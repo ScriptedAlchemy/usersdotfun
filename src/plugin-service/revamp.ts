@@ -8,7 +8,6 @@ import type {
   PluginMetadata
 } from "../pipeline/interfaces";
 
-
 const retrySchedule = Schedule.exponential(Duration.millis(100)).pipe(
   Schedule.compose(Schedule.recurs(2))
 );

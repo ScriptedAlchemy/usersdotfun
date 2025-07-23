@@ -1,10 +1,10 @@
-import Ajv from "ajv";
+import Ajv2020 from "ajv/dist/2020";
 import addFormats from "ajv-formats";
 import { Effect } from "effect";
 import type { JsonSchema7 } from "effect/JSONSchema";
 import { ValidationError } from "./errors";
 
-const ajv = new Ajv({
+const ajv = new Ajv2020({
   allErrors: true,
   verbose: true,
 });
