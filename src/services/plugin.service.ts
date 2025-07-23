@@ -1,12 +1,12 @@
-import { Cache, Effect, Schedule, Duration } from "effect";
+import { Cache, Duration, Effect, Schedule } from "effect";
 import {
   PluginError
 } from "../pipeline/errors";
-import { ModuleFederationTag } from "./mf.service";
 import type {
   PipelinePlugin,
   PluginMetadata
 } from "../pipeline/interfaces";
+import { ModuleFederationTag } from "./mf.service";
 
 const retrySchedule = Schedule.exponential(Duration.millis(100)).pipe(
   Schedule.compose(Schedule.recurs(2))
@@ -41,25 +41,27 @@ const loadModuleInternal = (
     const remoteName = pluginName.toLowerCase().replace(/[@\/]/g, "_");
 
     // Register remote
-    yield* Effect.tryPromise({
-      try: () => Promise.resolve(mf.registerRemotes([{ name: remoteName, entry: url }])),
-      catch: (error): PluginError => new PluginError({
-        message: `Failed to register ${pluginName}`,
-        pluginName,
-        operation: "load",
-        cause: error
-      })
+    yield* Effect.try({
+      try: () => mf.registerRemotes([{ name: remoteName, entry: url }]),
+      catch: (error): PluginError =>
+        new PluginError({
+          message: `Failed to register ${pluginName}`,
+          pluginName,
+          operation: "load",
+          cause: error,
+        }),
     });
 
     // Load module
-    const container: any = yield* Effect.tryPromise({
+    const container: any = yield* Effect.try({
       try: () => mf.loadRemote(`${remoteName}/plugin`),
-      catch: (error): PluginError => new PluginError({
-        message: `Failed to load ${pluginName}`,
-        pluginName,
-        operation: "load",
-        cause: error
-      })
+      catch: (error): PluginError =>
+        new PluginError({
+          message: `Failed to load ${pluginName}: ${remoteName}/plugin`,
+          pluginName,
+          operation: "load",
+          cause: error,
+        }),
     });
 
     const Constructor = typeof container === "function" ? container : container?.default;
@@ -151,7 +153,7 @@ export const loadPlugin = (
       // Get constructor from cache
       const getConstructor: Effect.Effect<new () => PipelinePlugin, PluginError> = getCacheKey.pipe(
         Effect.flatMap(({ cacheKey }) =>
-          moduleCache.get(cacheKey).pipe(  // <- Use instance method, not static
+          moduleCache.get(cacheKey).pipe(
             Effect.mapError((error: unknown): PluginError => {
               if (error instanceof PluginError) {
                 return error;
@@ -168,25 +170,41 @@ export const loadPlugin = (
       );
 
       // Create and initialize instance
-      const createAndInitialize: Effect.Effect<PipelinePlugin<TInput, TOutput, TConfig>, PluginError> = getConstructor.pipe(
-        Effect.flatMap((PluginConstructor: new () => PipelinePlugin) => {
-          const instance = new PluginConstructor() as PipelinePlugin<TInput, TOutput, TConfig>;
+      const createAndInitialize: Effect.Effect<
+        PipelinePlugin<TInput, TOutput, TConfig>,
+        PluginError
+      > = getConstructor.pipe(
+        Effect.flatMap((PluginConstructor: new () => PipelinePlugin) =>
+          // Create instance
+          Effect.try({
+            try: () => new PluginConstructor() as PipelinePlugin<TInput, TOutput, TConfig>,
+            catch: (error) =>
+              new PluginError({
+                message: `Failed to instantiate plugin: ${pluginName}`,
+                pluginName,
+                operation: "load",
+                cause: error,
+              }),
+          }).pipe(
+            // Initialize with retry
+            Effect.flatMap((instance) => {
+              const initialize: Effect.Effect<void, PluginError> = Effect.tryPromise({
+                try: () => instance.initialize(config),
+                catch: (error): PluginError =>
+                  new PluginError({
+                    message: `Failed to initialize ${pluginName}`,
+                    pluginName,
+                    operation: "initialize",
+                    cause: error,
+                    retryable: true,
+                  }),
+              }).pipe(Effect.retry(retrySchedule));
 
-          // Initialize with retry
-          const initialize: Effect.Effect<void, PluginError> = Effect.tryPromise({
-            try: () => instance.initialize(config),
-            catch: (error): PluginError => new PluginError({
-              message: `Failed to initialize ${pluginName}`,
-              pluginName,
-              operation: "initialize",
-              cause: error,
-              retryable: true
+              // Return instance after successful initialization
+              return initialize.pipe(Effect.map(() => instance));
             })
-          }).pipe(Effect.retry(retrySchedule));
-
-          // Return instance after successful initialization
-          return initialize.pipe(Effect.map(() => instance));
-        })
+          )
+        )
       );
 
       return createAndInitialize;

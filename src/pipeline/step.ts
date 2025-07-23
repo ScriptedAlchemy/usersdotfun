@@ -27,7 +27,7 @@ export const executeStep = (
     );
 
     const output = yield* Effect.tryPromise({
-      try: () => plugin.execute(validatedInput),
+      try: () => plugin.transform({ input: validatedInput }),
       catch: (error) =>
         new PluginError({
           pluginName: step.pluginName,

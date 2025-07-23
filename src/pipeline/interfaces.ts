@@ -26,7 +26,7 @@ export type PluginType = "transformer" | "distributor" | "source";
 
 export interface PipelinePlugin<TInput = unknown, TOutput = unknown, TConfig = unknown> {
   initialize(config: TConfig): Promise<void>;
-  execute(input: TInput): Promise<TOutput>;
+  transform({ input }: { input: TInput }): Promise<TOutput>;
   shutdown?(): Promise<void>;
 }
 
