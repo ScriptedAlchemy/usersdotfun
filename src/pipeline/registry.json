@@ -1,0 +1,62 @@
+{
+  "@curatedotfun/simple-transform": {
+    "remoteUrl": "https://unpkg.com/@curatedotfun/simple-transform@latest/dist/remoteEntry.js",
+    "configSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "multiplier": {
+          "default": 1,
+          "type": "number"
+        },
+        "prefix": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "multiplier"
+      ],
+      "additionalProperties": false
+    },
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "number"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "value",
+        "message"
+      ],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "number"
+        },
+        "processedMessage": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "result",
+        "processedMessage",
+        "timestamp"
+      ],
+      "additionalProperties": false
+    },
+    "version": "1.0.0",
+    "description": "Simple data transformation plugin"
+  }
+}

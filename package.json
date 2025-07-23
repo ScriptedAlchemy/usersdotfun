@@ -8,5 +8,15 @@
   },
   "peerDependencies": {
     "typescript": "^5"
+  },
+  "dependencies": {
+    "@effect/platform-bun": "^0.77.0",
+    "@module-federation/enhanced": "^0.15.0",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "effect": "^3.17.1",
+    "effect-errors": "^1.10.14",
+    "json-schema-to-zod": "^2.6.1",
+    "zod": "^4.0.5"
   }
 }
