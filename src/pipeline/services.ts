@@ -1,5 +1,6 @@
-import { Cache, Context, Duration, Effect, Layer } from "effect";
-import { loadPlugin as loadPluginFromSource } from "../plugin-service/revamp";
+import { Context, Effect, Layer } from "effect";
+import { createPluginCache, loadPlugin } from "../services/plugin.service";
+import { ModuleFederationLive } from "../services/mf.service";
 import { PluginError } from "./errors";
 import type { PluginMetadata } from "./interfaces";
 import registryData from "./registry.json";
@@ -9,21 +10,16 @@ const getPluginMetadata = (pluginName: string) =>
 
 export class PluginLoaderTag extends Context.Tag("PluginLoader")<
   PluginLoaderTag,
-  ReturnType<ReturnType<typeof loadPluginFromSource>>
+  ReturnType<ReturnType<typeof loadPlugin>>
 >() { }
 
 export const PluginLoaderLive = Layer.effect(
   PluginLoaderTag,
   Effect.gen(function* () {
-    const moduleCache = yield* Cache.make({
-      capacity: 50,
-      timeToLive: Duration.minutes(30),
-      lookup: (key: string) => Effect.succeed(null as any) // This should be a real lookup function if needed
-    });
-
-    return loadPluginFromSource(getPluginMetadata)(moduleCache);
+    const moduleCache = yield* createPluginCache();
+    return loadPlugin(getPluginMetadata)(moduleCache);
   })
-);
+).pipe(Layer.provide(ModuleFederationLive));
 
 // Helper for getting plugin metadata
 export const getPlugin = (pluginName: string): Effect.Effect<PluginMetadata, PluginError> =>

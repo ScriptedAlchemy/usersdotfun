@@ -56,7 +56,7 @@
       ],
       "additionalProperties": false
     },
-    "version": "1.0.0",
+    "version": "latest",
     "description": "Simple data transformation plugin"
   }
 }
