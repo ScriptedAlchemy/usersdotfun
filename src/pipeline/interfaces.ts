@@ -1,4 +1,4 @@
-import type { JsonSchema7 } from "effect/JSONSchema";
+import type { JSONSchemaType } from "ajv/dist/2020";
 
 export interface Pipeline {
   id: string;
@@ -15,9 +15,9 @@ export interface PipelineStep {
 export interface PluginMetadata {
   remoteUrl: string;
   type?: PluginType;
-  configSchema: JsonSchema7;
-  inputSchema: JsonSchema7;
-  outputSchema: JsonSchema7;
+  configSchema: JSONSchemaType<any>;
+  inputSchema: JSONSchemaType<any>;
+  outputSchema: JSONSchemaType<any>;
   version?: string;
   description?: string;
 }
@@ -35,4 +35,8 @@ export interface PluginConfig<TConfig = unknown> {
   url: string;
   config: TConfig;
   version?: string;
+}
+
+export interface PluginRegistry {
+  [pluginName: string]: PluginMetadata;
 }

@@ -15,7 +15,7 @@ export const executeStep = (
     const validatedConfig = yield* SchemaValidator.validate(
       pluginMeta.configSchema,
       step.config,
-      `${step.pluginName}-config`
+      `Step "${step.stepId}" config for plugin "${step.pluginName}`
     );
 
     const plugin = yield* loadPlugin(step.pluginName, validatedConfig, pluginMeta.version);
@@ -23,13 +23,13 @@ export const executeStep = (
     const validatedInput = yield* SchemaValidator.validate(
       pluginMeta.inputSchema,
       input,
-      `${step.pluginName}-input`
+      `Step "${step.stepId}" input for plugin "${step.pluginName}`
     );
 
     const output = yield* Effect.tryPromise({
       try: async () => {
         const output = await plugin.transform({ input: validatedInput });
-        return output;
+        return typeof output === "string" ? JSON.parse(output) : output;
       },
       catch: (error) =>
         new PluginError({
@@ -52,7 +52,7 @@ export const executeStep = (
     const validatedOutput = yield* SchemaValidator.validate(
       pluginMeta.outputSchema,
       output as Record<string, unknown>,
-      `${step.pluginName}-output`
+      `Step "${step.stepId}" output for plugin "${step.pluginName}`
     );
 
     return validatedOutput;

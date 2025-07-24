@@ -1,12 +1,12 @@
 import { Context, Effect, Layer } from "effect";
-import { createPluginCache, loadPlugin } from "../services/plugin.service";
 import { ModuleFederationLive } from "../services/mf.service";
+import { createPluginCache, loadPlugin } from "../services/plugin.service";
 import { PluginError } from "./errors";
-import type { PluginMetadata } from "./interfaces";
-import registryData from "./registry.json";
+import type { PluginMetadata, PluginRegistry } from "./interfaces";
+import registryData from "./registry.json" with { type: "json" };
 
 const getPluginMetadata = (pluginName: string) =>
-  registryData[pluginName as keyof typeof registryData] as PluginMetadata | undefined;
+  (registryData as PluginRegistry)[pluginName as keyof typeof registryData] as PluginMetadata | undefined;
 
 export class PluginLoaderTag extends Context.Tag("PluginLoader")<
   PluginLoaderTag,
