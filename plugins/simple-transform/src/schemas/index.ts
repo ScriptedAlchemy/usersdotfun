@@ -13,4 +13,6 @@ export const SimpleTransformerInputSchema = createInputSchema(
   z.object({ content: z.string() })
 );
 
-export const SimpleTransformerOutputSchema = createOutputSchema(z.string());
+export const SimpleTransformerOutputSchema = createOutputSchema(
+  z.object({ content: z.string() })
+);

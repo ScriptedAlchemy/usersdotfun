@@ -4,6 +4,11 @@ import type { PipelineStep } from "./interfaces";
 import { getPlugin, PluginLoaderTag } from "./services";
 import { SchemaValidator } from "./validation";
 
+const hydrateSecrets = (config: any) => {
+  // TODO: Implement secret hydration logic, e.g., using Mustache
+  return config;
+}
+
 export const executeStep = (
   step: PipelineStep,
   input: Record<string, unknown>
@@ -17,6 +22,9 @@ export const executeStep = (
       step.config,
       `Step "${step.stepId}" config for plugin "${step.pluginName}`
     );
+
+    // TODO: We will want to inject using a separate service... later
+    // const hydratedConfig = hydrateSecrets(validatedConfig, {});
 
     const plugin = yield* loadPlugin(step.pluginName, validatedConfig, pluginMeta.version);
 
@@ -42,7 +50,7 @@ export const executeStep = (
         pluginName: step.pluginName,
         operation: "execute",
         message: `Plugin ${step.pluginName} returned ${output === null ? 'null' : 'undefined'} output`,
-        cause: new Error(`Expected object output, got ${output === null ? 'null' : 'undefined'}`)
+        // cause: new Error(`Expected object output, got ${output === null ? 'null' : 'undefined'}`)
       }));
     }
 
@@ -51,6 +59,17 @@ export const executeStep = (
       output as Record<string, unknown>,
       `Step "${step.stepId}" output for plugin "${step.pluginName}`
     );
+
+    if (!validatedOutput.success) {
+      return yield* Effect.fail(new PluginError({
+        pluginName: step.pluginName,
+        operation: "execute",
+        message: `Plugin ${step.pluginName} execution failed`,
+        context: {
+          errors: validatedOutput.errors,
+        }
+      }));
+    }
 
     return validatedOutput;
   }).pipe(

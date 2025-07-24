@@ -12,24 +12,24 @@ const program = Effect.gen(function* () {
     steps: [
       {
         pluginName: "@curatedotfun/simple-transform",
-        config: { variables: { template: "{{content}}" } },
+        config: { variables: { template: "hello {{content}}" } },
         stepId: "transform-1"
       },
       {
         pluginName: "@curatedotfun/object-transform",
-        config: { variables: { mappings: { "content": "{{data}}" } } },
+        config: { variables: { mappings: { "content": "goodbye {{content}}" } } },
         stepId: "transform-2"
       },
       {
         pluginName: "@curatedotfun/simple-transform",
-        config: { variables: { template: "goodbye {{content}}" } },
+        config: { variables: { template: "hello {{content}}" } },
         stepId: "transform-3"
       },
     ]
   };
 
   const input = {
-    content: "hello world"
+    content: "world"
   };
 
   yield* Effect.log("Starting pipeline execution...");

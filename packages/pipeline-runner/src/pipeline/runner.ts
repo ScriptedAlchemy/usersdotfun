@@ -9,10 +9,12 @@ export const executePipeline = (
   initialInput: Record<string, unknown>
 ): Effect.Effect<unknown, PipelineExecutionError, PluginLoaderTag> =>
   Effect.gen(function* () {
-    let currentInput = initialInput;
+    let currentInput: Record<string, unknown> = initialInput;
 
     for (const step of pipeline.steps) {
-      currentInput = yield* executeStep(step, currentInput);
+      yield* Effect.logDebug(`Executing step "${step.stepId}" with input:`, currentInput);
+      const output = yield* executeStep(step, currentInput);
+      currentInput = output.data as Record<string, unknown>;
     }
 
     return currentInput;

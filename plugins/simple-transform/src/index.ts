@@ -33,7 +33,7 @@ export default class SimpleTransformer
   ): Promise<SimpleTransformerOutput> {
     try {
       const result = Mustache.render(this.template, input);
-      return { success: true, data: result };
+      return { success: true, data: { content: result } };
     } catch (error: unknown) {
       const err = error instanceof Error ? error : new Error('Unknown error occurred');
       return {
