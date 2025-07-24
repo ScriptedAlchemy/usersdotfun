@@ -13,7 +13,7 @@
     "postinstall": "bun run build:sdk && bun run build:registry",
     "build:sdk": "bun run --filter @usersdotfun/core-sdk build",
     "build:registry": "bun run packages/registry-builder/generate-registry.mjs",
-    "dev:plugins": "bun run --filter @curatedotfun/simple-transform dev",
+    "dev:plugins": "bun run --filter \"./plugins/*\" dev",
     "pipeline": "cd packages/pipeline-runner && bun run start"
   },
   "workspaces": [

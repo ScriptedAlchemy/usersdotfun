@@ -1,0 +1,54 @@
+{
+  "name": "@curatedotfun/object-transform",
+  "version": "0.0.7",
+  "description": "Object transformation plugin for curatedotfun with configurable field mappings",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "package.json"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/potlock/curatedotfun-plugins.git",
+    "directory": "packages/object-transform"
+  },
+  "keywords": [
+    "curatedotfun",
+    "transformer",
+    "plugin",
+    "object-mapping"
+  ],
+  "scripts": {
+    "build": "rspack build && tsc -p tsconfig.build.json",
+    "dev": "rspack serve",
+    "lint": "tsc --noEmit",
+    "test": "vitest"
+  },
+  "devDependencies": {
+    "@curatedotfun/utils": "^0.0.2",
+    "@module-federation/node": "^2.7.10",
+    "@rspack/cli": "latest",
+    "@types/mustache": "^4.2.5",
+    "typescript": "^5.0.0",
+    "vitest": "latest"
+  },
+  "dependencies": {
+    "@usersdotfun/core-sdk": "workspace:*",
+    "date-fns": "^4.1.0",
+    "mustache": "^4.2.0",
+    "zod": "^4.0.8"
+  }
+}

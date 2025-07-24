@@ -14,11 +14,19 @@ const program = Effect.gen(function* () {
         pluginName: "@curatedotfun/simple-transform",
         config: { variables: { template: "{{content}}" } },
         stepId: "transform-1"
-      }
+      },
+      {
+        pluginName: "@curatedotfun/object-transform",
+        config: { variables: { mappings: { "content": "{{data}}" } } },
+        stepId: "transform-2"
+      },
+      {
+        pluginName: "@curatedotfun/simple-transform",
+        config: { variables: { template: "goodbye {{content}}" } },
+        stepId: "transform-3"
+      },
     ]
   };
-
-
 
   const input = {
     content: "hello world"

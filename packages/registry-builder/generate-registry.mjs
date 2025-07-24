@@ -4,7 +4,8 @@ import { z } from "zod";
 
 // This list will be the single source of truth for which plugins are active.
 const pluginsToRegister = {
-    'simple-transform': "SimpleTransformer"
+    'simple-transform': "SimpleTransformer",
+    'object-transform': "ObjectTransformer"
 };
 
 const registry = {};
@@ -17,10 +18,13 @@ for (const [pluginName, schemaPrefix] of Object.entries(pluginsToRegister)) {
     const pluginPath = path.resolve(process.cwd(), `plugins/${pluginName}`);
     const schemaPath = path.join(pluginPath, 'src/schemas/index.ts');
     const packageJsonPath = path.join(pluginPath, 'package.json');
+    const rspackConfigPath = path.join(pluginPath, 'rspack.config.cjs');
 
     try {
         const schemas = await import(schemaPath);
         const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf-8'));
+        const rspackConfig = await import(rspackConfigPath);
+        const port = rspackConfig.default.devServer.port;
 
         const configSchema = schemas[`${schemaPrefix}ConfigSchema`];
         const inputSchema = schemas[`${schemaPrefix}InputSchema`];
@@ -31,8 +35,7 @@ for (const [pluginName, schemaPrefix] of Object.entries(pluginsToRegister)) {
         }
 
         registry[packageJson.name] = {
-            // This URL could be sourced from the plugin's package.json or another config file in the future.
-            remoteUrl: `http://localhost:3005/remoteEntry.js`,
+            remoteUrl: `http://localhost:${port}/remoteEntry.js`,
             configSchema: z.toJSONSchema(configSchema),
             inputSchema: z.toJSONSchema(inputSchema),
             outputSchema: z.toJSONSchema(outputSchema),
