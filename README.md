@@ -6,10 +6,16 @@ To install dependencies:
 bun install
 ```
 
-To run:
+To run, run the plugin:
 
 ```bash
-bun run index.ts
+cd simple-transform-plugin
+bun run dev
 ```
 
-This project was created using `bun init` in bun v1.2.14. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.
+Then, in another terminal, run the pipeline script
+
+```bash
+cd pipeline-runner
+bun run index.ts
+```
