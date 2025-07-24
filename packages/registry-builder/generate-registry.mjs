@@ -15,7 +15,7 @@ for (const [pluginName, schemaPrefix] of Object.entries(pluginsToRegister)) {
     console.log(`Processing plugin: ${pluginName}`);
     // Assumes the script is run from the root of the monorepo
     const pluginPath = path.resolve(process.cwd(), `plugins/${pluginName}`);
-    const schemaPath = path.join(pluginPath, 'schemas/index.ts');
+    const schemaPath = path.join(pluginPath, 'src/schemas/index.ts');
     const packageJsonPath = path.join(pluginPath, 'package.json');
 
     try {

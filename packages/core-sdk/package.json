@@ -1,7 +1,14 @@
 {
   "name": "@usersdotfun/core-sdk",
-  "module": "src/index.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "type": "module",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b"
+  },
   "devDependencies": {
     "@types/bun": "latest"
   },

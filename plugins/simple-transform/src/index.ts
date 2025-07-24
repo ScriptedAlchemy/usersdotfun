@@ -5,7 +5,7 @@ import {
   SimpleTransformerConfigSchema,
   SimpleTransformerInputSchema,
   SimpleTransformerOutputSchema,
-} from '../schemas';
+} from './schemas';
 
 // Derived Types
 type SimpleTransformerConfig = z.infer<typeof SimpleTransformerConfigSchema>;
