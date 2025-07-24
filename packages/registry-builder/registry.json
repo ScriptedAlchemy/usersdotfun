@@ -42,13 +42,6 @@
             "content"
           ],
           "additionalProperties": false
-        },
-        "options": {
-          "type": "object",
-          "propertyNames": {
-            "type": "string"
-          },
-          "additionalProperties": {}
         }
       },
       "required": [

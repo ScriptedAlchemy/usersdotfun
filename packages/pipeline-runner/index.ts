@@ -4,6 +4,7 @@ import { runPromise } from "effect-errors";
 import { executePipeline } from "./src/pipeline/runner";
 import type { Pipeline } from "./src/pipeline/interfaces";
 import { PluginLoaderLive } from "./src/pipeline/services";
+import type { Input } from "@usersdotfun/core-sdk";
 
 const program = Effect.gen(function* () {
   const pipeline: Pipeline = {
@@ -12,11 +13,13 @@ const program = Effect.gen(function* () {
     steps: [
       {
         pluginName: "@curatedotfun/simple-transform",
-        config: { template: "{{content}}" },
+        config: { variables: { template: "{{content}}" } },
         stepId: "transform-1"
       }
     ]
   };
+
+
 
   const input = {
     content: "hello world"

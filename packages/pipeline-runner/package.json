@@ -9,6 +9,9 @@
   "peerDependencies": {
     "typescript": "^5"
   },
+  "scripts": {
+    "start": "bun index.ts"
+  },
   "dependencies": {
     "@usersdotfun/core-sdk": "workspace:*",
     "@effect/platform-bun": "^0.77.0",

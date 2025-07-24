@@ -62,6 +62,7 @@
         "zod": "^4.0.8",
       },
       "devDependencies": {
+        "@curatedotfun/utils": "^0.0.2",
         "@module-federation/node": "^2.7.10",
         "@rspack/cli": "latest",
         "@types/mustache": "^4.2.5",
@@ -71,6 +72,8 @@
   },
   "packages": {
     "@curatedotfun/simple-transform": ["@curatedotfun/simple-transform@workspace:plugins/simple-transform"],
+
+    "@curatedotfun/utils": ["@curatedotfun/utils@0.0.2", "", {}, "sha512-DCuV/mK1WUbsUeDL4CKuhsNYSUtJH3BiAOGS3u+9J8yAcHGHFC9KQMEVEltdlqH1yuqYs1swBk+vl4cyzzXnUA=="],
 
     "@discoveryjs/json-ext": ["@discoveryjs/json-ext@0.5.7", "", {}, "sha512-dBVuXR082gk3jsFp7Rd/JI4kytwGHecnCoTtXFb7DB6CNHp4rg5k1bhg0nWdLGLnOV71lmDzGQaLMy8iPLY0pw=="],
 
