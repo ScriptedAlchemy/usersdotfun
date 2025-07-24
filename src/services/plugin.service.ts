@@ -19,11 +19,11 @@ const loadModuleInternal = (
   Effect.gen(function* () {
     const response = yield* Effect.tryPromise({
       try: () => fetch(url, { method: "HEAD" }),
-      catch: (error) => new PluginError({
+      catch: () => new PluginError({
         message: `Network error while fetching plugin ${pluginName} from ${url}`,
         pluginName,
         operation: "load",
-        cause: error,
+        // cause: error,
       }),
     });
 
@@ -58,10 +58,10 @@ const loadModuleInternal = (
             throw new Error(`No container returned for ${modulePath}`);
           }
 
-          const Constructor = typeof container === "function" ? container : container?.default;
+          const Constructor = typeof container === "function" ? container : (container as any)?.default;
 
           if (!Constructor || typeof Constructor !== "function") {
-            throw new Error(`No valid constructor found. Container type: ${typeof container}, has default: ${!!container?.default}`);
+            throw new Error(`No valid constructor found. Container type: ${typeof container}, has default: ${!!(container as any)?.default}`);
           }
 
           return Constructor;
@@ -77,7 +77,7 @@ const loadModuleInternal = (
           message: `Failed to load ${pluginName} from ${modulePath}: ${error instanceof Error ? error.message : String(error)}`,
           pluginName,
           operation: "load",
-          cause: error instanceof Error ? error : new Error(String(error)),
+          // cause: error instanceof Error ? error : new Error(String(error)),
         });
       },
     });
