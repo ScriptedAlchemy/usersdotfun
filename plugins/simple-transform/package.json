@@ -36,14 +36,14 @@
     "lint": "tsc --noEmit"
   },
   "devDependencies": {
-    "@curatedotfun/types": "^0.0.6",
-    "@curatedotfun/utils": "^0.0.2",
     "@module-federation/node": "^2.7.10",
     "@rspack/cli": "latest",
     "@types/mustache": "^4.2.5",
     "typescript": "^5.0.0"
   },
   "dependencies": {
-    "mustache": "^4.2.0"
+    "@usersdotfun/core-sdk": "workspace:*",
+    "mustache": "^4.2.0",
+    "zod": "^4.0.8"
   }
 }

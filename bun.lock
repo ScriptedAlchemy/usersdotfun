@@ -10,7 +10,19 @@
         "typescript": "^5",
       },
     },
-    "pipeline-runner": {
+    "packages/core-sdk": {
+      "name": "@usersdotfun/core-sdk",
+      "dependencies": {
+        "zod": "^4.0.8",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+      },
+      "peerDependencies": {
+        "typescript": "^5",
+      },
+    },
+    "packages/pipeline-runner": {
       "name": "usersdotfun",
       "dependencies": {
         "@effect/platform-bun": "^0.77.0",
@@ -28,15 +40,27 @@
         "typescript": "^5",
       },
     },
-    "simple-transform-plugin": {
+    "packages/registry-builder": {
+      "name": "@usersdotfun/registry-builder",
+      "dependencies": {
+        "zod": "^4.0.8",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+      },
+      "peerDependencies": {
+        "typescript": "^5",
+      },
+    },
+    "plugins/simple-transform": {
       "name": "@curatedotfun/simple-transform",
       "version": "0.0.9",
       "dependencies": {
+        "@usersdotfun/core-sdk": "workspace:*",
         "mustache": "^4.2.0",
+        "zod": "^4.0.8",
       },
       "devDependencies": {
-        "@curatedotfun/types": "^0.0.6",
-        "@curatedotfun/utils": "^0.0.2",
         "@module-federation/node": "^2.7.10",
         "@rspack/cli": "latest",
         "@types/mustache": "^4.2.5",
@@ -45,11 +69,7 @@
     },
   },
   "packages": {
-    "@curatedotfun/simple-transform": ["@curatedotfun/simple-transform@workspace:simple-transform-plugin"],
-
-    "@curatedotfun/types": ["@curatedotfun/types@0.0.6", "", {}, "sha512-m2/O2s6W0b0h/Oq/cGOnmMJP6rHqtBgfZYuQlFIEtIhvvFWkahMAGPRGD2VW2D6SJeIrdnHgSqJlosW4+TfQaA=="],
-
-    "@curatedotfun/utils": ["@curatedotfun/utils@0.0.2", "", {}, "sha512-DCuV/mK1WUbsUeDL4CKuhsNYSUtJH3BiAOGS3u+9J8yAcHGHFC9KQMEVEltdlqH1yuqYs1swBk+vl4cyzzXnUA=="],
+    "@curatedotfun/simple-transform": ["@curatedotfun/simple-transform@workspace:plugins/simple-transform"],
 
     "@discoveryjs/json-ext": ["@discoveryjs/json-ext@0.5.7", "", {}, "sha512-dBVuXR082gk3jsFp7Rd/JI4kytwGHecnCoTtXFb7DB6CNHp4rg5k1bhg0nWdLGLnOV71lmDzGQaLMy8iPLY0pw=="],
 
@@ -318,6 +338,10 @@
     "@types/sockjs": ["@types/sockjs@0.3.36", "", { "dependencies": { "@types/node": "*" } }, "sha512-MK9V6NzAS1+Ud7JV9lJLFqW85VbC9dq3LmwZCuBe4wBDgKC0Kj/jd8Xl+nSviU+Qc3+m7umHHyHg//2KSa0a0Q=="],
 
     "@types/ws": ["@types/ws@8.18.1", "", { "dependencies": { "@types/node": "*" } }, "sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg=="],
+
+    "@usersdotfun/core-sdk": ["@usersdotfun/core-sdk@workspace:packages/core-sdk"],
+
+    "@usersdotfun/registry-builder": ["@usersdotfun/registry-builder@workspace:packages/registry-builder"],
 
     "@webassemblyjs/ast": ["@webassemblyjs/ast@1.14.1", "", { "dependencies": { "@webassemblyjs/helper-numbers": "1.13.2", "@webassemblyjs/helper-wasm-bytecode": "1.13.2" } }, "sha512-nuBEDgQfm1ccRp/8bCQrx1frohyufl4JlbMMZ4P1wpeOfDhF6FQkxZJ1b/e+PLwr6X1Nhw6OLme5usuBWYBvuQ=="],
 
@@ -945,7 +969,7 @@
 
     "update-browserslist-db": ["update-browserslist-db@1.1.3", "", { "dependencies": { "escalade": "^3.2.0", "picocolors": "^1.1.1" }, "peerDependencies": { "browserslist": ">= 4.21.0" }, "bin": { "update-browserslist-db": "cli.js" } }, "sha512-UxhIZQ+QInVdunkDAaiazvvT/+fXL5Osr0JZlJulepYu6Jd7qJtDZjlur0emRlT71EN3ScPoE7gvsuIKKNavKw=="],
 
-    "usersdotfun": ["usersdotfun@workspace:pipeline-runner"],
+    "usersdotfun": ["usersdotfun@workspace:packages/pipeline-runner"],
 
     "util-deprecate": ["util-deprecate@1.0.2", "", {}, "sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw=="],
 
