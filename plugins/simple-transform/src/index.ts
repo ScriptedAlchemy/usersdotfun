@@ -14,12 +14,11 @@ type SimpleTransformerOutput = z.infer<typeof SimpleTransformerOutputSchema>;
 
 export default class SimpleTransformer
   implements
-    Plugin<
-      SimpleTransformerInput['input'],
-      SimpleTransformerOutput,
-      SimpleTransformerConfig
-    >
-{
+  Plugin<
+    SimpleTransformerInput,
+    SimpleTransformerOutput,
+    SimpleTransformerConfig
+  > {
   readonly type = 'transformer' as const;
   private template: string = '{{content}}'; // Simple default template
 
@@ -29,11 +28,9 @@ export default class SimpleTransformer
     }
   }
 
-  async transform({
-    input,
-  }: SimpleTransformerInput): Promise<
-    SimpleTransformerOutput
-  > {
+  async execute(
+    input: SimpleTransformerInput,
+  ): Promise<SimpleTransformerOutput> {
     try {
       const result = Mustache.render(this.template, input);
       return { success: true, data: result };

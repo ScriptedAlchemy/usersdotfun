@@ -1,3 +1,4 @@
+
 import { Cache, Duration, Effect, Schedule } from "effect";
 import {
   PluginError
@@ -6,6 +7,7 @@ import type {
   PipelinePlugin,
   PluginMetadata
 } from "../pipeline/interfaces";
+import type { Config } from "@usersdotfun/core-sdk";
 import { ModuleFederationTag } from "./mf.service";
 
 const retrySchedule = Schedule.exponential(Duration.millis(100)).pipe(
@@ -117,11 +119,11 @@ export const loadPlugin = (
   getPluginMetadata: (name: string) => PluginMetadata | undefined
 ) => (
   moduleCache: Cache.Cache<string, new () => PipelinePlugin, PluginError>
-) => <TInput = unknown, TOutput = unknown, TConfig = unknown>(
+) => <TConfig extends Config>(
   pluginName: string,
-  config: TConfig,
+  config?: TConfig,
   version?: string
-): Effect.Effect<PipelinePlugin<TInput, TOutput, TConfig>, PluginError> => {
+): Effect.Effect<PipelinePlugin, PluginError> => {
 
       // Get metadata or fail
       const getMetadata: Effect.Effect<PluginMetadata, PluginError> = Effect.sync(() => {
@@ -149,7 +151,7 @@ export const loadPlugin = (
       const getConstructor: Effect.Effect<new () => PipelinePlugin, PluginError> = getCacheKey.pipe(
         Effect.flatMap(({ cacheKey }) =>
           moduleCache.get(cacheKey).pipe(
-            Effect.mapError((error: unknown): PluginError => {
+            Effect.mapError((error): PluginError => {
               if (error instanceof PluginError) {
                 return error;
               }
@@ -157,7 +159,7 @@ export const loadPlugin = (
                 message: `Cache error for ${pluginName}`,
                 pluginName,
                 operation: "load",
-                cause: error
+                cause: error,
               });
             })
           )
@@ -166,13 +168,13 @@ export const loadPlugin = (
 
       // Create and initialize instance
       const createAndInitialize: Effect.Effect<
-        PipelinePlugin<TInput, TOutput, TConfig>,
+        PipelinePlugin,
         PluginError
       > = getConstructor.pipe(
         Effect.flatMap((PluginConstructor: new () => PipelinePlugin) =>
           // Create instance
           Effect.try({
-            try: () => new PluginConstructor() as PipelinePlugin<TInput, TOutput, TConfig>,
+            try: () => new PluginConstructor(),
             catch: (error) =>
               new PluginError({
                 message: `Failed to instantiate plugin: ${pluginName}`,

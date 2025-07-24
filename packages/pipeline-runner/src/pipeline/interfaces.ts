@@ -1,3 +1,4 @@
+import type { Config, Input, Output, Plugin } from "@usersdotfun/core-sdk";
 import type { JSONSchemaType } from "ajv/dist/2020";
 
 export interface Pipeline {
@@ -24,18 +25,7 @@ export interface PluginMetadata {
 
 export type PluginType = "transformer" | "distributor" | "source";
 
-export interface PipelinePlugin<TInput = unknown, TOutput = unknown, TConfig = unknown> {
-  initialize(config: TConfig): Promise<void>;
-  transform({ input }: { input: TInput }): Promise<TOutput>;
-  shutdown?(): Promise<void>;
-}
-
-export interface PluginConfig<TConfig = unknown> {
-  type: PluginType;
-  url: string;
-  config: TConfig;
-  version?: string;
-}
+export type PipelinePlugin = Plugin<Input<any>, Output<any>, Config>;
 
 export interface PluginRegistry {
   [pluginName: string]: PluginMetadata;

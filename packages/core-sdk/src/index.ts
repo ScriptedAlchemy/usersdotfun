@@ -1,15 +1,9 @@
 import { z } from 'zod';
 
-// Core schemas
-export const ErrorDetailsSchema = z.object({
-  message: z.string(),
-  details: z.record(z.string(), z.unknown()).optional(),
-  stack: z.string().optional(),
-});
-
+// Helpers
 export const createOutputSchema = <T extends z.ZodTypeAny>(dataSchema: T) =>
   z.object({
-    success: z.boolean(), // Always required
+    success: z.boolean(),
     data: dataSchema.optional(),
     errors: z.array(ErrorDetailsSchema).optional(),
   });
@@ -44,42 +38,21 @@ export function createConfigSchema<
   });
 }
 
-export function createInputSchema(): z.ZodObject<{
-  input: z.ZodUnknown;
-  options: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-}>;
 export function createInputSchema<I extends z.ZodTypeAny>(
-  inputSchema: I
-): z.ZodObject<{
-  input: I;
-  options: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-}>;
-export function createInputSchema<
-  I extends z.ZodTypeAny,
-  O extends z.ZodTypeAny
->(
   inputSchema: I,
-  optionsSchema: O
-): z.ZodObject<{
-  input: I;
-  options: z.ZodOptional<O>;
-}>;
-export function createInputSchema<
-  I extends z.ZodTypeAny = z.ZodUnknown,
-  O extends z.ZodTypeAny = z.ZodRecord<z.ZodString, z.ZodUnknown>
->(inputSchema?: I, optionsSchema?: O) {
+) {
   return z.object({
-    input: inputSchema ?? z.unknown(),
-    options: (optionsSchema ?? z.record(z.string(), z.unknown())).optional(),
+    input: inputSchema,
   });
 }
 
-// Convenience exports
-export const BaseConfigSchema = createConfigSchema();
-export const BaseInputSchema = createInputSchema();
-export const BaseOutputSchema = createOutputSchema(z.unknown());
+// Core schemas
+export const ErrorDetailsSchema = z.object({
+  message: z.string(),
+  details: z.record(z.string(), z.unknown()).optional(),
+  stack: z.string().optional(),
+});
 
-// Improved type definitions using conditional types
 export type ErrorDetails = z.infer<typeof ErrorDetailsSchema>;
 
 export type Config<
@@ -88,22 +61,21 @@ export type Config<
 > = z.infer<ReturnType<typeof createConfigSchema<V, S>>>;
 
 export type Input<
-  I extends z.ZodTypeAny = z.ZodUnknown,
-  O extends z.ZodTypeAny = z.ZodRecord<z.ZodString, z.ZodUnknown>
-> = z.infer<ReturnType<typeof createInputSchema<I, O>>>;
+  I extends z.ZodTypeAny
+> = z.infer<ReturnType<typeof createInputSchema<I>>>;
 
 export type Output<T extends z.ZodTypeAny> = z.infer<
   ReturnType<typeof createOutputSchema<T>>
 >;
 
-// More specific plugin interface
+// Plugin interface
 export interface Plugin<
-  InputType = unknown,
-  OutputType = unknown,
-  ConfigType extends Config = Config
+  InputType extends Input<z.ZodAny>,
+  OutputType extends Output<z.ZodAny>,
+  ConfigType extends Config,
 > {
   readonly type: 'transformer' | 'source' | 'destination';
   initialize(config?: ConfigType): Promise<void>;
-  transform(input: Input<z.ZodType<InputType>>): Promise<Output<z.ZodType<OutputType>>>;
+  execute(input: InputType): Promise<OutputType>;
   shutdown(): Promise<void>;
 }

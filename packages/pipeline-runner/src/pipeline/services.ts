@@ -3,10 +3,10 @@ import { ModuleFederationLive } from "../services/mf.service";
 import { createPluginCache, loadPlugin } from "../services/plugin.service";
 import { PluginError } from "./errors";
 import type { PluginMetadata, PluginRegistry } from "./interfaces";
-import registryData from "./registry.json" with { type: "json" };
+import registryData from "../../../registry-builder/registry.json" with { type: "json" };
 
-const getPluginMetadata = (pluginName: string) =>
-  (registryData as PluginRegistry)[pluginName as keyof typeof registryData] as PluginMetadata | undefined;
+const getPluginMetadata = (pluginName: string): PluginMetadata | undefined =>
+  (registryData as PluginRegistry)[pluginName];
 
 export class PluginLoaderTag extends Context.Tag("PluginLoader")<
   PluginLoaderTag,
