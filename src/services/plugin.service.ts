@@ -134,19 +134,7 @@ export const loadPlugin = (
           });
         }
         return metadata;
-      }).pipe(
-        Effect.catchAll((error: unknown) => {
-          const pluginError = error instanceof PluginError
-            ? error
-            : new PluginError({
-              message: `Plugin ${pluginName} not found`,
-              pluginName,
-              operation: "load",
-              cause: error
-            });
-          return Effect.fail(pluginError);
-        })
-      );
+      })
 
       // Build cache key
       const getCacheKey = getMetadata.pipe(

@@ -48,10 +48,9 @@ const runnable = program.pipe(
   Effect.provide(AppLive)
 )
 
-Effect.runPromise(runnable).then(result => {
+runPromise(runnable).then(result => {
   process.exit(0);
 }).catch(error => {
   console.error("❌ Pipeline failed - see errors above");
-  console.error(error);
   process.exit(1);
 });

@@ -1,6 +1,6 @@
 {
   "@curatedotfun/simple-transform": {
-    "remoteUrl": "http://localhost:3005/remoteEntry.js",
+    "remoteUrl": "https://unpkg.com/@curatedotfun/simple-transform@latest/dist/remoteEntry.js",
     "configSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
