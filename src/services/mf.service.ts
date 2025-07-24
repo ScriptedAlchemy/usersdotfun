@@ -1,27 +1,21 @@
-import { createInstance, getInstance } from "@module-federation/enhanced/runtime";
+import { init } from "@module-federation/enhanced/runtime";
 import { Context, Effect, Layer } from "effect";
 
-type ModuleFederation = ReturnType<typeof createInstance>;
+type ModuleFederation = ReturnType<typeof init>;
 
 export class ModuleFederationTag extends Context.Tag("ModuleFederation")<
   ModuleFederationTag,
   ModuleFederation
->() {}
+>() { }
 
 // Cached effect that ensures single instance creation
 const createModuleFederationInstance = Effect.cached(
   Effect.sync(() => {
     try {
-      let instance = getInstance();
-      
-      if (!instance) {
-        instance = createInstance({
-          name: "host",
-          remotes: [],
-        });
-      }
-      
-      return instance;
+      return init({
+        name: "host",
+        remotes: [],
+      });
     } catch (error) {
       throw new Error(`Failed to initialize Module Federation: ${error}`);
     }
