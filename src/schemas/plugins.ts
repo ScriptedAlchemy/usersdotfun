@@ -2,17 +2,13 @@ import { z } from "zod";
 
 export const SimpleTransformSchemas = {
   config: z.object({
-    multiplier: z.number().default(1),
-    prefix: z.string().optional(),
+    template: z.string().optional(),
   }),
   input: z.object({
-    value: z.number(),
-    message: z.string(),
+    content: z.string(),
   }),
   output: z.object({
-    result: z.number(),
-    processedMessage: z.string(),
-    timestamp: z.string(),
+    result: z.string(),
   }),
 };
 

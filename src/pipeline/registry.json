@@ -5,33 +5,22 @@
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
       "properties": {
-        "multiplier": {
-          "default": 1,
-          "type": "number"
-        },
-        "prefix": {
+        "template": {
           "type": "string"
         }
       },
-      "required": [
-        "multiplier"
-      ],
       "additionalProperties": false
     },
     "inputSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
       "properties": {
-        "value": {
-          "type": "number"
-        },
-        "message": {
+        "content": {
           "type": "string"
         }
       },
       "required": [
-        "value",
-        "message"
+        "content"
       ],
       "additionalProperties": false
     },
@@ -40,19 +29,11 @@
       "type": "object",
       "properties": {
         "result": {
-          "type": "number"
-        },
-        "processedMessage": {
-          "type": "string"
-        },
-        "timestamp": {
           "type": "string"
         }
       },
       "required": [
-        "result",
-        "processedMessage",
-        "timestamp"
+        "result"
       ],
       "additionalProperties": false
     },

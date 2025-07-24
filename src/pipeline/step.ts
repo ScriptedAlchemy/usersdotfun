@@ -27,10 +27,7 @@ export const executeStep = (
     );
 
     const output = yield* Effect.tryPromise({
-      try: async () => {
-        const output = await plugin.transform({ input: validatedInput });
-        return typeof output === "string" ? JSON.parse(output) : output;
-      },
+      try: () => plugin["transform"]({ input: validatedInput }),
       catch: (error) =>
         new PluginError({
           pluginName: step.pluginName,

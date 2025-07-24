@@ -8,7 +8,7 @@ const registry = {
     "configSchema": z.toJSONSchema(SimpleTransformSchemas.config),
     "inputSchema": z.toJSONSchema(SimpleTransformSchemas.input),
     "outputSchema": z.toJSONSchema(SimpleTransformSchemas.output),
-    "version": "1.0.0",
+    "version": "latest",
     "description": "Simple data transformation plugin"
   }
 };

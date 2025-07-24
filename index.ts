@@ -12,15 +12,14 @@ const program = Effect.gen(function* () {
     steps: [
       {
         pluginName: "@curatedotfun/simple-transform",
-        config: { multiplier: 2, prefix: "Processed: " },
+        config: { template: "{{content}}" },
         stepId: "transform-1"
       }
     ]
   };
 
   const input = {
-    value: 42,
-    message: "Hello World"
+    content: "hello world"
   };
 
   yield* Effect.log("Starting pipeline execution...");
@@ -49,11 +48,10 @@ const runnable = program.pipe(
   Effect.provide(AppLive)
 )
 
-try {
-  const result = await runPromise(runnable);
-  console.log("✅ Pipeline completed successfully");
-  console.log("📊 Final Result:", result);
-} catch (error) {
+Effect.runPromise(runnable).then(result => {
+  process.exit(0);
+}).catch(error => {
   console.error("❌ Pipeline failed - see errors above");
+  console.error(error);
   process.exit(1);
-}
+});
