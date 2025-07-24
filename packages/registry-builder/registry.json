@@ -31,21 +31,12 @@
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
       "properties": {
-        "input": {
-          "type": "object",
-          "properties": {
-            "content": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "content"
-          ],
-          "additionalProperties": false
+        "content": {
+          "type": "string"
         }
       },
       "required": [
-        "input"
+        "content"
       ],
       "additionalProperties": false
     },

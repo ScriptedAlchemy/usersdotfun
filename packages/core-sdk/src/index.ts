@@ -41,9 +41,7 @@ export function createConfigSchema<
 export function createInputSchema<I extends z.ZodTypeAny>(
   inputSchema: I,
 ) {
-  return z.object({
-    input: inputSchema,
-  });
+  return inputSchema;
 }
 
 // Core schemas
