@@ -16,31 +16,32 @@ export class SchemaValidator {
     data: Record<string, unknown>,
     context?: string
   ): Effect.Effect<Record<string, unknown>, ValidationError> {
-    return Effect.try({
-      try: () => {
-        const validate = ajv.compile(schema);
-        const valid = validate(data);
-        if (!valid) {
-          const errors = validate.errors?.map(err => ({
-            path: err.instancePath || err.schemaPath,
-            message: err.message,
-            allowedValues: err.params,
-            receivedValue: err.data
-          })) || [];
-          
-          throw new Error(JSON.stringify({
-            summary: ajv.errorsText(validate.errors),
-            details: errors,
-          }, null, 2));
-        }
-        return data;
-      },
-      catch: (error) => new ValidationError({
-        message: `${context ? `${context} validation` : 'Validation'} failed`,
-        cause: error,
-        data: data,
-        validationDetails: error instanceof Error ? error.message : String(error)
-      })
+    return Effect.gen(function* () {
+      const validate = ajv.compile(schema);
+      const valid = validate(data);
+
+      if (!valid) {
+        const errors = validate.errors?.map(err => ({
+          path: err.instancePath || err.schemaPath,
+          message: err.message,
+          allowedValues: err.params,
+          receivedValue: err.data
+        })) || [];
+
+        const errorMessage = JSON.stringify({
+          summary: ajv.errorsText(validate.errors),
+          details: errors,
+        }, null, 2);
+
+        return yield* Effect.fail(new ValidationError({
+          message: `${context || 'Unknown'} validation failed: ${ajv.errorsText(validate.errors)}`,
+          cause: new Error(errorMessage),
+          data: data,
+          validationDetails: errorMessage
+        }));
+      }
+
+      return data;
     });
   }
 }

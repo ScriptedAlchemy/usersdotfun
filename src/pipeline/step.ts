@@ -27,7 +27,10 @@ export const executeStep = (
     );
 
     const output = yield* Effect.tryPromise({
-      try: () => plugin.transform({ input: validatedInput }),
+      try: async () => {
+        const output = await plugin.transform({ input: validatedInput });
+        return output;
+      },
       catch: (error) =>
         new PluginError({
           pluginName: step.pluginName,
@@ -36,6 +39,15 @@ export const executeStep = (
           message: `Failed to execute plugin ${step.pluginName}`,
         }),
     });
+
+    if (output === undefined || output === null) {
+      return yield* Effect.fail(new PluginError({
+        pluginName: step.pluginName,
+        operation: "execute",
+        message: `Plugin ${step.pluginName} returned ${output === null ? 'null' : 'undefined'} output`,
+        cause: new Error(`Expected object output, got ${output === null ? 'null' : 'undefined'}`)
+      }));
+    }
 
     const validatedOutput = yield* SchemaValidator.validate(
       pluginMeta.outputSchema,

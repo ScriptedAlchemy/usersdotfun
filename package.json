@@ -11,12 +11,13 @@
   },
   "dependencies": {
     "@effect/platform-bun": "^0.77.0",
-    "@module-federation/enhanced": "^0.15.0",
+    "@module-federation/enhanced": "^0.16.0",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "effect": "^3.17.1",
     "effect-errors": "^1.10.14",
     "json-schema-to-zod": "^2.6.1",
     "zod": "^4.0.5"
-  }
+  },
+  "packageManager": "yarn@4.9.2+sha512.1fc009bc09d13cfd0e19efa44cbfc2b9cf6ca61482725eb35bbc5e257e093ebf4130db6dfe15d604ff4b79efd8e1e8e99b25fa7d0a6197c9f9826358d4d65c3c"
 }

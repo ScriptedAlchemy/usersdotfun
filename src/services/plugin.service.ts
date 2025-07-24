@@ -51,15 +51,9 @@ const loadModuleInternal = (
 
     const modulePath = `${remoteName}/plugin`;
 
-    console.log("Remotes: ", mf.options.remotes);
-
     return yield* Effect.tryPromise({
       try: async () => {
-        console.log(`Loading remote: ${modulePath}`);
-
         const container: any = mf.loadRemote(modulePath).then((container) => {
-          console.log(`Loaded container:`, typeof container, container);
-
           if (!container) {
             throw new Error(`No container returned for ${modulePath}`);
           }
