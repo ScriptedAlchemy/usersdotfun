@@ -1,7 +1,7 @@
-import { init, getInstance } from "@module-federation/enhanced/runtime";
+import { createInstance, getInstance } from "@module-federation/enhanced/runtime";
 import { Context, Effect, Layer } from "effect";
 
-type ModuleFederation = ReturnType<typeof init>;
+type ModuleFederation = ReturnType<typeof createInstance>;
 
 export class ModuleFederationTag extends Context.Tag("ModuleFederation")<
   ModuleFederationTag,
@@ -15,7 +15,7 @@ const createModuleFederationInstance = Effect.cached(
       let instance = getInstance();
       
       if (!instance) {
-        instance = init({
+        instance = createInstance({
           name: "host",
           remotes: [],
         });
