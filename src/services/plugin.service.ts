@@ -12,13 +12,11 @@ const retrySchedule = Schedule.exponential(Duration.millis(100)).pipe(
   Schedule.compose(Schedule.recurs(2))
 );
 
-// Internal function to load a module via Module Federation
 const loadModuleInternal = (
   pluginName: string,
   url: string
 ): Effect.Effect<new () => PipelinePlugin, PluginError, ModuleFederationTag> =>
   Effect.gen(function* () {
-    // Verify the remote entry is accessible
     const response = yield* Effect.tryPromise({
       try: () => fetch(url, { method: "HEAD" }),
       catch: (error) => new PluginError({
@@ -31,49 +29,64 @@ const loadModuleInternal = (
 
     if (!response.ok) {
       return yield* Effect.fail(new PluginError({
-        message: `Plugin ${pluginName} not found at ${url} (status: ${response.status})`,
+        message: `Plugin ${pluginName} not found at ${url}`,
         pluginName,
         operation: "load",
       }));
     }
 
     const mf = yield* ModuleFederationTag;
-    const remoteName = pluginName.toLowerCase().replace(/[@\/]/g, "_");
+    const remoteName = pluginName.toLowerCase().replace("@", "").replace("/", "_");
 
-    // Register remote
     yield* Effect.try({
       try: () => mf.registerRemotes([{ name: remoteName, entry: url }]),
       catch: (error): PluginError =>
         new PluginError({
           message: `Failed to register ${pluginName}`,
           pluginName,
-          operation: "load",
-          cause: error,
+          operation: "register",
+          cause: error instanceof Error ? error : new Error(String(error)),
         }),
     });
 
-    // Load module
-    const container: any = yield* Effect.try({
-      try: () => mf.loadRemote(`${remoteName}/plugin`),
-      catch: (error): PluginError =>
-        new PluginError({
-          message: `Failed to load ${pluginName}: ${remoteName}/plugin`,
+    const modulePath = `${remoteName}/plugin`;
+
+    console.log("Remotes: ", mf.options.remotes);
+
+    return yield* Effect.tryPromise({
+      try: async () => {
+        console.log(`Loading remote: ${modulePath}`);
+
+        const container: any = mf.loadRemote(modulePath).then((container) => {
+          console.log(`Loaded container:`, typeof container, container);
+
+          if (!container) {
+            throw new Error(`No container returned for ${modulePath}`);
+          }
+
+          const Constructor = typeof container === "function" ? container : container?.default;
+
+          if (!Constructor || typeof Constructor !== "function") {
+            throw new Error(`No valid constructor found. Container type: ${typeof container}, has default: ${!!container?.default}`);
+          }
+
+          return Constructor;
+        });
+        return container;
+      },
+      catch: (error): PluginError => {
+        if (error instanceof PluginError) {
+          return error;
+        }
+
+        return new PluginError({
+          message: `Failed to load ${pluginName} from ${modulePath}: ${error instanceof Error ? error.message : String(error)}`,
           pluginName,
           operation: "load",
-          cause: error,
-        }),
+          cause: error instanceof Error ? error : new Error(String(error)),
+        });
+      },
     });
-
-    const Constructor = typeof container === "function" ? container : container?.default;
-    if (!Constructor) {
-      return yield* Effect.fail(new PluginError({
-        message: `Invalid plugin format: ${pluginName}`,
-        pluginName,
-        operation: "load"
-      }));
-    }
-
-    return Constructor;
   });
 
 // Create the cache with integrated loading logic

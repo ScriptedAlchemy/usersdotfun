@@ -10,7 +10,7 @@ export class ValidationError extends Data.TaggedError("ValidationError")<{
 export class PluginError extends Data.TaggedError("PluginError")<{
   readonly message: string;
   readonly pluginName: string;
-  readonly operation: "load" | "initialize" | "execute" | "validate";
+  readonly operation: "load" | "initialize" | "execute" | "validate" | "register";
   readonly cause?: unknown;
   readonly retryable?: boolean;
   readonly context?: Record<string, unknown>;
