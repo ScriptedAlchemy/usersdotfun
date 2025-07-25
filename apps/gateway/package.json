@@ -1,0 +1,14 @@
+{
+  "name": "gateway",
+  "scripts": {
+    "dev": "bun run --hot src/index.ts"
+  },
+  "dependencies": {
+    "@bull-board/api": "^6.12.0",
+    "@bull-board/hono": "^6.12.0",
+    "hono": "^4.8.8"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}

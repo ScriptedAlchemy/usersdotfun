@@ -1,7 +1,7 @@
 {
   "name": "job-scheduler",
   "scripts": {
-    "dev": "bun run --hot src/index.ts"
+    "dev": "bun run --hot src/main.ts"
   },
   "dependencies": {
     "@usersdotfun/pipeline-runner": "workspace:*",
