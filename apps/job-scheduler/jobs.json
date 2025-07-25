@@ -1,24 +1,22 @@
 {
   "jobs": [
     {
-      "id": "web3-community-tweets",
-      "name": "Fetch recent tweets about the Web3 community",
-      "schedule": "0 * * * *",
+      "id": "open crosspost",
+      "name": "Fetch features from open crosspost",
+      "schedule": "* * * * *",
       "source": {
         "plugin": "@curatedotfun/masa-source",
         "config": {
           "secrets": {
-            "apiKey": "MASA_API_KEY"
+            "apiKey": "0afdwAl4m5hj1q9AGUQnHMRPQuuYVKD3T4RVlkgGe6KNe46y"
           }
         },
         "search": {
           "type": "twitter-scraper",
-          "query": "web3 community",
           "language": "en",
           "platformArgs": {
-            "hashtags": ["#NEARProtocol", "#opensource"],
-            "fromAccounts": ["neardevgov", "pagodaplatform"],
-            "minLikes": 10
+            "hashtags": ["feature"],
+            "fromAccounts": ["open_crosspost"]
           }
         }
       },
