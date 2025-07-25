@@ -42,6 +42,9 @@
     "@types/mustache": "^4.2.5",
     "typescript": "^5.0.0"
   },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
   "dependencies": {
     "@usersdotfun/core-sdk": "workspace:*",
     "mustache": "^4.2.0",

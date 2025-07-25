@@ -43,6 +43,9 @@
     "@usersdotfun/core-sdk": "workspace:*",
     "zod": "^4.0.8"
   },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
   "devDependencies": {
     "@rspack/cli": "latest",
     "@types/node": "^20.0.0",

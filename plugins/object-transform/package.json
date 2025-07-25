@@ -45,6 +45,9 @@
     "typescript": "^5.0.0",
     "vitest": "latest"
   },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
   "dependencies": {
     "@usersdotfun/core-sdk": "workspace:*",
     "date-fns": "^4.1.0",

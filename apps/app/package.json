@@ -1,5 +1,5 @@
 {
-  "name": "tanstack-start-example-basic",
+  "name": "@usersdotfun/app",
   "private": true,
   "sideEffects": false,
   "type": "module",
@@ -13,6 +13,7 @@
     "@tanstack/react-router": "^1.129.8",
     "@tanstack/react-router-devtools": "^1.129.8",
     "@tanstack/react-start": "^1.129.8",
+    "better-auth": "^1.3.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.525.0",
