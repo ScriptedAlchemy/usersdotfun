@@ -67,13 +67,28 @@ export type Output<T extends z.ZodTypeAny> = z.infer<
 >;
 
 // Plugin interface
+export type PluginState = Record<string, any>;
+
+/**
+ * A custom error that plugins can throw to signal that their state has expired
+ * and needs to be re-initialized. The runner will catch this error, evict the
+ * old state from the cache, and re-run the initialization process.
+ */
+export class StateExpiredError extends Error {
+  constructor(message = "Plugin state has expired") {
+    super(message);
+    this.name = "StateExpiredError";
+  }
+}
+
 export interface Plugin<
   InputType extends Input<z.ZodAny>,
   OutputType extends Output<z.ZodAny>,
   ConfigType extends Config,
+  TState extends PluginState = PluginState,
 > {
   readonly type: 'transformer' | 'source' | 'destination';
-  initialize(config?: ConfigType): Promise<void>;
-  execute(input: InputType): Promise<OutputType>;
+  initialize(config?: ConfigType): Promise<TState | void>;
+  execute(input: InputType, state?: TState): Promise<OutputType>;
   shutdown(): Promise<void>;
 }
