@@ -1,4 +1,4 @@
-import { schema, type DB } from "@curatedotfun/shared-db";
+import { schema, type DB } from "@usersdotfun/shared-db";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 
