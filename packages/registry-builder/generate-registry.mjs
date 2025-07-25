@@ -5,7 +5,8 @@ import { z } from "zod";
 // This list will be the single source of truth for which plugins are active.
 const pluginsToRegister = {
     'simple-transform': "SimpleTransformer",
-    'object-transform': "ObjectTransformer"
+    'object-transform': "ObjectTransformer",
+    'masa-source': "MasaSource"
 };
 
 const registry = {};

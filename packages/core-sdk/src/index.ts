@@ -13,7 +13,7 @@ export function createConfigSchema(): z.ZodObject<{
   secrets: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
 }>;
 export function createConfigSchema<V extends z.ZodTypeAny>(
-  variablesSchema: V
+  variablesSchema?: V
 ): z.ZodObject<{
   variables: z.ZodOptional<V>;
   secrets: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
@@ -22,8 +22,8 @@ export function createConfigSchema<
   V extends z.ZodTypeAny,
   S extends z.ZodTypeAny
 >(
-  variablesSchema: V,
-  secretsSchema: S
+  variablesSchema?: V,
+  secretsSchema?: S
 ): z.ZodObject<{
   variables: z.ZodOptional<V>;
   secrets: z.ZodOptional<S>;

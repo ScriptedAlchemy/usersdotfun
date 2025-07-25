@@ -1,0 +1,37 @@
+{
+  "jobs": [
+    {
+      "id": "web3-community-tweets",
+      "name": "Fetch recent tweets about the Web3 community",
+      "schedule": "0 * * * *",
+      "source": {
+        "plugin": "@curatedotfun/masa-source",
+        "config": {
+          "secrets": {
+            "apiKey": "MASA_API_KEY"
+          }
+        },
+        "search": {
+          "type": "twitter-scraper",
+          "query": "web3 community",
+          "language": "en",
+          "platformArgs": {
+            "hashtags": ["#NEARProtocol", "#opensource"],
+            "fromAccounts": ["neardevgov", "pagodaplatform"],
+            "minLikes": 10
+          }
+        }
+      },
+      "pipeline": {
+        "id": "standard-tweet-processing",
+        "steps": [
+          {
+            "pluginName": "@curatedotfun/simple-transform",
+            "config": { "variables": { "template": "New Tweet from {{Metadata.author}}: {{Content}}" } },
+            "stepId": "format-tweet"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "name": "job-scheduler",
+  "scripts": {
+    "dev": "bun run --hot src/index.ts"
+  },
+  "dependencies": {
+    "@usersdotfun/pipeline-runner": "workspace:*",
+    "effect": "^3.17.1",
+    "hono": "^4.8.5",
+    "node-cron": "^4.2.1"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/node-cron": "^3.0.11"
+  }
+}
