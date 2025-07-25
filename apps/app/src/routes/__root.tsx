@@ -80,12 +80,12 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             Home
           </Link>{' '}
           <Link
-            to="/posts"
+            to="/projects"
             activeProps={{
               className: 'font-bold',
             }}
           >
-            Posts
+            Projects
           </Link>{' '}
           <Link
             to="/users"

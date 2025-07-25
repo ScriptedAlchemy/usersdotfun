@@ -1,16 +1,16 @@
 import { notFound } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
 
-export type PostType = {
+export type ProjectType = {
   id: string
   title: string
   body: string
 }
 
-export const fetchPost = createServerFn()
+export const fetchProject = createServerFn()
   .validator((d: string) => d)
   .handler(async ({ data }) => {
-    console.info(`Fetching post with id ${data}...`)
+    console.info(`Fetching project with id ${data}...`)
     const res = await fetch(
       `https://jsonplaceholder.typicode.com/posts/${data}`,
     )
@@ -19,22 +19,22 @@ export const fetchPost = createServerFn()
         throw notFound()
       }
 
-      throw new Error('Failed to fetch post')
+      throw new Error('Failed to fetch project')
     }
 
-    const post = (await res.json()) as PostType
+    const project = (await res.json()) as ProjectType
 
-    return post
+    return project
   })
 
-export const fetchPosts = createServerFn().handler(async () => {
-  console.info('Fetching posts...')
+export const fetchProjects = createServerFn().handler(async () => {
+  console.info('Fetching projects...')
   const res = await fetch('https://jsonplaceholder.typicode.com/posts')
   if (!res.ok) {
-    throw new Error('Failed to fetch posts')
+    throw new Error('Failed to fetch projects')
   }
 
-  const posts = (await res.json()) as Array<PostType>
+  const projects = (await res.json()) as Array<ProjectType>
 
-  return posts.slice(0, 10)
+  return projects.slice(0, 10)
 })
