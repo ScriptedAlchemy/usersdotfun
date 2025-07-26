@@ -1,6 +1,5 @@
 import { relations } from "drizzle-orm";
 import { jsonb, pgTable, timestamp, varchar } from "drizzle-orm/pg-core";
-import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { pipelineSteps } from "./pipeline-steps";
 
@@ -24,18 +23,31 @@ export const jobsRelations = relations(jobs, ({ many }) => ({
 export type Job = typeof jobs.$inferSelect;
 export type NewJob = typeof jobs.$inferInsert;
 
-export const selectJobSchema = createSelectSchema(jobs);
-
-export const insertJobSchema = createInsertSchema(jobs, {
-  id: z.string().uuid("Invalid UUID format for job ID"),
-  sourceConfig: z.any(),
-  sourceSearch: z.any(),
-  pipeline: z.any(),
+export const selectJobSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  schedule: z.string(),
+  status: z.string(),
+  sourcePlugin: z.string(),
+  sourceConfig: z.any().nullable(),
+  sourceSearch: z.any().nullable(),
+  pipeline: z.any().nullable(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
 });
 
-export const updateJobSchema = insertJobSchema
-  .partial()
-  .required({ id: true });
+export const insertJobSchema = z.object({
+  id: z.string().uuid("Invalid UUID format for job ID"),
+  name: z.string().min(1),
+  schedule: z.string().min(1),
+  status: z.string().min(1),
+  sourcePlugin: z.string().min(1),
+  sourceConfig: z.any().optional().nullable(),
+  sourceSearch: z.any().optional().nullable(),
+  pipeline: z.any().optional().nullable(),
+});
+
+export const updateJobSchema = insertJobSchema.partial().required({ id: true });
 
 export type SelectJob = z.infer<typeof selectJobSchema>;
 export type InsertJobData = z.infer<typeof insertJobSchema>;

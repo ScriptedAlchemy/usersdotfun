@@ -19,10 +19,10 @@ export {
   type UpdatePipelineStepData,
 } from "./pipeline-steps";
 
-import { jobsRelations } from "./jobs";
-import { pipelineStepsRelations } from "./pipeline-steps";
+import * as jobs from "./jobs";
+import * as pipelineSteps from "./pipeline-steps";
 
-export const relations = {
-  ...jobsRelations,
-  ...pipelineStepsRelations,
-};
+export const schema = { ...jobs, ...pipelineSteps };
+
+export type DB = typeof schema;
+

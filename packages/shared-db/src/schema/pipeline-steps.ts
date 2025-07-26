@@ -1,6 +1,5 @@
 import { relations } from "drizzle-orm";
 import { json, pgTable, timestamp, varchar } from "drizzle-orm/pg-core";
-import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { jobs } from "./jobs";
 
@@ -30,23 +29,32 @@ export const pipelineStepsRelations = relations(pipelineSteps, ({ one }) => ({
 export type PipelineStep = typeof pipelineSteps.$inferSelect;
 export type NewPipelineStep = typeof pipelineSteps.$inferInsert;
 
-export const selectPipelineStepSchema = createSelectSchema(pipelineSteps, {
+export const selectPipelineStepSchema = z.object({
+  id: z.uuid(),
+  jobId: z.uuid(),
+  stepId: z.string().min(1),
+  pluginName: z.string().min(1),
+  config: z.any().nullable(),
+  input: z.any().nullable(),
+  output: z.any().nullable(),
+  error: z.any().nullable(),
+  status: z.string().min(1),
   startedAt: z.date().nullable(),
   completedAt: z.date().nullable(),
-  config: z.any().optional().nullable(),
-  input: z.any().optional().nullable(),
-  output: z.any().optional().nullable(),
-  error: z.any().optional().nullable(),
 });
 
-export const insertPipelineStepSchema = createInsertSchema(pipelineSteps, {
-  id: z.string().uuid("Invalid UUID format for step ID"),
-  startedAt: z.date().optional().nullable(),
-  completedAt: z.date().optional().nullable(),
+export const insertPipelineStepSchema = z.object({
+  id: z.uuid("Invalid UUID format for step ID"),
+  jobId: z.uuid(),
+  stepId: z.string().min(1),
+  pluginName: z.string().min(1),
   config: z.any().optional().nullable(),
   input: z.any().optional().nullable(),
   output: z.any().optional().nullable(),
   error: z.any().optional().nullable(),
+  status: z.string().min(1),
+  startedAt: z.date().optional().nullable(),
+  completedAt: z.date().optional().nullable(),
 });
 
 export const updatePipelineStepSchema = insertPipelineStepSchema
