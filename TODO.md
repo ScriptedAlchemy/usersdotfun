@@ -1,0 +1,4 @@
+- tanstack start app with near-sign-verify
+- login, connect to twitter, create workspace -> then navigate to it authenticated
+- query the twitter and transform to create project and tweets
+- simple just display the feed of items before they get sent to whatever -- this can disappear, be totally cached on users.fun side, doesn't actually need to persist. Maybe the queue

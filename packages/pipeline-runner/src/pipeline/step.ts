@@ -1,3 +1,4 @@
+import { JobService } from "@usersdotfun/shared-db";
 import { Effect } from "effect";
 import { PluginError, type StepError } from "./errors";
 import type { PipelineStep } from "./interfaces";
@@ -11,9 +12,23 @@ const hydrateSecrets = (config: any) => {
 
 export const executeStep = (
   step: PipelineStep,
-  input: Record<string, unknown>
-): Effect.Effect<Record<string, unknown>, StepError, PluginLoaderTag> =>
+  input: Record<string, unknown>,
+  jobId: string,
+): Effect.Effect<Record<string, unknown>, StepError, PluginLoaderTag | JobService> =>
   Effect.gen(function* () {
+    const jobService = yield* JobService;
+    const stepId = crypto.randomUUID();
+    yield* jobService.createPipelineStep({
+      id: stepId,
+      jobId,
+      stepId: step.stepId,
+      pluginName: step.pluginName,
+      config: step.config,
+      status: "processing",
+      startedAt: new Date(),
+      input,
+    });
+
     const loadPlugin = yield* PluginLoaderTag;
     const pluginMeta = yield* getPlugin(step.pluginName);
 
@@ -36,16 +51,29 @@ export const executeStep = (
 
     const output = yield* Effect.tryPromise({
       try: () => plugin.execute(validatedInput),
-      catch: (error) =>
-        new PluginError({
-          pluginName: step.pluginName,
-          cause: error,
-          operation: "execute",
-          message: `Failed to execute plugin ${step.pluginName}`,
-        }),
-    });
+      catch: (error) => new PluginError({
+        pluginName: step.pluginName,
+        cause: error,
+        operation: "execute",
+        message: `Failed to execute plugin ${step.pluginName}`,
+      })
+    }).pipe(
+      Effect.mapError((error) => {
+        jobService.updatePipelineStep(stepId, {
+          status: "failed",
+          error,
+          completedAt: new Date(),
+        });
+        return error;
+      })
+    );
 
     if (output === undefined || output === null) {
+      jobService.updatePipelineStep(stepId, {
+        status: "failed",
+        error: { message: `Plugin returned ${output === null ? 'null' : 'undefined'} output` },
+        completedAt: new Date(),
+      });
       return yield* Effect.fail(new PluginError({
         pluginName: step.pluginName,
         operation: "execute",
@@ -61,15 +89,27 @@ export const executeStep = (
     );
 
     if (!validatedOutput.success) {
-      return yield* Effect.fail(new PluginError({
+      const error = new PluginError({
         pluginName: step.pluginName,
         operation: "execute",
         message: `Plugin ${step.pluginName} execution failed`,
         context: {
           errors: validatedOutput.errors,
         }
-      }));
+      });
+      jobService.updatePipelineStep(stepId, {
+        status: "failed",
+        error,
+        completedAt: new Date(),
+      });
+      return yield* Effect.fail(error);
     }
+
+    yield* jobService.updatePipelineStep(stepId, {
+      status: "completed",
+      output: validatedOutput,
+      completedAt: new Date(),
+    });
 
     return validatedOutput;
   }).pipe(

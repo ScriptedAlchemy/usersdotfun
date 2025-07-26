@@ -1,4 +1,5 @@
 import { getPlugin, PluginError, PluginLoaderLive, PluginLoaderTag, SchemaValidator } from '@usersdotfun/pipeline-runner';
+import { JobService } from '@usersdotfun/shared-db';
 import { type Job } from 'bullmq';
 import { Effect, Layer, pipe } from 'effect';
 import { getJobDefinitionById, type JobDefinition } from '../jobs';
@@ -97,6 +98,8 @@ const processSourceJob = (job: Job<SourceJobData>) =>
     ),
     Effect.flatMap(({ jobId, jobDefinition, stateService, queueService }) =>
       Effect.gen(function* () {
+        const jobService = yield* JobService;
+        yield* jobService.updateJob(jobId, { status: 'processing' });
         const lastProcessedState = yield* stateService.get(jobId);
         const sourceResult = yield* runSourcePlugin(jobDefinition, lastProcessedState);
 
@@ -116,14 +119,20 @@ const processSourceJob = (job: Job<SourceJobData>) =>
         } else {
           yield* Effect.log(`Polling complete for ${jobId}. Clearing state.`);
           yield* stateService.delete(jobId);
+          yield* jobService.updateJob(jobId, { status: 'completed' });
         }
       })
     ),
     Effect.map(() => { }), // Convert to void
     Effect.catchAll((error) =>
-      pipe(
-        Effect.logError("Source job failed", error),
-        Effect.map(() => { })
+      Effect.gen(function* () {
+        const jobService = yield* JobService;
+        const jobData = yield* Effect.succeed(job.data.jobId);
+        yield* jobService.updateJob(jobData, { status: 'failed' });
+        yield* Effect.logError("Source job failed", error)
+      }).pipe(
+        Effect.provide(JobService),
+        Effect.map(() => {})
       )
     )
   );

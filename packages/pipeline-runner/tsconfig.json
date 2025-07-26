@@ -28,5 +28,5 @@
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false
   },
-  "references": [{ "path": "../core-sdk" }]
+  "references": [{ "path": "../core-sdk" }, {"path": "../shared-db"}]
 }
