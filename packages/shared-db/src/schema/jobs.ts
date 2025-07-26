@@ -24,7 +24,7 @@ export type Job = typeof jobs.$inferSelect;
 export type NewJob = typeof jobs.$inferInsert;
 
 export const selectJobSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   name: z.string(),
   schedule: z.string(),
   status: z.string(),
@@ -37,7 +37,7 @@ export const selectJobSchema = z.object({
 });
 
 export const insertJobSchema = z.object({
-  id: z.string().uuid("Invalid UUID format for job ID"),
+  id: z.uuid("Invalid UUID format for job ID"),
   name: z.string().min(1),
   schedule: z.string().min(1),
   status: z.string().min(1),
@@ -47,7 +47,7 @@ export const insertJobSchema = z.object({
   pipeline: z.any().optional().nullable(),
 });
 
-export const updateJobSchema = insertJobSchema.partial().required({ id: true });
+export const updateJobSchema = insertJobSchema.omit({ id: true }).partial();
 
 export type SelectJob = z.infer<typeof selectJobSchema>;
 export type InsertJobData = z.infer<typeof insertJobSchema>;

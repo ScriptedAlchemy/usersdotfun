@@ -1,5 +1,5 @@
 import { PluginLoaderLive } from '@usersdotfun/pipeline-runner';
-import { JobService, JobServiceLive } from '@usersdotfun/shared-db';
+import { DatabaseLive, JobService, JobServiceLive } from '@usersdotfun/shared-db';
 import { Effect, Layer, pipe } from 'effect';
 import { jobs } from './jobs';
 import { AppConfigLive } from './services/config.service';
@@ -7,7 +7,6 @@ import { QueueService, QueueServiceLive } from './services/queue.service';
 import { StateServiceLive } from './services/state.service';
 import { createPipelineWorker } from './workers/pipeline.worker';
 import { createSourceWorker } from './workers/source.worker';
-import { DatabaseLive } from '~/db';
 
 const AppLive = Layer.mergeAll(
   QueueServiceLive,
@@ -55,7 +54,8 @@ const program = Effect.gen(function* () {
 
 const runnable = pipe(
   program,
-  Effect.provide(AppLive)
+  Effect.provide(AppLive),
+  Effect.scoped
 );
 
 Effect.runPromise(runnable).catch(console.error);

@@ -123,15 +123,18 @@
       "name": "@usersdotfun/shared-db",
       "version": "0.1.0",
       "dependencies": {
+        "@effect/sql": "^0.44.0",
+        "@effect/sql-drizzle": "^0.43.0",
+        "@effect/sql-pg": "^0.45.0",
         "async-retry": "^1.3.3",
         "drizzle-orm": "^0.44.3",
         "drizzle-zod": "^0.8.2",
+        "effect": "^3.17.2",
         "postgres": "^3.4.7",
         "uuid": "^11.1.0",
         "zod": "^4.0.10",
       },
       "devDependencies": {
-        "@types/async-retry": "^1.4.9",
         "dotenv": "^16.5.0",
         "drizzle-kit": "^0.31.2",
         "eslint": "^9.29.0",
@@ -320,6 +323,10 @@
     "@effect/rpc": ["@effect/rpc@0.68.0", "", { "peerDependencies": { "@effect/platform": "^0.90.0", "effect": "^3.17.1" } }, "sha512-1fFLE5MgSpu+kTy+A2SrPVNTnAIPWlLIlSeslIE9R22EvR1eCkskWxcBDvKNyfqCefXNhSRY5UafG3XpTYumaw=="],
 
     "@effect/sql": ["@effect/sql@0.44.0", "", { "dependencies": { "@opentelemetry/semantic-conventions": "^1.33.0", "uuid": "^11.0.3" }, "peerDependencies": { "@effect/experimental": "^0.54.0", "@effect/platform": "^0.90.0", "effect": "^3.17.0" } }, "sha512-HxVEk9ufZZnJ2AuqUlgirjlSDYQ49QDM6o7MkcFQtp4UKrCmDgTshNre11rACOiMZH3ywH6cWViJ1eLwf10D2A=="],
+
+    "@effect/sql-drizzle": ["@effect/sql-drizzle@0.43.0", "", { "peerDependencies": { "@effect/sql": "^0.44.0", "drizzle-orm": ">=0.43.1 <0.50", "effect": "^3.17.0" } }, "sha512-udfXOY+8RVCXZSqMH0wo3OTbIOc4RpGNq4XA+jv6QAa0NkMHytPYT5CtpqoQesnJKOgAlxU3pyQEvjl69amcNQ=="],
+
+    "@effect/sql-pg": ["@effect/sql-pg@0.45.0", "", { "dependencies": { "@opentelemetry/semantic-conventions": "^1.33.0", "postgres": "^3.4.4" }, "peerDependencies": { "@effect/experimental": "^0.54.0", "@effect/platform": "^0.90.0", "@effect/sql": "^0.44.0", "effect": "^3.17.0" } }, "sha512-zDBY5be4IiPWE0e+wC16QY3RO0mFxNkSRWD8Zb7bATlLICkZzgBTZjRRbpp9UUpSiHD/5gWM9pzTwB33RT78fQ=="],
 
     "@effect/workflow": ["@effect/workflow@0.8.1", "", { "peerDependencies": { "@effect/platform": "^0.90.0", "@effect/rpc": "^0.68.0", "effect": "^3.17.1" } }, "sha512-kZRChyGlhgaPB19st/F0FZmz9Y6aQSLBbbC/oBiXspB4rdxkP10O1Z7nVsCcASQ10hfxjdoR816kxf9LctSTKQ=="],
 
@@ -788,8 +795,6 @@
     "@tanstack/virtual-file-routes": ["@tanstack/virtual-file-routes@1.129.7", "", {}, "sha512-a+MxoAXG+Sq94Jp67OtveKOp2vQq75AWdVI8DRt6w19B0NEqpfm784FTLbVp/qdR1wmxCOmKAvElGSIiBOx5OQ=="],
 
     "@tybys/wasm-util": ["@tybys/wasm-util@0.10.0", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-VyyPYFlOMNylG45GoAe0xDoLwWuowvf92F9kySqzYh8vmYm7D2u4iUJKa1tOUpS70Ku13ASrOkS4ScXFsTaCNQ=="],
-
-    "@types/async-retry": ["@types/async-retry@1.4.9", "", { "dependencies": { "@types/retry": "*" } }, "sha512-s1ciZQJzRh3708X/m3vPExr5KJlzlZJvXsKpbtE2luqNcbROr64qU+3KpJsYHqWMeaxI839OvXf9PrUSw1Xtyg=="],
 
     "@types/babel__code-frame": ["@types/babel__code-frame@7.0.6", "", {}, "sha512-Anitqkl3+KrzcW2k77lRlg/GfLZLWXBuNgbEcIOU6M92yw42vsd3xV/Z/yAHEj8m+KUjL6bWOVOFqX8PFPJ4LA=="],
 

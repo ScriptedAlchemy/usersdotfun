@@ -3,8 +3,8 @@ import * as Zod from "zod";
 import { eq } from "drizzle-orm";
 
 import { schema } from "../schema";
-import { Database } from "../database";
-import { DbError } from "../errors";
+import { Database } from "./db.service";
+import { DbError, ValidationError } from "../errors";
 import {
   type SelectJob,
   type InsertJobData,
@@ -22,11 +22,6 @@ import {
   updatePipelineStepSchema,
 } from "../schema/pipeline-steps";
 
-export class ValidationError extends Data.TaggedError("ValidationError")<{
-  readonly errors: Zod.ZodError;
-  readonly message: string;
-}> {}
-
 export class JobNotFoundError extends Data.TaggedError("JobNotFoundError")<{
   readonly jobId: string;
 }> {}
@@ -38,7 +33,6 @@ export class PipelineStepNotFoundError extends Data.TaggedError(
   readonly jobId?: string;
 }> {}
 
-// Consolidated validation function
 const validateData = <A>(
   zodSchema: Zod.ZodSchema<A>,
   data: unknown
@@ -52,7 +46,6 @@ const validateData = <A>(
       }),
   });
 
-// Fixed helper functions with proper type constraints
 const requireRecord = <T, E>(
   record: T | undefined,
   notFoundError: E
