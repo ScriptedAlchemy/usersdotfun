@@ -1,6 +1,7 @@
 import { PluginLoaderLive } from '@usersdotfun/pipeline-runner';
 import { DatabaseLive, JobService, JobServiceLive } from '@usersdotfun/shared-db';
 import { Effect, Layer, pipe } from 'effect';
+import { runPromise } from "effect-errors";
 import { jobs } from './jobs';
 import { AppConfigLive } from './services/config.service';
 import { QueueService, QueueServiceLive } from './services/queue.service';
@@ -33,6 +34,8 @@ const program = Effect.gen(function* () {
           status: 'scheduled',
           sourcePlugin: job.source.plugin,
           sourceConfig: job.source.config,
+          sourceSearch: job.source.search,
+          pipeline: job.pipeline,
         });
         yield* queueService.addRepeatable(
           'source-jobs',
@@ -58,4 +61,4 @@ const runnable = pipe(
   Effect.scoped
 );
 
-Effect.runPromise(runnable).catch(console.error);
+runPromise(runnable).catch(console.error);

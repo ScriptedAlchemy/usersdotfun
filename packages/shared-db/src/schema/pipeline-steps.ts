@@ -57,9 +57,7 @@ export const insertPipelineStepSchema = z.object({
   completedAt: z.date().optional().nullable(),
 });
 
-export const updatePipelineStepSchema = insertPipelineStepSchema
-  .partial()
-  .required({ id: true });
+export const updatePipelineStepSchema = insertPipelineStepSchema.omit({ id: true }).partial();
 
 export type SelectPipelineStep = z.infer<typeof selectPipelineStepSchema>;
 export type InsertPipelineStepData = z.infer<typeof insertPipelineStepSchema>;
