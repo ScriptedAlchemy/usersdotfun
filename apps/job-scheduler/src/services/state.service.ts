@@ -17,9 +17,9 @@ export interface StateService {
 
 export const StateService = Context.GenericTag<StateService>('StateService');
 
-const RedisTag = Context.GenericTag<Redis>('Redis');
+export const RedisTag = Context.GenericTag<Redis>('Redis');
 
-const RedisLive = Layer.scoped(
+export const RedisLive = Layer.scoped(
   RedisTag,
   Effect.gen(function* () {
     const config = yield* AppConfig;
@@ -30,7 +30,7 @@ const RedisLive = Layer.scoped(
   })
 );
 
-export const StateServiceLive = pipe(
+export const StateServiceLayer =
   Layer.effect(
     StateService,
     Effect.gen(function* () {
@@ -66,7 +66,6 @@ export const StateServiceLive = pipe(
           ),
       });
     })
-  ),
-  Layer.provide(RedisLive),
-  Layer.provide(AppConfigLive)
-);
+  );
+
+  export const StateServiceLive = StateServiceLayer;

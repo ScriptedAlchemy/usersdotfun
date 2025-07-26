@@ -30,7 +30,7 @@ export interface QueueService {
   readonly createWorker: <T extends JobData, E, R>(
     queueName: string,
     processor: (job: Job<T>) => Effect.Effect<void, E, R>
-  ) => Effect.Effect<Worker<T>, Error, R>;
+  ) => Effect.Effect<Worker<T, any, string>, Error, R | Scope.Scope>
 }
 
 export const QueueService = Context.GenericTag<QueueService>('QueueService');

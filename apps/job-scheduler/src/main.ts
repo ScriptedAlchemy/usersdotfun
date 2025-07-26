@@ -1,26 +1,30 @@
 import { PluginLoaderLive } from '@usersdotfun/pipeline-runner';
-import { DatabaseLive, JobService, JobServiceLive } from '@usersdotfun/shared-db';
-import { Effect, Layer, pipe } from 'effect';
+import { Database, DatabaseLive, JobService, JobServiceLive } from '@usersdotfun/shared-db';
+import { Effect, Layer } from 'effect';
 import { runPromise } from "effect-errors";
 import { jobs } from './jobs';
-import { AppConfigLive } from './services/config.service';
+import { AppConfigLive, AppConfig } from './services/config.service';
 import { QueueService, QueueServiceLive } from './services/queue.service';
-import { StateServiceLive } from './services/state.service';
+import { StateServiceLive, RedisLive, RedisTag } from './services/state.service';
 import { createPipelineWorker } from './workers/pipeline.worker';
 import { createSourceWorker } from './workers/source.worker';
 
-const AppLive = Layer.mergeAll(
-  QueueServiceLive,
-  StateServiceLive,
-  PluginLoaderLive,
+const AppLayer = Layer.mergeAll(
   AppConfigLive,
+  DatabaseLive,
   JobServiceLive,
-  DatabaseLive
+  QueueServiceLive,
+  RedisLive,
+  StateServiceLive,
+  PluginLoaderLive
 );
 
 const program = Effect.gen(function* () {
   const queueService = yield* QueueService;
+  const database = yield* Database;
   const jobService = yield* JobService;
+  const appConfig = yield* AppConfig;
+  const redis = yield* RedisTag;
 
   yield* Effect.log('Scheduling jobs...');
   yield* Effect.forEach(
@@ -55,10 +59,7 @@ const program = Effect.gen(function* () {
   yield* Effect.never;
 });
 
-const runnable = pipe(
-  program,
-  Effect.provide(AppLive),
-  Effect.scoped
-);
+const runnable = Effect.provide(program, AppLayer).pipe(Effect.scoped);
 
 runPromise(runnable).catch(console.error);
+
