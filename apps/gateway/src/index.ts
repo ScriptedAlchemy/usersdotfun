@@ -1,14 +1,9 @@
-import { Hono } from 'hono';
-import { bullRouter } from './routes/bull';
-import { jobsRouter } from './routes/jobs';
+import { Hono } from 'hono'
+import { jobsRouter } from './routes/jobs'
 
-const app = new Hono();
+const app = new Hono()
 
-app.get('/', (c) => {
-  return c.text('Hello Hono!');
-});
+app.get('/', (c) => c.text('Jobs API'))
+app.route('/api/jobs', jobsRouter)
 
-app.route('/bull', bullRouter);
-app.route('/api/jobs', jobsRouter);
-
-export default app;
+export default app

@@ -1,37 +1,60 @@
-import { Hono } from 'hono';
-import { JobService, JobServiceLive } from '@usersdotfun/shared-db';
-import { Effect, Layer } from 'effect';
-import { DatabaseLive } from '~/db';
+// src/routes/jobs.ts - Clean routes with no Effect
+import { Hono } from 'hono'
+import { getJobAdapter } from '../services/job.service'
 
-const JobsLive = Layer.provide(JobServiceLive, DatabaseLive);
-
-const jobsRouter = new Hono()
+export const jobsRouter = new Hono()
   .get('/', async (c) => {
-    const jobService = await Layer.run(JobsLive);
-    const jobs = await Effect.runPromise(jobService.getJobs());
-    return c.json(jobs);
+    try {
+      const jobAdapter = await getJobAdapter()
+      const jobs = await jobAdapter.getJobs()
+      return c.json(jobs)
+    } catch (error) {
+      return c.json({ error: String(error) }, 500)
+    }
   })
+  
   .get('/:id', async (c) => {
-    const jobService = await Layer.run(JobsLive);
-    const job = await Effect.runPromise(jobService.getJobById(c.req.param('id')));
-    return c.json(job);
+    try {
+      const jobAdapter = await getJobAdapter()
+      const job = await jobAdapter.getJobById(c.req.param('id'))
+      return c.json(job)
+    } catch (error: any) {
+      const status = error.status || 500
+      return c.json({ error: error.message }, status)
+    }
   })
+  
   .post('/', async (c) => {
-    const jobService = await Layer.run(JobsLive);
-    const body = await c.req.json();
-    const newJob = await Effect.runPromise(jobService.createJob(body));
-    return c.json(newJob, 201);
+    try {
+      const jobAdapter = await getJobAdapter()
+      const body = await c.req.json()
+      const job = await jobAdapter.createJob(body)
+      return c.json(job, 201)
+    } catch (error: any) {
+      const status = error.status || 500
+      return c.json({ error: error.message }, status)
+    }
   })
+  
   .put('/:id', async (c) => {
-    const jobService = await Layer.run(JobsLive);
-    const body = await c.req.json();
-    const updatedJob = await Effect.runPromise(jobService.updateJob(c.req.param('id'), body));
-    return c.json(updatedJob);
+    try {
+      const jobAdapter = await getJobAdapter()
+      const body = await c.req.json()
+      const job = await jobAdapter.updateJob(c.req.param('id'), body)
+      return c.json(job)
+    } catch (error: any) {
+      const status = error.status || 500
+      return c.json({ error: error.message }, status)
+    }
   })
+  
   .delete('/:id', async (c) => {
-    const jobService = await Layer.run(JobsLive);
-    await Effect.runPromise(jobService.deleteJob(c.req.param('id')));
-    return c.body(null, 204);
-  });
-
-export { jobsRouter };
+    try {
+      const jobAdapter = await getJobAdapter()
+      await jobAdapter.deleteJob(c.req.param('id'))
+      return c.body(null, 204)
+    } catch (error: any) {
+      const status = error.status || 500
+      return c.json({ error: error.message }, status)
+    }
+  })
