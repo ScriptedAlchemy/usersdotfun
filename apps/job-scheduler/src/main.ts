@@ -1,6 +1,7 @@
+import { BunTerminal } from "@effect/platform-bun";
 import { PluginLoaderLive } from '@usersdotfun/pipeline-runner';
 import { Database, DatabaseLive, JobService, JobServiceLive } from '@usersdotfun/shared-db';
-import { Effect, Layer } from 'effect';
+import { Effect, Layer, Logger, LogLevel } from 'effect';
 import { runPromise } from "effect-errors";
 import { jobs } from './jobs';
 import { AppConfigLive } from './services/config.service';
@@ -32,11 +33,18 @@ const ServicesLayer = Layer.mergeAll(
   Layer.provide(Layer.mergeAll(ConfigLayer, InfrastructureLayer, DatabaseLayer))
 );
 
+const LoggingLayer = Layer.mergeAll(
+  BunTerminal.layer,
+  Logger.pretty,
+  Logger.minimumLogLevel(LogLevel.Info)
+);
+
 const AppLayer = Layer.mergeAll(
   ConfigLayer,
   InfrastructureLayer,
   DatabaseLayer,
-  ServicesLayer
+  ServicesLayer,
+  LoggingLayer
 );
 
 const program = Effect.gen(function* () {
