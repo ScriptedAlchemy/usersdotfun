@@ -3,28 +3,47 @@ import { Database, DatabaseLive, JobService, JobServiceLive } from '@usersdotfun
 import { Effect, Layer } from 'effect';
 import { runPromise } from "effect-errors";
 import { jobs } from './jobs';
-import { AppConfigLive, AppConfig } from './services/config.service';
+import { AppConfigLive } from './services/config.service';
+import { DatabaseConfigLive } from './services/database-config.service';
 import { QueueService, QueueServiceLive } from './services/queue.service';
-import { StateServiceLive, RedisLive, RedisTag } from './services/state.service';
+import { RedisConfigLive } from './services/redis-config.service';
+import { StateService, StateServiceLive } from './services/state.service';
 import { createPipelineWorker } from './workers/pipeline.worker';
 import { createSourceWorker } from './workers/source.worker';
 
-const AppLayer = Layer.mergeAll(
-  AppConfigLive,
-  DatabaseLive,
+// Build layers with proper dependencies
+const ConfigLayer = AppConfigLive;
+
+const InfrastructureLayer = Layer.mergeAll(
+  RedisConfigLive,
+  DatabaseConfigLive
+).pipe(Layer.provide(ConfigLayer));
+
+const DatabaseLayer = DatabaseLive.pipe(
+  Layer.provide(InfrastructureLayer)
+);
+
+const ServicesLayer = Layer.mergeAll(
   JobServiceLive,
   QueueServiceLive,
-  RedisLive,
   StateServiceLive,
   PluginLoaderLive
+).pipe(
+  Layer.provide(Layer.mergeAll(ConfigLayer, InfrastructureLayer, DatabaseLayer))
+);
+
+const AppLayer = Layer.mergeAll(
+  ConfigLayer,
+  InfrastructureLayer,
+  DatabaseLayer,
+  ServicesLayer
 );
 
 const program = Effect.gen(function* () {
   const queueService = yield* QueueService;
-  const database = yield* Database;
+  const { db } = yield* Database;
   const jobService = yield* JobService;
-  const appConfig = yield* AppConfig;
-  const redis = yield* RedisTag;
+  const stateService = yield* StateService;
 
   yield* Effect.log('Scheduling jobs...');
   yield* Effect.forEach(
@@ -41,6 +60,7 @@ const program = Effect.gen(function* () {
           sourceSearch: job.source.search,
           pipeline: job.pipeline,
         });
+
         yield* queueService.addRepeatable(
           'source-jobs',
           'scheduled-source-run',
@@ -48,18 +68,20 @@ const program = Effect.gen(function* () {
           { pattern: job.schedule }
         );
       }),
-    { concurrency: 'unbounded', discard: true }
+    { concurrency: 5, discard: true }
   );
 
   yield* Effect.log('Starting workers...');
-  yield* createSourceWorker;
-  yield* createPipelineWorker;
+  yield* Effect.fork(createSourceWorker);
+  yield* Effect.fork(createPipelineWorker);
 
   yield* Effect.log('Job scheduler and workers are running.');
   yield* Effect.never;
 });
 
-const runnable = Effect.provide(program, AppLayer).pipe(Effect.scoped);
+const runnable = program.pipe(
+  Effect.provide(AppLayer),
+  Effect.scoped
+);
 
 runPromise(runnable).catch(console.error);
-

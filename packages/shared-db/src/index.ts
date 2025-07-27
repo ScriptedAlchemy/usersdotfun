@@ -1,6 +1,6 @@
-export { Database, DatabaseLive, JobService, JobServiceLive } from "./services";
 export { DbError, ValidationError } from "./errors";
+export { Database, DatabaseConfig, DatabaseLive, JobService, JobServiceLive } from "./services";
 export {
   JobNotFoundError,
-  PipelineStepNotFoundError,
+  PipelineStepNotFoundError
 } from "./services/job.service";

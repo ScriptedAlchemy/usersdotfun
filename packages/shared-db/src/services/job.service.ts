@@ -58,53 +58,51 @@ const requireNonEmptyArray = <T, E>(
 ): Effect.Effect<void, E> =>
   records.length > 0 ? Effect.void : Effect.fail(notFoundError);
 
-export class JobService extends Context.Tag("JobService")<
-  JobService,
-  {
-    readonly getJobById: (
-      id: string
-    ) => Effect.Effect<SelectJob, JobNotFoundError | DbError>;
-    readonly getJobs: () => Effect.Effect<Array<SelectJob>, DbError>;
-    readonly createJob: (
-      data: InsertJobData
-    ) => Effect.Effect<SelectJob, ValidationError | DbError>;
-    readonly updateJob: (
-      id: string,
-      data: UpdateJobData
-    ) => Effect.Effect<
-      SelectJob,
-      JobNotFoundError | ValidationError | DbError
-    >;
-    readonly deleteJob: (
-      id: string
-    ) => Effect.Effect<void, JobNotFoundError | DbError>;
+export interface JobService {
+  readonly getJobById: (
+    id: string
+  ) => Effect.Effect<SelectJob, JobNotFoundError | DbError>;
+  readonly getJobs: () => Effect.Effect<Array<SelectJob>, DbError>;
+  readonly createJob: (
+    data: InsertJobData
+  ) => Effect.Effect<SelectJob, ValidationError | DbError>;
+  readonly updateJob: (
+    id: string,
+    data: UpdateJobData
+  ) => Effect.Effect<
+    SelectJob,
+    JobNotFoundError | ValidationError | DbError
+  >;
+  readonly deleteJob: (
+    id: string
+  ) => Effect.Effect<void, JobNotFoundError | DbError>;
+  readonly getStepById: (
+    id: string
+  ) => Effect.Effect<
+    SelectPipelineStep,
+    PipelineStepNotFoundError | DbError
+  >;
+  readonly getStepsForJob: (
+    jobId: string
+  ) => Effect.Effect<Array<SelectPipelineStep>, DbError>;
+  readonly createPipelineStep: (
+    data: InsertPipelineStepData
+  ) => Effect.Effect<SelectPipelineStep, ValidationError | DbError>;
+  readonly updatePipelineStep: (
+    id: string,
+    data: UpdatePipelineStepData
+  ) => Effect.Effect<
+    SelectPipelineStep,
+    PipelineStepNotFoundError | ValidationError | DbError
+  >;
+}
 
-    readonly getStepById: (
-      id: string
-    ) => Effect.Effect<
-      SelectPipelineStep,
-      PipelineStepNotFoundError | DbError
-    >;
-    readonly getStepsForJob: (
-      jobId: string
-    ) => Effect.Effect<Array<SelectPipelineStep>, DbError>;
-    readonly createPipelineStep: (
-      data: InsertPipelineStepData
-    ) => Effect.Effect<SelectPipelineStep, ValidationError | DbError>;
-    readonly updatePipelineStep: (
-      id: string,
-      data: UpdatePipelineStepData
-    ) => Effect.Effect<
-      SelectPipelineStep,
-      PipelineStepNotFoundError | ValidationError | DbError
-    >;
-  }
->() {}
+export const JobService = Context.GenericTag<JobService>("JobService");
 
 export const JobServiceLive = Layer.effect(
   JobService,
   Effect.gen(function* () {
-    const db = yield* Database;
+    const { db } = yield* Database;
 
     const getJobById = (id: string): Effect.Effect<SelectJob, JobNotFoundError | DbError> =>
       Effect.tryPromise({
@@ -354,7 +352,7 @@ export const JobServiceLive = Layer.effect(
         )
       );
 
-    return JobService.of({
+    return {
       getJobById,
       getJobs,
       createJob,
@@ -364,6 +362,6 @@ export const JobServiceLive = Layer.effect(
       getStepsForJob,
       createPipelineStep,
       updatePipelineStep,
-    });
+    };
   })
 );

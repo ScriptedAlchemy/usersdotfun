@@ -1,41 +1,42 @@
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
-import { Effect, Layer } from "effect";
-import { Tag } from "effect/Context";
+import { Context, Effect, Layer } from "effect";
 import { Pool } from "pg";
 import { schema } from "../schema";
 
-export class Database extends Tag("Database")<
-  Database,
-  NodePgDatabase<typeof schema>
->() { }
+export interface DatabaseData {
+  readonly db: NodePgDatabase<typeof schema>;
+}
 
-export const DatabaseLive = Layer.effect(
+export const Database = Context.GenericTag<DatabaseData>("Database");
+
+export interface DatabaseConfigData {
+  readonly connectionString: string;
+}
+
+export const DatabaseConfig = Context.GenericTag<DatabaseConfigData>("DatabaseConfig");
+
+export const DatabaseLive = Layer.scoped(
   Database,
-  Effect.acquireRelease(
-    Effect.sync(() => {
-      const pool = new Pool({
-        connectionString: process.env.DATABASE_URL || "postgresql://user:password@localhost:5432/mydb",
-      });
-      console.log("Database pool created.");
-      return drizzle(pool, { schema });
-    }),
-    (db) =>
-      Effect.promise(() => {
-        const pool = db.$client;
-        if (pool) {
+  Effect.gen(function* () {
+    const config = yield* DatabaseConfig;
+
+    const pool = yield* Effect.acquireRelease(
+      Effect.sync(() => {
+        console.log("Database pool created.");
+        return new Pool({ connectionString: config.connectionString });
+      }),
+      (pool) =>
+        Effect.promise(() => {
           console.log("Database pool closing...");
           return pool.end();
-        }
-        return Promise.resolve();
-      }).pipe(
-        Effect.andThen(() => Effect.log("Database pool closed.")),
-        Effect.catchAllDefect((defect) =>
-          Effect.logError(`Error closing database pool: ${defect}`)
+        }).pipe(
+          Effect.catchAllDefect((error) =>
+            Effect.logError(`Error closing database pool: ${error}`)
+          )
         )
-      )
-  ).pipe(
-    Effect.catchAllDefect((defect) =>
-      Effect.die(`Database connection failed at startup: ${defect}`)
-    )
-  )
+    );
+
+    const db = drizzle(pool, { schema });
+    return { db };
+  })
 );
