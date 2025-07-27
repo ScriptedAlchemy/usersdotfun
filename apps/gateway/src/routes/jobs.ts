@@ -1,4 +1,3 @@
-// src/routes/jobs.ts - Clean routes with no Effect
 import { Hono } from 'hono'
 import { getJobAdapter } from '../services/job.service'
 

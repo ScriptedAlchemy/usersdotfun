@@ -1,4 +1,3 @@
-// src/services/job-adapter.ts
 import { JobNotFoundError, JobService, ValidationError } from '@usersdotfun/shared-db'
 import { Effect, Exit, Runtime, Scope } from 'effect'
 import { AppRuntime } from '../runtime'
