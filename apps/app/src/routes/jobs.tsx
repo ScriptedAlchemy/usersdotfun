@@ -1,6 +1,7 @@
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { z } from 'zod';
 import { useQuery } from '@tanstack/react-query';
-import { getJobs } from '~/api/jobs';
+import { getJobs, getJob } from '~/api/jobs';
 import {
   flexRender,
   getCoreRowModel,
@@ -23,8 +24,20 @@ import {
   TableHeader,
   TableRow,
 } from '~/components/ui/table';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "~/components/ui/sheet";
+
+const jobsSearchSchema = z.object({
+  jobId: z.string().optional(),
+});
 
 export const Route = createFileRoute('/jobs')({
+  validateSearch: jobsSearchSchema,
   component: JobsComponent,
 });
 
@@ -41,25 +54,49 @@ function SkeletonRow({ columnCount }: { columnCount: number }) {
 }
 
 function JobsComponent() {
+  const navigate = useNavigate({ from: '/jobs' });
+  const { jobId } = Route.useSearch();
+  
   const { data: jobs, isLoading, error } = useQuery({
     queryKey: ['jobs'],
     queryFn: getJobs,
   });
+  
+  const { data: selectedJob, isLoading: jobLoading } = useQuery({
+    queryKey: ['job', jobId],
+    queryFn: () => getJob(jobId!),
+    enabled: !!jobId,
+  });
+  
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
+
+  const handleRowClick = (job: Job) => {
+    navigate({
+      search: { jobId: job.id },
+    });
+  };
+
+  const handleCloseSheet = () => {
+    navigate({
+      search: {},
+    });
+  };
 
   const columns: ColumnDef<Job>[] = [
     {
       accessorKey: 'name',
       header: 'Name',
       cell: ({ row }) => (
-        <Link
-          to="/jobs/$jobId"
-          params={{ jobId: row.original.id }}
-          className="text-blue-800 hover:text-blue-600"
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleRowClick(row.original);
+          }}
+          className="text-blue-800 hover:text-blue-600 text-left"
         >
           {row.original.name}
-        </Link>
+        </button>
       ),
     },
     {
@@ -87,7 +124,11 @@ function JobsComponent() {
     },
     {
       id: 'actions',
-      cell: ({ row }) => <JobActions job={row.original} />,
+      cell: ({ row }) => (
+        <div onClick={(e) => e.stopPropagation()}>
+          <JobActions job={row.original} />
+        </div>
+      ),
     },
   ];
 
@@ -103,6 +144,28 @@ function JobsComponent() {
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+  });
+
+  const stepsTable = useReactTable({
+    data: selectedJob?.pipeline?.steps ?? [],
+    columns: [
+      {
+        accessorKey: "stepId",
+        header: "Step ID",
+      },
+      {
+        accessorKey: "pluginName",
+        header: "Plugin",
+      },
+      {
+        accessorKey: "config",
+        header: "Config",
+        cell: ({ getValue }) => (
+          <pre className="text-xs overflow-auto max-w-xs">{JSON.stringify(getValue(), null, 2)}</pre>
+        ),
+      },
+    ],
+    getCoreRowModel: getCoreRowModel(),
   });
 
   return (
@@ -157,7 +220,11 @@ function JobsComponent() {
             </TableRow>
           ) : (
             table.getRowModel().rows.map((row) => (
-              <TableRow key={row.id}>
+              <TableRow 
+                key={row.id}
+                className="cursor-pointer hover:bg-gray-50"
+                onClick={() => handleRowClick(row.original)}
+              >
                 {row.getVisibleCells().map((cell) => (
                   <TableCell key={cell.id}>
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -168,6 +235,78 @@ function JobsComponent() {
           )}
         </TableBody>
       </Table>
+
+      <Sheet open={!!jobId} onOpenChange={(open) => !open && handleCloseSheet()}>
+        <SheetContent side="right" className="sm:max-w-[600px] overflow-y-auto">
+          {jobLoading ? (
+            <div className="flex items-center justify-center h-32">
+              <div className="animate-pulse">Loading job details...</div>
+            </div>
+          ) : selectedJob ? (
+            <>
+              <SheetHeader>
+                <SheetTitle>{selectedJob.name}</SheetTitle>
+                <SheetDescription>
+                  Schedule: {selectedJob.schedule} | Status: {selectedJob.status}
+                </SheetDescription>
+              </SheetHeader>
+              <div className="space-y-4 py-4">
+                <div>
+                  <h5 className="font-semibold mb-2">Source Configuration</h5>
+                  <div className="bg-gray-50 p-3 rounded">
+                    <p className="text-sm"><strong>Plugin:</strong> {selectedJob.sourcePlugin}</p>
+                    <p className="text-sm mt-2"><strong>Config:</strong></p>
+                    <pre className="text-xs mt-1 bg-white p-2 rounded border overflow-auto">
+                      {JSON.stringify(selectedJob.sourceConfig, null, 2)}
+                    </pre>
+                    <p className="text-sm mt-2"><strong>Search:</strong></p>
+                    <pre className="text-xs mt-1 bg-white p-2 rounded border overflow-auto">
+                      {JSON.stringify(selectedJob.sourceSearch, null, 2)}
+                    </pre>
+                  </div>
+                </div>
+                
+                <div>
+                  <h5 className="font-semibold mb-2">Pipeline Steps</h5>
+                  <Table>
+                    <TableHeader>
+                      {stepsTable.getHeaderGroups().map((headerGroup) => (
+                        <TableRow key={headerGroup.id}>
+                          {headerGroup.headers.map((header) => (
+                            <TableHead key={header.id} className="text-xs">
+                              {header.isPlaceholder
+                                ? null
+                                : flexRender(
+                                    header.column.columnDef.header,
+                                    header.getContext()
+                                  )}
+                            </TableHead>
+                          ))}
+                        </TableRow>
+                      ))}
+                    </TableHeader>
+                    <TableBody>
+                      {stepsTable.getRowModel().rows.map((row) => (
+                        <TableRow key={row.id}>
+                          {row.getVisibleCells().map((cell) => (
+                            <TableCell key={cell.id} className="text-xs">
+                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            </>
+          ) : jobId ? (
+            <div className="flex items-center justify-center h-32">
+              <div className="text-red-500">Job not found</div>
+            </div>
+          ) : null}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
