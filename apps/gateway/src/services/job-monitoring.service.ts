@@ -1,7 +1,6 @@
 import { JobService } from '@usersdotfun/shared-db';
+import { QueueStatusService, StateService, type JobStatus, type QueueStatus } from '@usersdotfun/shared-queue';
 import { Context, Effect, Layer, Option } from 'effect';
-import { QueueStatusService, type JobStatus, type QueueStatus } from './queue-status.service';
-import { StateService } from './state.service';
 
 export interface JobRunInfo {
   readonly runId: string;
@@ -11,6 +10,18 @@ export interface JobRunInfo {
   readonly itemsProcessed: number;
   readonly itemsTotal: number;
   readonly state?: unknown;
+}
+
+export interface PipelineStepInfo {
+  readonly runId: string;
+  readonly sourceJobId: string;
+  readonly itemIndex: number;
+  readonly status: string;
+  readonly startedAt: Date;
+  readonly completedAt?: Date;
+  readonly item: unknown;
+  readonly result?: unknown;
+  readonly error?: string;
 }
 
 export interface JobMonitoringData {
@@ -25,7 +36,7 @@ export interface JobMonitoringData {
     readonly pipelineJobs: JobStatus[];
   };
   readonly recentRuns: JobRunInfo[];
-  readonly pipelineSteps: any[];
+  readonly pipelineSteps: PipelineStepInfo[];
 }
 
 export interface JobMonitoringService {
@@ -52,30 +63,100 @@ export const JobMonitoringServiceLive = Layer.effect(
     const stateService = yield* StateService;
     const queueStatusService = yield* QueueStatusService;
 
-    const parseJobRunsHistory = (runIds: string[]): JobRunInfo[] => {
-      return runIds.map(runId => {
-        try {
-          const parts = runId.split(':');
-          const timestamp = parts[2];
-          const status = parts[3];
-          return {
-            runId,
-            status: status || 'unknown',
-            startedAt: timestamp ? new Date(parseInt(timestamp) * 1000) : new Date(),
-            itemsProcessed: 0,
-            itemsTotal: 0,
-          };
-        } catch {
-          return {
-            runId,
-            status: 'unknown',
-            startedAt: new Date(),
-            itemsProcessed: 0,
-            itemsTotal: 0,
-          };
-        }
-      });
-    };
+    const parseJobRunsHistory = (jobId: string, runIds: string[]): Effect.Effect<JobRunInfo[], Error> =>
+      Effect.gen(function* () {
+        const runs = yield* Effect.all(
+          runIds.map(runId =>
+            Effect.gen(function* () {
+              const runData = yield* stateService.getJobRun(jobId, runId);
+              if (Option.isSome(runData)) {
+                const data = runData.value as any;
+                return {
+                  runId,
+                  status: data.status || 'unknown',
+                  startedAt: data.startedAt ? new Date(data.startedAt) : new Date(),
+                  completedAt: data.completedAt ? new Date(data.completedAt) : undefined,
+                  itemsProcessed: data.itemsProcessed || 0,
+                  itemsTotal: data.itemsTotal || 0,
+                  state: data.nextState,
+                };
+              }
+              // Fallback parsing for old format
+              try {
+                const parts = runId.split(':');
+                const timestamp = parts[1];
+                return {
+                  runId,
+                  status: 'unknown',
+                  startedAt: timestamp ? new Date(parseInt(timestamp)) : new Date(),
+                  itemsProcessed: 0,
+                  itemsTotal: 0,
+                };
+              } catch {
+                return {
+                  runId,
+                  status: 'unknown',
+                  startedAt: new Date(),
+                  itemsProcessed: 0,
+                  itemsTotal: 0,
+                };
+              }
+            }).pipe(Effect.catchAll(() => Effect.succeed({
+              runId,
+              status: 'unknown',
+              startedAt: new Date(),
+              itemsProcessed: 0,
+              itemsTotal: 0,
+            })))
+          )
+        );
+        return runs;
+      }).pipe(Effect.catchAll(() => Effect.succeed([])));
+
+    const getPipelineStepsFromRedis = (jobId: string): Effect.Effect<PipelineStepInfo[], Error> =>
+      Effect.gen(function* () {
+        // Get all pipeline item keys for this job
+        const keys = yield* stateService.getKeys(`pipeline-item:*`);
+        const jobKeys = keys.filter((key: string) => {
+          const parts = key.split(':');
+          return parts.length >= 3; // pipeline-item:runId:itemIndex
+        });
+
+        const pipelineItems = yield* Effect.all(
+          jobKeys.map((key: string) =>
+            Effect.gen(function* () {
+              const parts = key.split(':');
+              const runId = parts[1] || '';
+              const itemIndex = parseInt(parts[2] || '0');
+              
+              const itemData = yield* stateService.getPipelineItem(runId, itemIndex);
+              if (Option.isSome(itemData)) {
+                const data = itemData.value as any;
+                // Only include items for this job
+                if (data.sourceJobId === jobId) {
+                  return Option.some({
+                    runId,
+                    sourceJobId: data.sourceJobId,
+                    itemIndex,
+                    status: data.status || 'unknown',
+                    startedAt: data.startedAt ? new Date(data.startedAt) : new Date(),
+                    completedAt: data.completedAt ? new Date(data.completedAt) : undefined,
+                    item: data.item,
+                    result: data.result,
+                    error: data.error,
+                  } as PipelineStepInfo);
+                }
+              }
+              return Option.none();
+            }).pipe(Effect.catchAll(() => Effect.succeed(Option.none())))
+          )
+        );
+
+        return pipelineItems
+          .filter(Option.isSome)
+          .map((item) => (item as Option.Some<PipelineStepInfo>).value)
+          .sort((a, b) => a.startedAt.getTime() - b.startedAt.getTime());
+      }).pipe(Effect.catchAll(() => Effect.succeed([])));
 
     return {
       getJobMonitoringData: (jobId) =>
@@ -87,8 +168,7 @@ export const JobMonitoringServiceLive = Layer.effect(
             pipelineQueueStatus,
             activeSourceJobs,
             activePipelineJobs,
-            recentRunIds,
-            pipelineSteps
+            recentRunIds
           ] = yield* Effect.all([
             jobService.getJobById(jobId),
             stateService.get(jobId),
@@ -97,14 +177,19 @@ export const JobMonitoringServiceLive = Layer.effect(
             queueStatusService.getActiveJobs('source-jobs'),
             queueStatusService.getActiveJobs('pipeline-jobs'),
             stateService.getJobRuns(jobId),
-            jobService.getStepsForJob(jobId),
+          ]);
+
+          const [recentRuns, pipelineSteps] = yield* Effect.all([
+            parseJobRunsHistory(jobId, recentRunIds),
+            getPipelineStepsFromRedis(jobId),
           ]);
 
           const jobActiveSourceJobs = activeSourceJobs.filter(j => 
             j.data?.jobId === jobId
           );
+          // Fix the filter for pipeline jobs - they use sourceJobId, not jobDefinition.id
           const jobActivePipelineJobs = activePipelineJobs.filter(j => 
-            j.data?.jobDefinition?.id === jobId
+            j.data?.sourceJobId === jobId
           );
 
           return {
@@ -118,7 +203,7 @@ export const JobMonitoringServiceLive = Layer.effect(
               sourceJobs: jobActiveSourceJobs,
               pipelineJobs: jobActivePipelineJobs,
             },
-            recentRuns: parseJobRunsHistory(recentRunIds),
+            recentRuns,
             pipelineSteps,
           };
         }),
@@ -164,7 +249,7 @@ export const JobMonitoringServiceLive = Layer.effect(
       getJobRuns: (jobId) =>
         Effect.gen(function* () {
           const runIds = yield* stateService.getJobRuns(jobId);
-          return parseJobRunsHistory(runIds);
+          return yield* parseJobRunsHistory(jobId, runIds);
         }),
 
       getJobRunDetails: (jobId, runId) =>

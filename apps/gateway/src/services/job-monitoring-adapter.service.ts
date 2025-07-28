@@ -1,6 +1,7 @@
-import { Effect, Runtime, Scope, Exit } from 'effect';
+import { Effect } from 'effect';
 import { JobMonitoringService, type JobMonitoringData, type JobRunInfo } from './job-monitoring.service';
-import { HttpError, getJobAdapter } from './job.service';
+import { HttpError } from './job.service';
+import { AppLayer } from '../runtime';
 
 export interface JobMonitoringAdapter {
   getJobMonitoringData(jobId: string): Promise<JobMonitoringData>;
@@ -15,7 +16,6 @@ export interface JobMonitoringAdapter {
     run: JobRunInfo;
     pipelineItems: any[];
   }>;
-  close(): Promise<void>;
 }
 
 const handleEffectError = (error: any): never => {
@@ -30,49 +30,52 @@ const handleEffectError = (error: any): never => {
 };
 
 export class JobMonitoringAdapterImpl implements JobMonitoringAdapter {
-  constructor(
-    private runtime: Runtime.Runtime<any>,
-    private scope: Scope.CloseableScope
-  ) {}
-
   async getJobMonitoringData(jobId: string) {
-    return Runtime.runPromise(this.runtime)(
+    return Effect.runPromise(
       Effect.gen(function* () {
         const jobMonitoringService = yield* JobMonitoringService;
         return yield* jobMonitoringService.getJobMonitoringData(jobId);
-      })
+      }).pipe(
+        Effect.provide(AppLayer),
+        Effect.scoped
+      )
     ).catch(handleEffectError);
   }
 
   async getJobStatus(jobId: string) {
-    return Runtime.runPromise(this.runtime)(
+    return Effect.runPromise(
       Effect.gen(function* () {
         const jobMonitoringService = yield* JobMonitoringService;
         return yield* jobMonitoringService.getJobStatus(jobId);
-      })
+      }).pipe(
+        Effect.provide(AppLayer),
+        Effect.scoped
+      )
     ).catch(handleEffectError);
   }
 
   async getJobRuns(jobId: string) {
-    return Runtime.runPromise(this.runtime)(
+    return Effect.runPromise(
       Effect.gen(function* () {
         const jobMonitoringService = yield* JobMonitoringService;
         return yield* jobMonitoringService.getJobRuns(jobId);
-      })
+      }).pipe(
+        Effect.provide(AppLayer),
+        Effect.scoped
+      )
     ).catch(handleEffectError);
   }
 
   async getJobRunDetails(jobId: string, runId: string) {
-    return Runtime.runPromise(this.runtime)(
+    return Effect.runPromise(
       Effect.gen(function* () {
         const jobMonitoringService = yield* JobMonitoringService;
         return yield* jobMonitoringService.getJobRunDetails(jobId, runId);
-      })
+      }).pipe(
+        Effect.provide(AppLayer),
+        Effect.scoped
+      )
     ).catch(handleEffectError);
-  }
-
-  async close() {
-    await Effect.runPromise(Scope.close(this.scope, Exit.void));
   }
 }
 
@@ -80,13 +83,7 @@ let jobMonitoringAdapter: JobMonitoringAdapter | null = null;
 
 export async function getJobMonitoringAdapter(): Promise<JobMonitoringAdapter> {
   if (!jobMonitoringAdapter) {
-    const jobAdapter = await getJobAdapter();
-    const adapterImpl = jobAdapter as any;
-    
-    jobMonitoringAdapter = new JobMonitoringAdapterImpl(
-      adapterImpl.runtime,
-      adapterImpl.scope
-    );
+    jobMonitoringAdapter = new JobMonitoringAdapterImpl();
   }
   return jobMonitoringAdapter;
 }

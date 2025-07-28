@@ -1,6 +1,6 @@
 import { JobNotFoundError, JobService, ValidationError, DbError } from '@usersdotfun/shared-db'
-import { Cause, Effect, Exit, Runtime, Scope } from 'effect'
-import { AppRuntime } from '../runtime'
+import { Cause, Effect } from 'effect'
+import { AppLayer } from '../runtime'
 
 export class HttpError extends Error {
   constructor(message: string, public status: number) {
@@ -21,22 +21,17 @@ const handleEffectError = (error: any): never => {
     isRuntimeException: Cause.isRuntimeException(error),
     errorType: error?._tag,
     errorData: error?.errors,
-    // Try to extract nested error properties
     nestedError: error?.error,
     errorCause: error?.cause,
     allKeys: Object.keys(error || {})
   })
   
-  // Try multiple ways to extract ValidationError details
   let validationDetails = null;
   
-  // Check if it's a direct ValidationError
   if (error instanceof ValidationError) {
     validationDetails = error.errors?.issues || error.errors;
   }
-  // Check if it's wrapped in Effect error structure
   else if (error?.message?.includes('Validation failed')) {
-    // Try to find the ValidationError in various nested properties
     const nestedError = error?.cause || error?.error || error;
     if (nestedError?.errors?.issues) {
       validationDetails = nestedError.errors.issues;
@@ -69,92 +64,91 @@ const handleEffectError = (error: any): never => {
 export interface JobAdapter {
   getJobs(): Promise<any[]>
   getJobById(id: string): Promise<any>
+  getStepsForJob(jobId: string): Promise<any[]>
   createJob(data: any): Promise<any>
   updateJob(id: string, data: any): Promise<any>
   deleteJob(id: string): Promise<void>
-  close(): Promise<void>
 }
 
 export class JobAdapterImpl implements JobAdapter {
-  constructor(
-    private runtime: Runtime.Runtime<any>,
-    private scope: Scope.CloseableScope
-  ) { }
-
   async getJobs() {
-    return Runtime.runPromise(this.runtime)(
+    return Effect.runPromise(
       Effect.gen(function* () {
-        const jobService = yield* JobService
-        return yield* jobService.getJobs()
-      })
-    )
+        const jobService = yield* JobService;
+        return yield* jobService.getJobs();
+      }).pipe(
+        Effect.provide(AppLayer),
+        Effect.scoped
+      )
+    );
   }
 
   async getJobById(id: string) {
-    return Runtime.runPromise(this.runtime)(
+    return Effect.runPromise(
       Effect.gen(function* () {
-        const jobService = yield* JobService
-        return yield* jobService.getJobById(id)
-      })
-    ).catch(handleEffectError)
+        const jobService = yield* JobService;
+        return yield* jobService.getJobById(id);
+      }).pipe(
+        Effect.provide(AppLayer),
+        Effect.scoped
+      )
+    ).catch(handleEffectError);
+  }
+
+  async getStepsForJob(jobId: string) {
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const jobService = yield* JobService;
+        return yield* jobService.getStepsForJob(jobId);
+      }).pipe(
+        Effect.provide(AppLayer),
+        Effect.scoped
+      )
+    ).catch(handleEffectError);
   }
 
   async createJob(data: any) {
-    return Runtime.runPromise(this.runtime)(
+    return Effect.runPromise(
       Effect.gen(function* () {
-        const jobService = yield* JobService
-        return yield* jobService.createJob(data)
-      })
-    ).catch(handleEffectError)
+        const jobService = yield* JobService;
+        return yield* jobService.createJob(data);
+      }).pipe(
+        Effect.provide(AppLayer),
+        Effect.scoped
+      )
+    ).catch(handleEffectError);
   }
 
   async updateJob(id: string, data: any) {
-    return Runtime.runPromise(this.runtime)(
+    return Effect.runPromise(
       Effect.gen(function* () {
-        const jobService = yield* JobService
-        return yield* jobService.updateJob(id, data)
-      })
-    ).catch(handleEffectError)
+        const jobService = yield* JobService;
+        return yield* jobService.updateJob(id, data);
+      }).pipe(
+        Effect.provide(AppLayer),
+        Effect.scoped
+      )
+    ).catch(handleEffectError);
   }
 
   async deleteJob(id: string) {
-    return Runtime.runPromise(this.runtime)(
+    return Effect.runPromise(
       Effect.gen(function* () {
-        const jobService = yield* JobService
-        return yield* jobService.deleteJob(id)
-      })
-    ).catch(handleEffectError)
-  }
-
-  async close() {
-    await Effect.runPromise(Scope.close(this.scope, Exit.void))
+        const jobService = yield* JobService;
+        return yield* jobService.deleteJob(id);
+      }).pipe(
+        Effect.provide(AppLayer),
+        Effect.scoped
+      )
+    ).catch(handleEffectError);
   }
 }
 
-let jobAdapter: JobAdapter | null = null
+let jobAdapter: JobAdapter | null = null;
 
 export async function getJobAdapter(): Promise<JobAdapter> {
   if (!jobAdapter) {
-    const scope = await Effect.runPromise(Scope.make())
-    const runtime = await Effect.runPromise(
-      Scope.extend(AppRuntime, scope)
-    )
-    jobAdapter = new JobAdapterImpl(runtime, scope)
-
-    // Clean up on process exit
-    process.on('SIGINT', async () => {
-      if (jobAdapter) {
-        await jobAdapter.close()
-      }
-      process.exit(0)
-    })
-
-    process.on('SIGTERM', async () => {
-      if (jobAdapter) {
-        await jobAdapter.close()
-      }
-      process.exit(0)
-    })
+    jobAdapter = new JobAdapterImpl();
   }
-  return jobAdapter
+  return jobAdapter;
 }

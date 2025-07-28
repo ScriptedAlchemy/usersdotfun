@@ -37,7 +37,8 @@ export const jobsRouter = new Hono()
     try {
       const jobAdapter = await getJobAdapter()
       const job = await jobAdapter.getJobById(c.req.param('id'))
-      return c.json(job)
+      const steps = await jobAdapter.getStepsForJob(c.req.param('id'))
+      return c.json({ ...job, steps })
     } catch (error) {
       return handleError(c, error)
     }
@@ -87,8 +88,10 @@ export const jobsRouter = new Hono()
 
   .get('/:id/monitoring', async (c) => {
     try {
+      console.log("trying monitoring");
       const monitoringAdapter = await getJobMonitoringAdapter()
       const data = await monitoringAdapter.getJobMonitoringData(c.req.param('id'))
+      console.log("got data monitoring", data);
       return c.json(data)
     } catch (error) {
       return handleError(c, error)
