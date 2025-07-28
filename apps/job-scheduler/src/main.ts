@@ -1,51 +1,17 @@
 import { BunTerminal } from "@effect/platform-bun";
 import { PluginLoaderLive, StateServiceTag } from '@usersdotfun/pipeline-runner';
-import { Database, DatabaseLive, JobService, JobServiceLive } from '@usersdotfun/shared-db';
-import { Effect, Layer, Logger, LogLevel } from 'effect';
+import { Database, DatabaseLive, DatabaseConfig, JobService, JobServiceLive } from '@usersdotfun/shared-db';
+import { RedisConfigLive, RedisAppConfig, StateService, StateServiceLive, QueueService, QueueServiceLive } from '@usersdotfun/shared-queue';
+import { Effect, Layer, Logger, LogLevel, ConfigProvider, Redacted } from 'effect';
 import { runPromise } from "effect-errors";
 import { jobs } from './jobs';
-import { AppConfigLive } from './services/config.service';
-import { DatabaseConfigLive } from './services/database-config.service';
-import { QueueService, QueueServiceLive } from './services/queue.service';
-import { RedisConfigLive } from './services/redis-config.service';
-import { StateService, StateServiceLive } from './services/state.service';
+import { AppConfig, AppConfigLive } from './config';
 import { createPipelineWorker } from './workers/pipeline.worker';
 import { createSourceWorker } from './workers/source.worker';
 
-// Build layers with proper dependencies
-const ConfigLayer = AppConfigLive;
-
-const InfrastructureLayer = Layer.mergeAll(
-  RedisConfigLive,
-  DatabaseConfigLive
-).pipe(Layer.provide(ConfigLayer));
-
-const DatabaseLayer = DatabaseLive.pipe(
-  Layer.provide(InfrastructureLayer)
-);
-
-const ServicesLayer = Layer.mergeAll(
-  JobServiceLive,
-  QueueServiceLive,
-  StateServiceLive,
-  PluginLoaderLive
-).pipe(
-  Layer.provide(Layer.mergeAll(ConfigLayer, InfrastructureLayer, DatabaseLayer))
-);
-
-// Create a layer that provides StateService to pipeline-runner
-const PipelineStateServiceLayer = Layer.effect(
-  StateServiceTag,
-  Effect.gen(function* () {
-    return yield* StateService;
-  })
-).pipe(
-  Layer.provide(ServicesLayer)
-);
-
-const AllServicesLayer = Layer.mergeAll(
-  ServicesLayer,
-  PipelineStateServiceLayer
+// Step 1: Base layers
+const ConfigLayer = AppConfigLive.pipe(
+  Layer.provide(Layer.setConfigProvider(ConfigProvider.fromEnv()))
 );
 
 const LoggingLayer = Layer.mergeAll(
@@ -54,12 +20,74 @@ const LoggingLayer = Layer.mergeAll(
   Logger.minimumLogLevel(LogLevel.Info)
 );
 
+// Step 2: Bridge layers - these depend on ConfigLayer
+const DatabaseConfigLayer = Layer.effect(
+  DatabaseConfig,
+  Effect.gen(function* () {
+    const appConfig = yield* AppConfig;
+    return { 
+      connectionString: Redacted.value(appConfig.databaseUrl)
+    };
+  })
+).pipe(
+  Layer.provide(ConfigLayer)
+);
+
+const RedisAppConfigLayer = Layer.effect(
+  RedisAppConfig,
+  Effect.gen(function* () {
+    const appConfig = yield* AppConfig;
+    return { redisUrl: appConfig.redisUrl };
+  })
+).pipe(
+  Layer.provide(ConfigLayer)
+);
+
+// Step 3: Infrastructure layers - these depend on bridge layers
+const DatabaseLayer = DatabaseLive.pipe(
+  Layer.provide(DatabaseConfigLayer)
+);
+
+const RedisLayer = RedisConfigLive.pipe(
+  Layer.provide(RedisAppConfigLayer)
+);
+
+// Step 4: Service layers - these depend on infrastructure
+const QueueServiceLayer = QueueServiceLive.pipe(
+  Layer.provide(RedisLayer)
+);
+
+const StateServiceLayer = StateServiceLive.pipe(
+  Layer.provide(RedisLayer)
+);
+
+const JobServiceLayer = JobServiceLive.pipe(
+  Layer.provide(DatabaseLayer)
+);
+
+const PluginServiceLayer = PluginLoaderLive;
+
+// Step 5: Pipeline bridge layer - depends on StateService
+const PipelineStateServiceLayer = Layer.effect(
+  StateServiceTag,
+  Effect.gen(function* () {
+    return yield* StateService;
+  })
+).pipe(
+  Layer.provide(StateServiceLayer)
+);
+
+// Step 6: Final composition - merge all resolved layers
 const AppLayer = Layer.mergeAll(
   ConfigLayer,
-  InfrastructureLayer,
+  LoggingLayer,
   DatabaseLayer,
-  AllServicesLayer,
-  LoggingLayer
+  RedisLayer,
+  QueueServiceLayer,
+  StateServiceLayer,
+  JobServiceLayer,
+  PluginServiceLayer,
+  PipelineStateServiceLayer
 );
 
 const program = Effect.gen(function* () {

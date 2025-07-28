@@ -1,8 +1,8 @@
 import { executePipeline } from '@usersdotfun/pipeline-runner';
 import { JobService } from '@usersdotfun/shared-db';
+import { QueueService, StateService, type PipelineJobData } from '@usersdotfun/shared-queue';
 import { type Job } from 'bullmq';
-import { Effect, pipe } from 'effect';
-import { QueueService, StateService, type PipelineJobData } from '../services/index';
+import { Effect } from 'effect';
 
 const processPipelineJob = (job: Job<PipelineJobData>) =>
   Effect.gen(function* () {

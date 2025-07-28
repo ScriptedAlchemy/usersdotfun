@@ -1,9 +1,9 @@
 import { getPlugin, PluginError, PluginLoaderTag, SchemaValidator } from '@usersdotfun/pipeline-runner';
 import { JobService } from '@usersdotfun/shared-db';
+import { QueueService, StateService, type SourceJobData } from '@usersdotfun/shared-queue';
 import { type Job } from 'bullmq';
 import { Effect, Option } from 'effect';
 import { getJobDefinitionById, type JobDefinition } from '../jobs';
-import { QueueService, StateService, type SourceJobData } from '../services/index';
 
 interface SourceOutput {
   items: any[];
@@ -107,7 +107,7 @@ const processSourceJob = (job: Job<SourceJobData>) =>
 
     if (sourceResult.items.length > 0) {
       yield* Effect.log(`Enqueuing ${sourceResult.items.length} items for pipeline (run: ${runId}).`);
-      
+
       // Update run with total items
       yield* stateService.set(`job-run:${jobId}:${runId}`, {
         runId,
@@ -121,12 +121,12 @@ const processSourceJob = (job: Job<SourceJobData>) =>
       yield* Effect.forEach(
         sourceResult.items,
         (item, index) => queueService.add('pipeline-jobs', 'process-item',
-          { 
-            jobDefinition, 
-            item, 
-            runId, 
+          {
+            jobDefinition,
+            item,
+            runId,
             itemIndex: index,
-            sourceJobId: jobId 
+            sourceJobId: jobId
           },
           {
             attempts: 3, backoff: { type: 'exponential', delay: 2000 }
@@ -138,7 +138,7 @@ const processSourceJob = (job: Job<SourceJobData>) =>
     if (sourceResult.nextLastProcessedState) {
       yield* Effect.log(`New state found. Re-enqueuing poll job for ${jobId}.`);
       yield* stateService.set(jobId, sourceResult.nextLastProcessedState);
-      
+
       // Update run status
       yield* stateService.set(`job-run:${jobId}:${runId}`, {
         runId,
@@ -157,7 +157,7 @@ const processSourceJob = (job: Job<SourceJobData>) =>
     } else {
       yield* Effect.log(`Polling complete for ${jobId}. Clearing state.`);
       yield* stateService.delete(jobId);
-      
+
       // Mark run as completed
       yield* stateService.set(`job-run:${jobId}:${runId}`, {
         runId,

@@ -5,6 +5,8 @@
   },
   "dependencies": {
     "@usersdotfun/pipeline-runner": "workspace:*",
+    "@usersdotfun/shared-queue": "workspace:*",
+    "@usersdotfun/shared-db": "workspace:*",
     "bullmq": "^5.56.7",
     "effect": "^3.17.1",
     "effect-errors": "^1.10.14",
