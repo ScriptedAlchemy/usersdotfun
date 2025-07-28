@@ -40,9 +40,7 @@ const validateData = <A>(
 ): Effect.Effect<A, ValidationError> =>
   Effect.try({
     try: () => {
-      console.log('Validating data:', JSON.stringify(data, null, 2));
       const result = zodSchema.parse(data);
-      console.log('Validation successful');
       return result;
     },
     catch: (error) => {

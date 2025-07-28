@@ -23,7 +23,7 @@ export const executeStep = (
     
     // Create deterministic step ID using context
     const stepId = `${context.runId}:${step.stepId}:${context.itemIndex}`;
-    const redisStepKey = `pipeline-step:${stepId}`;
+    const redisStepKey = `pipeline-item:${context.runId}:${context.itemIndex}`;
     
     // Store step data in Redis for real-time monitoring
     yield* stateService.set(redisStepKey, {

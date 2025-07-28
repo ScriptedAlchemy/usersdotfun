@@ -36,6 +36,9 @@ import { ServerRoute as ApiJobsServerRouteImport } from './routes/api/jobs'
 import { ServerRoute as ApiUsersUserIdServerRouteImport } from './routes/api/users.$userId'
 import { ServerRoute as ApiJobsJobIdServerRouteImport } from './routes/api/jobs.$jobId'
 import { ServerRoute as ApiAuthSplatServerRouteImport } from './routes/api/auth/$'
+import { ServerRoute as ApiJobsJobIdStatusServerRouteImport } from './routes/api/jobs.$jobId.status'
+import { ServerRoute as ApiJobsJobIdRunsServerRouteImport } from './routes/api/jobs.$jobId.runs'
+import { ServerRoute as ApiJobsJobIdMonitoringServerRouteImport } from './routes/api/jobs.$jobId.monitoring'
 
 const AdminRouteImport = createFileRoute('/admin')()
 const rootServerRouteImport = createServerRootRoute()
@@ -165,6 +168,23 @@ const ApiAuthSplatServerRoute = ApiAuthSplatServerRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootServerRouteImport,
 } as any)
+const ApiJobsJobIdStatusServerRoute =
+  ApiJobsJobIdStatusServerRouteImport.update({
+    id: '/status',
+    path: '/status',
+    getParentRoute: () => ApiJobsJobIdServerRoute,
+  } as any)
+const ApiJobsJobIdRunsServerRoute = ApiJobsJobIdRunsServerRouteImport.update({
+  id: '/runs',
+  path: '/runs',
+  getParentRoute: () => ApiJobsJobIdServerRoute,
+} as any)
+const ApiJobsJobIdMonitoringServerRoute =
+  ApiJobsJobIdMonitoringServerRouteImport.update({
+    id: '/monitoring',
+    path: '/monitoring',
+    getParentRoute: () => ApiJobsJobIdServerRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -294,16 +314,22 @@ export interface FileServerRoutesByFullPath {
   '/api/jobs': typeof ApiJobsServerRouteWithChildren
   '/api/users': typeof ApiUsersServerRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatServerRoute
-  '/api/jobs/$jobId': typeof ApiJobsJobIdServerRoute
+  '/api/jobs/$jobId': typeof ApiJobsJobIdServerRouteWithChildren
   '/api/users/$userId': typeof ApiUsersUserIdServerRoute
+  '/api/jobs/$jobId/monitoring': typeof ApiJobsJobIdMonitoringServerRoute
+  '/api/jobs/$jobId/runs': typeof ApiJobsJobIdRunsServerRoute
+  '/api/jobs/$jobId/status': typeof ApiJobsJobIdStatusServerRoute
 }
 export interface FileServerRoutesByTo {
   '/customScript.js': typeof CustomScriptDotjsServerRoute
   '/api/jobs': typeof ApiJobsServerRouteWithChildren
   '/api/users': typeof ApiUsersServerRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatServerRoute
-  '/api/jobs/$jobId': typeof ApiJobsJobIdServerRoute
+  '/api/jobs/$jobId': typeof ApiJobsJobIdServerRouteWithChildren
   '/api/users/$userId': typeof ApiUsersUserIdServerRoute
+  '/api/jobs/$jobId/monitoring': typeof ApiJobsJobIdMonitoringServerRoute
+  '/api/jobs/$jobId/runs': typeof ApiJobsJobIdRunsServerRoute
+  '/api/jobs/$jobId/status': typeof ApiJobsJobIdStatusServerRoute
 }
 export interface FileServerRoutesById {
   __root__: typeof rootServerRouteImport
@@ -311,8 +337,11 @@ export interface FileServerRoutesById {
   '/api/jobs': typeof ApiJobsServerRouteWithChildren
   '/api/users': typeof ApiUsersServerRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatServerRoute
-  '/api/jobs/$jobId': typeof ApiJobsJobIdServerRoute
+  '/api/jobs/$jobId': typeof ApiJobsJobIdServerRouteWithChildren
   '/api/users/$userId': typeof ApiUsersUserIdServerRoute
+  '/api/jobs/$jobId/monitoring': typeof ApiJobsJobIdMonitoringServerRoute
+  '/api/jobs/$jobId/runs': typeof ApiJobsJobIdRunsServerRoute
+  '/api/jobs/$jobId/status': typeof ApiJobsJobIdStatusServerRoute
 }
 export interface FileServerRouteTypes {
   fileServerRoutesByFullPath: FileServerRoutesByFullPath
@@ -323,6 +352,9 @@ export interface FileServerRouteTypes {
     | '/api/auth/$'
     | '/api/jobs/$jobId'
     | '/api/users/$userId'
+    | '/api/jobs/$jobId/monitoring'
+    | '/api/jobs/$jobId/runs'
+    | '/api/jobs/$jobId/status'
   fileServerRoutesByTo: FileServerRoutesByTo
   to:
     | '/customScript.js'
@@ -331,6 +363,9 @@ export interface FileServerRouteTypes {
     | '/api/auth/$'
     | '/api/jobs/$jobId'
     | '/api/users/$userId'
+    | '/api/jobs/$jobId/monitoring'
+    | '/api/jobs/$jobId/runs'
+    | '/api/jobs/$jobId/status'
   id:
     | '__root__'
     | '/customScript.js'
@@ -339,6 +374,9 @@ export interface FileServerRouteTypes {
     | '/api/auth/$'
     | '/api/jobs/$jobId'
     | '/api/users/$userId'
+    | '/api/jobs/$jobId/monitoring'
+    | '/api/jobs/$jobId/runs'
+    | '/api/jobs/$jobId/status'
   fileServerRoutesById: FileServerRoutesById
 }
 export interface RootServerRouteChildren {
@@ -529,6 +567,27 @@ declare module '@tanstack/react-start/server' {
       preLoaderRoute: typeof ApiAuthSplatServerRouteImport
       parentRoute: typeof rootServerRouteImport
     }
+    '/api/jobs/$jobId/status': {
+      id: '/api/jobs/$jobId/status'
+      path: '/status'
+      fullPath: '/api/jobs/$jobId/status'
+      preLoaderRoute: typeof ApiJobsJobIdStatusServerRouteImport
+      parentRoute: typeof ApiJobsJobIdServerRoute
+    }
+    '/api/jobs/$jobId/runs': {
+      id: '/api/jobs/$jobId/runs'
+      path: '/runs'
+      fullPath: '/api/jobs/$jobId/runs'
+      preLoaderRoute: typeof ApiJobsJobIdRunsServerRouteImport
+      parentRoute: typeof ApiJobsJobIdServerRoute
+    }
+    '/api/jobs/$jobId/monitoring': {
+      id: '/api/jobs/$jobId/monitoring'
+      path: '/monitoring'
+      fullPath: '/api/jobs/$jobId/monitoring'
+      preLoaderRoute: typeof ApiJobsJobIdMonitoringServerRouteImport
+      parentRoute: typeof ApiJobsJobIdServerRoute
+    }
   }
 }
 
@@ -612,12 +671,27 @@ const AdminRouteChildren: AdminRouteChildren = {
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
+interface ApiJobsJobIdServerRouteChildren {
+  ApiJobsJobIdMonitoringServerRoute: typeof ApiJobsJobIdMonitoringServerRoute
+  ApiJobsJobIdRunsServerRoute: typeof ApiJobsJobIdRunsServerRoute
+  ApiJobsJobIdStatusServerRoute: typeof ApiJobsJobIdStatusServerRoute
+}
+
+const ApiJobsJobIdServerRouteChildren: ApiJobsJobIdServerRouteChildren = {
+  ApiJobsJobIdMonitoringServerRoute: ApiJobsJobIdMonitoringServerRoute,
+  ApiJobsJobIdRunsServerRoute: ApiJobsJobIdRunsServerRoute,
+  ApiJobsJobIdStatusServerRoute: ApiJobsJobIdStatusServerRoute,
+}
+
+const ApiJobsJobIdServerRouteWithChildren =
+  ApiJobsJobIdServerRoute._addFileChildren(ApiJobsJobIdServerRouteChildren)
+
 interface ApiJobsServerRouteChildren {
-  ApiJobsJobIdServerRoute: typeof ApiJobsJobIdServerRoute
+  ApiJobsJobIdServerRoute: typeof ApiJobsJobIdServerRouteWithChildren
 }
 
 const ApiJobsServerRouteChildren: ApiJobsServerRouteChildren = {
-  ApiJobsJobIdServerRoute: ApiJobsJobIdServerRoute,
+  ApiJobsJobIdServerRoute: ApiJobsJobIdServerRouteWithChildren,
 }
 
 const ApiJobsServerRouteWithChildren = ApiJobsServerRoute._addFileChildren(

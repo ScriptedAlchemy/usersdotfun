@@ -160,7 +160,7 @@ function JobsComponent() {
   });
 
   const stepsTable = useReactTable({
-    data: selectedJob?.pipeline?.steps ?? [],
+    data: monitoringData?.pipelineSteps ?? selectedJob?.pipeline?.steps ?? [],
     columns: [
       {
         accessorKey: "stepId",
@@ -171,11 +171,79 @@ function JobsComponent() {
         header: "Plugin",
       },
       {
+        accessorKey: "status",
+        header: "Status",
+        cell: ({ getValue }) => {
+          const status = getValue() as string;
+          return status ? <StatusBadge status={status} /> : <span className="text-gray-400">-</span>;
+        },
+      },
+      {
         accessorKey: "config",
         header: "Config",
         cell: ({ getValue }) => (
           <pre className="text-xs overflow-auto max-w-xs">{JSON.stringify(getValue(), null, 2)}</pre>
         ),
+      },
+      {
+        accessorKey: "input",
+        header: "Input",
+        cell: ({ getValue }) => {
+          const input = getValue();
+          return input ? (
+            <pre className="text-xs overflow-auto max-w-xs">{JSON.stringify(input, null, 2)}</pre>
+          ) : (
+            <span className="text-gray-400">-</span>
+          );
+        },
+      },
+      {
+        accessorKey: "output",
+        header: "Output",
+        cell: ({ getValue }) => {
+          const output = getValue();
+          return output ? (
+            <pre className="text-xs overflow-auto max-w-xs">{JSON.stringify(output, null, 2)}</pre>
+          ) : (
+            <span className="text-gray-400">-</span>
+          );
+        },
+      },
+      {
+        accessorKey: "error",
+        header: "Error",
+        cell: ({ getValue }) => {
+          const error = getValue();
+          return error ? (
+            <pre className="text-xs overflow-auto max-w-xs text-red-600">{JSON.stringify(error, null, 2)}</pre>
+          ) : (
+            <span className="text-gray-400">-</span>
+          );
+        },
+      },
+      {
+        accessorKey: "startedAt",
+        header: "Started",
+        cell: ({ getValue }) => {
+          const startedAt = getValue() as string;
+          return startedAt ? (
+            <span className="text-xs">{new Date(startedAt).toLocaleString()}</span>
+          ) : (
+            <span className="text-gray-400">-</span>
+          );
+        },
+      },
+      {
+        accessorKey: "completedAt",
+        header: "Completed",
+        cell: ({ getValue }) => {
+          const completedAt = getValue() as string;
+          return completedAt ? (
+            <span className="text-xs">{new Date(completedAt).toLocaleString()}</span>
+          ) : (
+            <span className="text-gray-400">-</span>
+          );
+        },
       },
     ],
     getCoreRowModel: getCoreRowModel(),
@@ -280,29 +348,126 @@ function JobsComponent() {
                 </div>
                 
                 {monitoringData && (
-                  <div>
-                    <h5 className="font-semibold mb-2">Queue Status</h5>
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                      <div className="bg-blue-50 p-3 rounded">
-                        <h6 className="font-medium text-sm">Source Queue</h6>
-                        <div className="text-xs space-y-1">
-                          <p>Waiting: {monitoringData.queueStatus.sourceQueue.waiting}</p>
-                          <p>Active: {monitoringData.queueStatus.sourceQueue.active}</p>
-                          <p>Completed: {monitoringData.queueStatus.sourceQueue.completed}</p>
-                          <p>Failed: {monitoringData.queueStatus.sourceQueue.failed}</p>
+                  <>
+                    <div>
+                      <h5 className="font-semibold mb-2">Queue Status</h5>
+                      <div className="grid grid-cols-2 gap-4 mb-4">
+                        <div className="bg-blue-50 p-3 rounded">
+                          <h6 className="font-medium text-sm">Source Queue</h6>
+                          <div className="text-xs space-y-1">
+                            <p>Waiting: {monitoringData.queueStatus.sourceQueue.waiting}</p>
+                            <p>Active: {monitoringData.queueStatus.sourceQueue.active}</p>
+                            <p>Completed: {monitoringData.queueStatus.sourceQueue.completed}</p>
+                            <p>Failed: {monitoringData.queueStatus.sourceQueue.failed}</p>
+                            <p>Delayed: {monitoringData.queueStatus.sourceQueue.delayed}</p>
+                            <p>Paused: {monitoringData.queueStatus.sourceQueue.paused ? 'Yes' : 'No'}</p>
+                          </div>
                         </div>
-                      </div>
-                      <div className="bg-green-50 p-3 rounded">
-                        <h6 className="font-medium text-sm">Pipeline Queue</h6>
-                        <div className="text-xs space-y-1">
-                          <p>Waiting: {monitoringData.queueStatus.pipelineQueue.waiting}</p>
-                          <p>Active: {monitoringData.queueStatus.pipelineQueue.active}</p>
-                          <p>Completed: {monitoringData.queueStatus.pipelineQueue.completed}</p>
-                          <p>Failed: {monitoringData.queueStatus.pipelineQueue.failed}</p>
+                        <div className="bg-green-50 p-3 rounded">
+                          <h6 className="font-medium text-sm">Pipeline Queue</h6>
+                          <div className="text-xs space-y-1">
+                            <p>Waiting: {monitoringData.queueStatus.pipelineQueue.waiting}</p>
+                            <p>Active: {monitoringData.queueStatus.pipelineQueue.active}</p>
+                            <p>Completed: {monitoringData.queueStatus.pipelineQueue.completed}</p>
+                            <p>Failed: {monitoringData.queueStatus.pipelineQueue.failed}</p>
+                            <p>Delayed: {monitoringData.queueStatus.pipelineQueue.delayed}</p>
+                            <p>Paused: {monitoringData.queueStatus.pipelineQueue.paused ? 'Yes' : 'No'}</p>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
+
+                    {(monitoringData.activeJobs.sourceJobs.length > 0 || monitoringData.activeJobs.pipelineJobs.length > 0) && (
+                      <div>
+                        <h5 className="font-semibold mb-2">Active Jobs</h5>
+                        
+                        {monitoringData.activeJobs.sourceJobs.length > 0 && (
+                          <div className="mb-4">
+                            <h6 className="font-medium text-sm mb-2">Source Jobs</h6>
+                            <div className="space-y-2">
+                              {monitoringData.activeJobs.sourceJobs.map((job) => (
+                                <div key={job.id} className="bg-blue-50 p-3 rounded">
+                                  <div className="flex justify-between items-center mb-2">
+                                    <span className="font-mono text-xs">{job.id}</span>
+                                    <span className="text-xs">Progress: {job.progress}%</span>
+                                  </div>
+                                  <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+                                    <div 
+                                      className="bg-blue-600 h-2 rounded-full" 
+                                      style={{ width: `${job.progress}%` }}
+                                    ></div>
+                                  </div>
+                                  <div className="text-xs space-y-1">
+                                    <p>Name: {job.name}</p>
+                                    <p>Attempts: {job.attemptsMade}</p>
+                                    <p>Started: {new Date(job.timestamp).toLocaleString()}</p>
+                                    {job.processedOn && <p>Processing: {new Date(job.processedOn).toLocaleString()}</p>}
+                                    {job.failedReason && <p className="text-red-600">Error: {job.failedReason}</p>}
+                                  </div>
+                                  {job.data && (
+                                    <details className="mt-2">
+                                      <summary className="text-xs cursor-pointer">Job Data</summary>
+                                      <pre className="text-xs mt-1 bg-white p-2 rounded border overflow-auto">
+                                        {JSON.stringify(job.data, null, 2)}
+                                      </pre>
+                                    </details>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {monitoringData.activeJobs.pipelineJobs.length > 0 && (
+                          <div>
+                            <h6 className="font-medium text-sm mb-2">Pipeline Jobs</h6>
+                            <div className="space-y-2">
+                              {monitoringData.activeJobs.pipelineJobs.map((job) => (
+                                <div key={job.id} className="bg-green-50 p-3 rounded">
+                                  <div className="flex justify-between items-center mb-2">
+                                    <span className="font-mono text-xs">{job.id}</span>
+                                    <span className="text-xs">Progress: {job.progress}%</span>
+                                  </div>
+                                  <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+                                    <div 
+                                      className="bg-green-600 h-2 rounded-full" 
+                                      style={{ width: `${job.progress}%` }}
+                                    ></div>
+                                  </div>
+                                  <div className="text-xs space-y-1">
+                                    <p>Name: {job.name}</p>
+                                    <p>Attempts: {job.attemptsMade}</p>
+                                    <p>Started: {new Date(job.timestamp).toLocaleString()}</p>
+                                    {job.processedOn && <p>Processing: {new Date(job.processedOn).toLocaleString()}</p>}
+                                    {job.failedReason && <p className="text-red-600">Error: {job.failedReason}</p>}
+                                  </div>
+                                  {job.data && (
+                                    <details className="mt-2">
+                                      <summary className="text-xs cursor-pointer">Job Data</summary>
+                                      <pre className="text-xs mt-1 bg-white p-2 rounded border overflow-auto">
+                                        {JSON.stringify(job.data, null, 2)}
+                                      </pre>
+                                    </details>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {monitoringData.currentState && (
+                      <div>
+                        <h5 className="font-semibold mb-2">Current State</h5>
+                        <div className="bg-gray-50 p-3 rounded">
+                          <pre className="text-xs overflow-auto">
+                            {JSON.stringify(monitoringData.currentState, null, 2)}
+                          </pre>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
 
                 {jobRuns && jobRuns.length > 0 && (
