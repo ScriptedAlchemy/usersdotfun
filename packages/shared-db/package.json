@@ -6,9 +6,9 @@
   "scripts": {
     "build": "tsc -b",
     "lint": "eslint . --ext .ts",
-    "db:generate": "bun exec drizzle-kit generate",
-    "db:migrate": "bun exec drizzle-kit migrate",
-    "db:studio": "bun exec drizzle-kit studio",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio",
     "seed:dev": "bun ./scripts/seed-dev.ts",
     "seed:remote": "bun ./scripts/seed-remote.ts",
     "overwrite-vars:up": "bun run ./scripts/overwrite-vars.ts up",

@@ -1,3 +1,4 @@
+export * from "./auth";
 export * from "./jobs";
 export * from "./pipeline-steps";
 
@@ -19,10 +20,11 @@ export {
   type UpdatePipelineStepData,
 } from "./pipeline-steps";
 
+import * as auth from "./auth";
 import * as jobs from "./jobs";
 import * as pipelineSteps from "./pipeline-steps";
 
-export const schema = { ...jobs, ...pipelineSteps };
+export const schema = { ...auth, ...jobs, ...pipelineSteps };
 
 export type DB = typeof schema;
 
