@@ -10,6 +10,7 @@
     "typescript": "^5"
   },
   "scripts": {
+    "init": "sh scripts/init-dev.sh",
     "build:sdk": "bun run --filter @usersdotfun/core-sdk build",
     "build:registry": "bun run packages/registry-builder/generate-registry.mjs",
     "dev:plugins": "bun run --filter \"./plugins/*\" dev",

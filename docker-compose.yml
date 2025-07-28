@@ -5,7 +5,7 @@ services:
     ports:
       - '6379:6379'
   postgres:
-    image: postgres:16
+    image: postgres:15
     container_name: usersdotfun_postgres_dev
     ports:
       - "5432:5432"
@@ -20,6 +20,17 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+  # handles data migration and database seeding
+  db-migrate-dev:
+    build:
+      context: .
+      dockerfile: packages/shared-db/Dockerfile.dev
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@usersdotfun_postgres_dev:5432/usersdotfun
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles: ["dev"]
 
 volumes:
   postgres_data:

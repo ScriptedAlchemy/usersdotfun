@@ -1,4 +1,5 @@
 import { betterAuth } from "better-auth";
+import { jwt } from "better-auth/plugins";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { anonymous } from "better-auth/plugins";
 import { db } from "~/db";
@@ -10,6 +11,7 @@ export const auth = betterAuth({
   }),
   plugins: [
     anonymous(),
+    jwt(), 
     reactStartCookies() // make sure this is the last plugin in the array
   ]
 });
