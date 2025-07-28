@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { deleteJob } from '~/api/jobs'
 import { Button } from '~/components/ui/button'
 import { toast } from 'sonner'
-import { JobDialog } from './job-dialog'
+import { JobSheet } from './job-sheet'
 import { Job } from '~/types/jobs'
 
 export function JobActions({ job }: { job: Job }) {
@@ -21,11 +21,11 @@ export function JobActions({ job }: { job: Job }) {
 
   return (
     <div className="flex gap-2">
-      <JobDialog job={job}>
+      <JobSheet job={job}>
         <Button variant="outline" size="sm">
           Edit
         </Button>
-      </JobDialog>
+      </JobSheet>
       <Button
         variant="destructive"
         size="sm"

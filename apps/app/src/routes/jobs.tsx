@@ -1,4 +1,4 @@
-import { Outlet, createFileRoute, Link } from '@tanstack/react-router';
+import { createFileRoute, Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { getJobs } from '~/api/jobs';
 import {
@@ -8,17 +8,37 @@ import {
   getSortedRowModel,
   getFilteredRowModel,
 } from '@tanstack/react-table';
-import { type ColumnDef, type SortingState } from '@tanstack/react-table'
-import { Job } from '~/types/jobs'
-import { useState } from 'react'
-import { StatusBadge } from '~/components/jobs/status-badge'
-import { JobActions } from '~/components/jobs/job-actions'
-import { JobDialog } from '~/components/jobs/job-dialog'
-import { Button } from '~/components/ui/button'
+import { type ColumnDef, type SortingState } from '@tanstack/react-table';
+import { Job } from '~/types/jobs';
+import { useState } from 'react';
+import { StatusBadge } from '~/components/jobs/status-badge';
+import { JobActions } from '~/components/jobs/job-actions';
+import { JobSheet } from '~/components/jobs/job-sheet';
+import { Button } from '~/components/ui/button';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '~/components/ui/table';
 
 export const Route = createFileRoute('/jobs')({
   component: JobsComponent,
 });
+
+function SkeletonRow({ columnCount }: { columnCount: number }) {
+  return (
+    <TableRow className="animate-pulse">
+      {Array.from({ length: columnCount }).map((_, index) => (
+        <TableCell key={index}>
+          <div className="h-4 bg-gray-200 rounded"></div>
+        </TableCell>
+      ))}
+    </TableRow>
+  );
+}
 
 function JobsComponent() {
   const { data: jobs, isLoading, error } = useQuery({
@@ -85,9 +105,6 @@ function JobsComponent() {
     getFilteredRowModel: getFilteredRowModel(),
   });
 
-  if (isLoading) return <div>Loading...</div>;
-  if (error) return <div>Error loading jobs: {error.message}</div>;
-
   return (
     <div className="p-2">
       <div className="flex justify-between mb-2">
@@ -97,16 +114,16 @@ function JobsComponent() {
           className="p-2 border rounded"
           placeholder="Search all columns..."
         />
-        <JobDialog>
+        <JobSheet>
           <Button>Create Job</Button>
-        </JobDialog>
+        </JobSheet>
       </div>
-      <table className="w-full">
-        <thead>
+      <Table>
+        <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
-            <tr key={headerGroup.id}>
+            <TableRow key={headerGroup.id}>
               {headerGroup.headers.map((header) => (
-                <th
+                <TableHead
                   key={header.id}
                   onClick={header.column.getToggleSortingHandler()}
                   className="cursor-pointer"
@@ -119,25 +136,38 @@ function JobsComponent() {
                     asc: ' 🔼',
                     desc: ' 🔽',
                   }[header.column.getIsSorted() as string] ?? null}
-                </th>
+                </TableHead>
               ))}
-            </tr>
+            </TableRow>
           ))}
-        </thead>
-        <tbody>
-          {table.getRowModel().rows.map((row) => (
-            <tr key={row.id}>
-              {row.getVisibleCells().map((cell) => (
-                <td key={cell.id} className="p-2 border-b">
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <hr className="my-4" />
-      <Outlet />
+        </TableHeader>
+        <TableBody>
+          {isLoading ? (
+            Array.from({ length: 5 }).map((_, i) => (
+              <SkeletonRow key={i} columnCount={columns.length} />
+            ))
+          ) : error ? (
+            <TableRow>
+              <TableCell
+                colSpan={columns.length}
+                className="text-center text-red-500"
+              >
+                Error loading jobs: {error.message}
+              </TableCell>
+            </TableRow>
+          ) : (
+            table.getRowModel().rows.map((row) => (
+              <TableRow key={row.id}>
+                {row.getVisibleCells().map((cell) => (
+                  <TableCell key={cell.id}>
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
     </div>
   );
 }

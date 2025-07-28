@@ -37,10 +37,10 @@ export const selectJobSchema = z.object({
 });
 
 export const insertJobSchema = z.object({
-  id: z.uuid("Invalid UUID format for job ID"),
+  id: z.uuid("Invalid UUID format for job ID").optional(),
   name: z.string().min(1),
   schedule: z.string().min(1),
-  status: z.string().min(1),
+  status: z.string().min(1).optional(),
   sourcePlugin: z.string().min(1),
   sourceConfig: z.any().optional().nullable(),
   sourceSearch: z.any().optional().nullable(),

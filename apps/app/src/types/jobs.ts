@@ -1,4 +1,5 @@
-import { z } from 'zod';
+import { z } from "zod";
+import { CronExpressionParser } from "cron-parser";
 
 export const pipelineStepSchema = z.object({
   id: z.string(),
@@ -35,7 +36,45 @@ export type PipelineStep = z.infer<typeof pipelineStepSchema>;
 export type Job = z.infer<typeof jobSchema>;
 export type JobWithSteps = z.infer<typeof jobWithStepsSchema>;
 
-export const createJobSchema = jobSchema.omit({ id: true, createdAt: true, updatedAt: true, status: true });
+const jsonString = z.string().transform((val, ctx) => {
+  try {
+    return JSON.parse(val);
+  } catch (e) {
+    ctx.addIssue({
+      code: "custom",
+      message: "Invalid JSON",
+    });
+    return z.NEVER;
+  }
+});
+
+export const createJobSchema = jobSchema
+  .omit({
+    id: true,
+    createdAt: true,
+    updatedAt: true,
+    status: true,
+    sourceConfig: true,
+    sourceSearch: true,
+    pipeline: true,
+  })
+  .extend({
+    name: z.string().transform((val) => val.toLowerCase().replace(/\s+/g, "-")),
+    schedule: z.string().refine(
+      (val) => {
+        try {
+          CronExpressionParser.parse(val);
+          return true;
+        } catch (e) {
+          return false;
+        }
+      },
+      { message: "Invalid cron expression" }
+    ),
+    sourceConfig: jsonString.nullable(),
+    sourceSearch: jsonString.nullable(),
+    pipeline: jsonString.nullable(),
+  });
 export type CreateJob = z.infer<typeof createJobSchema>;
 
 export const updateJobSchema = createJobSchema.partial();

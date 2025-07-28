@@ -2,10 +2,23 @@ import { Hono } from 'hono'
 import { getJobAdapter, HttpError } from '../services/job.service'
 
 const handleError = (c: any, error: any) => {
+  console.error('Gateway Error:', {
+    message: error.message,
+    stack: error.stack,
+    cause: error.cause,
+    name: error.constructor.name,
+    error: error
+  })
+  
   if (error instanceof HttpError) {
     return c.json({ error: error.message }, error.status)
   }
-  return c.json({ error: 'Internal Server Error' }, 500)
+  
+  const isDev = process.env.NODE_ENV !== 'production'
+  return c.json({ 
+    error: isDev ? error.message : 'Internal Server Error',
+    details: isDev ? error.stack : 'An unexpected error occurred'
+  }, 500)
 }
 
 export const jobsRouter = new Hono()

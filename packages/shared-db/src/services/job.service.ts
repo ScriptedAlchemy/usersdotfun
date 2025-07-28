@@ -1,6 +1,7 @@
 import { Effect, Context, Layer, Data } from "effect";
 import * as Zod from "zod";
 import { eq } from "drizzle-orm";
+import { randomUUID } from "crypto";
 
 import { schema } from "../schema";
 import { Database } from "./db.service";
@@ -38,12 +39,36 @@ const validateData = <A>(
   data: unknown
 ): Effect.Effect<A, ValidationError> =>
   Effect.try({
-    try: () => zodSchema.parse(data),
-    catch: (error) =>
-      new ValidationError({
-        errors: error as Zod.ZodError,
+    try: () => {
+      console.log('Validating data:', JSON.stringify(data, null, 2));
+      const result = zodSchema.parse(data);
+      console.log('Validation successful');
+      return result;
+    },
+    catch: (error) => {
+      console.log('Validation failed - Raw Zod error:', error);
+      const zodError = error as Zod.ZodError;
+      console.log('Zod error details:', {
+        name: zodError.name,
+        message: zodError.message,
+        issues: zodError.issues
+      });
+      
+      const validationError = new ValidationError({
+        errors: zodError,
         message: "Validation failed",
-      }),
+      });
+      
+      console.log('Created ValidationError:', {
+        validationError,
+        errorType: validationError.constructor.name,
+        tag: validationError._tag,
+        errors: validationError.errors,
+        message: validationError.message
+      });
+      
+      return validationError;
+    },
   });
 
 const requireRecord = <T, E>(
@@ -146,14 +171,20 @@ export const JobServiceLive = Layer.effect(
 
     const createJob = (data: InsertJobData): Effect.Effect<SelectJob, ValidationError | DbError> =>
       validateData(insertJobSchema, data).pipe(
-        Effect.flatMap((validatedData) =>
-          Effect.tryPromise({
+        Effect.flatMap((validatedData) => {
+          const newJob = {
+            ...validatedData,
+            id: randomUUID(),
+            status: validatedData.status || 'pending'
+          };
+          
+          return Effect.tryPromise({
             try: () =>
-              db.insert(schema.jobs).values(validatedData).returning(),
+              db.insert(schema.jobs).values(newJob).returning(),
             catch: (cause) =>
               new DbError({ cause, message: "Failed to create job" }),
-          })
-        ),
+          });
+        }),
         Effect.flatMap((result) =>
           requireRecord(
             result[0],

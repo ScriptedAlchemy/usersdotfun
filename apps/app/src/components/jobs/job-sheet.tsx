@@ -6,14 +6,14 @@ import { toast } from "sonner";
 import { createJob, updateJob } from "~/api/jobs";
 import { Button } from "~/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "~/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "~/components/ui/sheet";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import {
@@ -26,9 +26,11 @@ import {
 import { Textarea } from "~/components/ui/textarea";
 import { CreateJob, createJobSchema, Job, UpdateJob } from "~/types/jobs";
 
-interface JobDialogProps {
+interface JobSheetProps {
   job?: Job;
   children: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 const schedulePresets = [
@@ -40,7 +42,7 @@ const schedulePresets = [
   { label: "Custom", value: "custom" },
 ];
 
-export function JobDialog({ job, children }: JobDialogProps) {
+export function JobSheet({ job, children, open, onOpenChange }: JobSheetProps) {
   const queryClient = useQueryClient();
   const [scheduleType, setScheduleType] = useState("preset");
   const [namePreview, setNamePreview] = useState("");
@@ -92,6 +94,7 @@ export function JobDialog({ job, children }: JobDialogProps) {
     onSuccess: () => {
       toast.success("Job created");
       queryClient.invalidateQueries({ queryKey: ["jobs"] });
+      onOpenChange?.(false);
     },
     onError: (error) => {
       toast.error(`Failed to create job: ${error.message}`);
@@ -104,6 +107,7 @@ export function JobDialog({ job, children }: JobDialogProps) {
       toast.success("Job updated");
       queryClient.invalidateQueries({ queryKey: ["jobs"] });
       queryClient.invalidateQueries({ queryKey: ["job", job!.id] });
+      onOpenChange?.(false);
     },
     onError: (error) => {
       toast.error(`Failed to update job: ${error.message}`);
@@ -111,26 +115,33 @@ export function JobDialog({ job, children }: JobDialogProps) {
   });
 
   const onSubmit = (data: CreateJob) => {
+    const transformedData = {
+      ...data,
+      sourceConfig: typeof data.sourceConfig === 'string' ? data.sourceConfig : JSON.stringify(data.sourceConfig),
+      sourceSearch: typeof data.sourceSearch === 'string' ? data.sourceSearch : JSON.stringify(data.sourceSearch),
+      pipeline: typeof data.pipeline === 'string' ? data.pipeline : JSON.stringify(data.pipeline),
+    };
+
     if (job) {
-      updateMutation.mutate(data);
+      updateMutation.mutate(transformedData);
     } else {
-      createMutation.mutate(data);
+      createMutation.mutate(transformedData);
     }
   };
 
   return (
-    <Dialog>
-      <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetTrigger asChild>{children}</SheetTrigger>
+      <SheetContent side="right" className="sm:max-w-[500px] overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>
             {job ? "Edit Job" : `Create Job: ${namePreview}`}
-          </DialogTitle>
-          <DialogDescription>
+          </SheetTitle>
+          <SheetDescription>
             {job ? "Edit the job details." : "Create a new job."}
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)}>
+          </SheetDescription>
+        </SheetHeader>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="name" className="text-right">
@@ -268,7 +279,7 @@ export function JobDialog({ job, children }: JobDialogProps) {
               )}
             </div>
           </div>
-          <DialogFooter>
+          <SheetFooter>
             <Button
               type="submit"
               disabled={createMutation.isPending || updateMutation.isPending}
@@ -277,9 +288,9 @@ export function JobDialog({ job, children }: JobDialogProps) {
                 ? "Saving..."
                 : "Save"}
             </Button>
-          </DialogFooter>
+          </SheetFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }
