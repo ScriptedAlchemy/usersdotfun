@@ -27,6 +27,13 @@ export type PluginType = "transformer" | "distributor" | "source";
 
 export type PipelinePlugin = Plugin<Input<any>, Output<any>, Config>;
 
+export interface PipelineExecutionContext {
+  runId: string;
+  itemIndex: number;
+  sourceJobId: string;
+  jobId: string;
+}
+
 export interface PluginRegistry {
   [pluginName: string]: PluginMetadata;
 }

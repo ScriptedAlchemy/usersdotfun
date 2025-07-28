@@ -1,21 +1,22 @@
 import { JobService } from "@usersdotfun/shared-db";
 import { Effect } from "effect";
 import { type PipelineExecutionError } from "./errors";
-import type { Pipeline } from "./interfaces";
+import type { Pipeline, PipelineExecutionContext } from "./interfaces";
 import { PluginLoaderTag } from "./services";
 import { executeStep } from "./step";
+import { type StateService } from "../services/state.service";
 
 export const executePipeline = (
   pipeline: Pipeline,
   initialInput: Record<string, unknown>,
-  jobId: string,
-): Effect.Effect<unknown, PipelineExecutionError, PluginLoaderTag | JobService> =>
+  context: PipelineExecutionContext,
+): Effect.Effect<unknown, PipelineExecutionError, PluginLoaderTag | JobService | StateService> =>
   Effect.gen(function* () {
     let currentInput: Record<string, unknown> = initialInput;
 
     for (const step of pipeline.steps) {
-      yield* Effect.logDebug(`Executing step "${step.stepId}" with input:`, currentInput);
-      const output = yield* executeStep(step, currentInput, jobId);
+      yield* Effect.logDebug(`Executing step "${step.stepId}" for item ${context.itemIndex} (run: ${context.runId}) with input:`, currentInput);
+      const output = yield* executeStep(step, currentInput, context);
       currentInput = output.data as Record<string, unknown>;
     }
 
@@ -26,9 +27,9 @@ export const executePipeline = (
 export const executePipelineParallel = (
   pipeline: Pipeline,
   initialInput: Record<string, unknown>,
-  jobId: string,
-): Effect.Effect<unknown[], PipelineExecutionError, PluginLoaderTag | JobService> =>
+  context: PipelineExecutionContext,
+): Effect.Effect<unknown[], PipelineExecutionError, PluginLoaderTag | JobService | StateService> =>
   Effect.all(
-    pipeline.steps.map((step) => executeStep(step, initialInput, jobId)),
+    pipeline.steps.map((step) => executeStep(step, initialInput, context)),
     { concurrency: "unbounded" }
   );

@@ -14,9 +14,51 @@ export interface JobDefinition {
 }
 
 export const jobs: JobDefinition[] = [
-  // This is where you would define your jobs.
-  // For now, it's an empty array.
-  // We will populate this later or it can be populated by the user.
+  {
+    id: "8e5d8f9b-4cf5-4fb9-b6a3-fce362da6d96",
+    name: "open_crosspost",
+    schedule: "*/5 * * * *",
+    source: {
+      plugin: "@usersdotfun/masa-source",
+      config: { "apiKey": "PNXGZ4GqWTer9FAUuW2oa2W7aNfSd2GVTkkjBDTPfh3mUQhHi6sT5busrzCZmn3c" },
+      search: "@open_crosspost #feature"
+    },
+    pipeline: {
+      "id": "test-pipeline",
+      "name": "Simple Transform Pipeline",
+      "steps": [
+        {
+          "config": {
+            "variables": {
+              "template": "hello {{content}}"
+            }
+          },
+          "stepId": "transform-1",
+          "pluginName": "@curatedotfun/simple-transform"
+        },
+        {
+          "config": {
+            "variables": {
+              "mappings": {
+                "content": "goodbye {{content}}"
+              }
+            }
+          },
+          "stepId": "transform-2",
+          "pluginName": "@curatedotfun/object-transform"
+        },
+        {
+          "config": {
+            "variables": {
+              "template": "hello {{content}}"
+            }
+          },
+          "stepId": "transform-3",
+          "pluginName": "@curatedotfun/simple-transform"
+        }
+      ]
+    }
+  }
 ];
 
 export const getJobDefinitionById = (jobId: string): Effect.Effect<JobDefinition, Error> => {

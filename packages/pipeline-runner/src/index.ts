@@ -6,3 +6,4 @@ export * from "./pipeline/step";
 export * from "./pipeline/validation";
 export * from "./services/mf.service";
 export * from "./services/plugin.service";
+export * from "./services/state.service";

@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { getJobAdapter, HttpError } from '../services/job.service'
+import { getJobMonitoringAdapter } from '../services/job-monitoring-adapter.service'
 
 const handleError = (c: any, error: any) => {
   console.error('Gateway Error:', {
@@ -69,6 +70,49 @@ export const jobsRouter = new Hono()
       const jobAdapter = await getJobAdapter()
       await jobAdapter.deleteJob(c.req.param('id'))
       return c.body(null, 204)
+    } catch (error) {
+      return handleError(c, error)
+    }
+  })
+
+  .get('/:id/status', async (c) => {
+    try {
+      const monitoringAdapter = await getJobMonitoringAdapter()
+      const status = await monitoringAdapter.getJobStatus(c.req.param('id'))
+      return c.json(status)
+    } catch (error) {
+      return handleError(c, error)
+    }
+  })
+
+  .get('/:id/monitoring', async (c) => {
+    try {
+      const monitoringAdapter = await getJobMonitoringAdapter()
+      const data = await monitoringAdapter.getJobMonitoringData(c.req.param('id'))
+      return c.json(data)
+    } catch (error) {
+      return handleError(c, error)
+    }
+  })
+
+  .get('/:id/runs', async (c) => {
+    try {
+      const monitoringAdapter = await getJobMonitoringAdapter()
+      const runs = await monitoringAdapter.getJobRuns(c.req.param('id'))
+      return c.json(runs)
+    } catch (error) {
+      return handleError(c, error)
+    }
+  })
+
+  .get('/:id/runs/:runId', async (c) => {
+    try {
+      const monitoringAdapter = await getJobMonitoringAdapter()
+      const runDetails = await monitoringAdapter.getJobRunDetails(
+        c.req.param('id'),
+        c.req.param('runId')
+      )
+      return c.json(runDetails)
     } catch (error) {
       return handleError(c, error)
     }

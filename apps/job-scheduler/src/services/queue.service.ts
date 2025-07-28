@@ -9,6 +9,9 @@ export interface SourceJobData {
 export interface PipelineJobData {
   jobDefinition: any;
   item: Record<string, unknown>;
+  runId: string;
+  itemIndex: number;
+  sourceJobId: string;
 }
 
 export type JobData = SourceJobData | PipelineJobData;

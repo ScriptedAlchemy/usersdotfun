@@ -80,8 +80,25 @@ const processSourceJob = (job: Job<SourceJobData>) =>
     const queueService = yield* QueueService;
     const jobService = yield* JobService;
 
-    yield* Effect.log(`Processing source job: ${jobId} (attempt ${job.attemptsMade + 1})`);
+    // Generate unique run ID for this execution
+    const runId = `${jobId}:${Date.now()}:${Math.random().toString(36).substr(2, 9)}`;
+    const runStartTime = new Date();
+
+    yield* Effect.log(`Processing source job: ${jobId} (run: ${runId}, attempt ${job.attemptsMade + 1})`);
     yield* jobService.updateJob(jobId, { status: 'processing' });
+
+    // Store run information
+    yield* stateService.set(`job-run:${jobId}:${runId}`, {
+      runId,
+      jobId,
+      status: 'running',
+      startedAt: runStartTime,
+      itemsProcessed: 0,
+      itemsTotal: 0,
+    });
+
+    // Add to run history
+    yield* stateService.addToRunHistory(jobId, runId);
 
     const lastProcessedState = yield* stateService.get(jobId);
     const stateValue = Option.isSome(lastProcessedState) ? lastProcessedState.value : null;
@@ -89,11 +106,28 @@ const processSourceJob = (job: Job<SourceJobData>) =>
     const sourceResult = yield* runSourcePlugin(jobDefinition, stateValue);
 
     if (sourceResult.items.length > 0) {
-      yield* Effect.log(`Enqueuing ${sourceResult.items.length} items for pipeline.`);
+      yield* Effect.log(`Enqueuing ${sourceResult.items.length} items for pipeline (run: ${runId}).`);
+      
+      // Update run with total items
+      yield* stateService.set(`job-run:${jobId}:${runId}`, {
+        runId,
+        jobId,
+        status: 'processing',
+        startedAt: runStartTime,
+        itemsProcessed: 0,
+        itemsTotal: sourceResult.items.length,
+      });
+
       yield* Effect.forEach(
         sourceResult.items,
-        item => queueService.add('pipeline-jobs', 'process-item',
-          { jobDefinition, item },
+        (item, index) => queueService.add('pipeline-jobs', 'process-item',
+          { 
+            jobDefinition, 
+            item, 
+            runId, 
+            itemIndex: index,
+            sourceJobId: jobId 
+          },
           {
             attempts: 3, backoff: { type: 'exponential', delay: 2000 }
           }),
@@ -104,6 +138,18 @@ const processSourceJob = (job: Job<SourceJobData>) =>
     if (sourceResult.nextLastProcessedState) {
       yield* Effect.log(`New state found. Re-enqueuing poll job for ${jobId}.`);
       yield* stateService.set(jobId, sourceResult.nextLastProcessedState);
+      
+      // Update run status
+      yield* stateService.set(`job-run:${jobId}:${runId}`, {
+        runId,
+        jobId,
+        status: 'polling',
+        startedAt: runStartTime,
+        itemsProcessed: sourceResult.items.length,
+        itemsTotal: sourceResult.items.length,
+        nextState: sourceResult.nextLastProcessedState,
+      });
+
       yield* queueService.add('source-jobs', 'poll-source',
         { jobId },
         { delay: 5000 } // 5 second delay before polling again
@@ -111,6 +157,18 @@ const processSourceJob = (job: Job<SourceJobData>) =>
     } else {
       yield* Effect.log(`Polling complete for ${jobId}. Clearing state.`);
       yield* stateService.delete(jobId);
+      
+      // Mark run as completed
+      yield* stateService.set(`job-run:${jobId}:${runId}`, {
+        runId,
+        jobId,
+        status: 'completed',
+        startedAt: runStartTime,
+        completedAt: new Date(),
+        itemsProcessed: sourceResult.items.length,
+        itemsTotal: sourceResult.items.length,
+      });
+
       yield* jobService.updateJob(jobId, { status: 'completed' });
     }
   })

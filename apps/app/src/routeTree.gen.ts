@@ -21,10 +21,8 @@ import { Route as PathlessLayoutRouteImport } from './routes/_pathlessLayout'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as UsersIndexRouteImport } from './routes/users.index'
 import { Route as ProjectsIndexRouteImport } from './routes/projects.index'
-import { Route as JobsIndexRouteImport } from './routes/jobs.index'
 import { Route as UsersUserIdRouteImport } from './routes/users.$userId'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects.$projectId'
-import { Route as JobsJobIdRouteImport } from './routes/jobs.$jobId'
 import { Route as AdminDashboardRouteImport } from './routes/admin/_dashboard'
 import { Route as PathlessLayoutNestedLayoutRouteImport } from './routes/_pathlessLayout/_nested-layout'
 import { Route as AdminDashboardIndexRouteImport } from './routes/admin/_dashboard/index'
@@ -91,11 +89,6 @@ const ProjectsIndexRoute = ProjectsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => ProjectsRoute,
 } as any)
-const JobsIndexRoute = JobsIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => JobsRoute,
-} as any)
 const UsersUserIdRoute = UsersUserIdRouteImport.update({
   id: '/$userId',
   path: '/$userId',
@@ -105,11 +98,6 @@ const ProjectsProjectIdRoute = ProjectsProjectIdRouteImport.update({
   id: '/$projectId',
   path: '/$projectId',
   getParentRoute: () => ProjectsRoute,
-} as any)
-const JobsJobIdRoute = JobsJobIdRouteImport.update({
-  id: '/$jobId',
-  path: '/$jobId',
-  getParentRoute: () => JobsRoute,
 } as any)
 const AdminDashboardRoute = AdminDashboardRouteImport.update({
   id: '/_dashboard',
@@ -181,15 +169,13 @@ const ApiAuthSplatServerRoute = ApiAuthSplatServerRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/deferred': typeof DeferredRoute
-  '/jobs': typeof JobsRouteWithChildren
+  '/jobs': typeof JobsRoute
   '/projects': typeof ProjectsRouteWithChildren
   '/redirect': typeof RedirectRoute
   '/users': typeof UsersRouteWithChildren
   '/admin': typeof AdminDashboardRouteWithChildren
-  '/jobs/$jobId': typeof JobsJobIdRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/users/$userId': typeof UsersUserIdRoute
-  '/jobs/': typeof JobsIndexRoute
   '/projects/': typeof ProjectsIndexRoute
   '/users/': typeof UsersIndexRoute
   '/route-a': typeof PathlessLayoutNestedLayoutRouteARoute
@@ -201,12 +187,11 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/deferred': typeof DeferredRoute
+  '/jobs': typeof JobsRoute
   '/redirect': typeof RedirectRoute
   '/admin': typeof AdminDashboardIndexRoute
-  '/jobs/$jobId': typeof JobsJobIdRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/users/$userId': typeof UsersUserIdRoute
-  '/jobs': typeof JobsIndexRoute
   '/projects': typeof ProjectsIndexRoute
   '/users': typeof UsersIndexRoute
   '/route-a': typeof PathlessLayoutNestedLayoutRouteARoute
@@ -219,17 +204,15 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_pathlessLayout': typeof PathlessLayoutRouteWithChildren
   '/deferred': typeof DeferredRoute
-  '/jobs': typeof JobsRouteWithChildren
+  '/jobs': typeof JobsRoute
   '/projects': typeof ProjectsRouteWithChildren
   '/redirect': typeof RedirectRoute
   '/users': typeof UsersRouteWithChildren
   '/_pathlessLayout/_nested-layout': typeof PathlessLayoutNestedLayoutRouteWithChildren
   '/admin': typeof AdminRouteWithChildren
   '/admin/_dashboard': typeof AdminDashboardRouteWithChildren
-  '/jobs/$jobId': typeof JobsJobIdRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/users/$userId': typeof UsersUserIdRoute
-  '/jobs/': typeof JobsIndexRoute
   '/projects/': typeof ProjectsIndexRoute
   '/users/': typeof UsersIndexRoute
   '/_pathlessLayout/_nested-layout/route-a': typeof PathlessLayoutNestedLayoutRouteARoute
@@ -248,10 +231,8 @@ export interface FileRouteTypes {
     | '/redirect'
     | '/users'
     | '/admin'
-    | '/jobs/$jobId'
     | '/projects/$projectId'
     | '/users/$userId'
-    | '/jobs/'
     | '/projects/'
     | '/users/'
     | '/route-a'
@@ -263,12 +244,11 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/deferred'
+    | '/jobs'
     | '/redirect'
     | '/admin'
-    | '/jobs/$jobId'
     | '/projects/$projectId'
     | '/users/$userId'
-    | '/jobs'
     | '/projects'
     | '/users'
     | '/route-a'
@@ -287,10 +267,8 @@ export interface FileRouteTypes {
     | '/_pathlessLayout/_nested-layout'
     | '/admin'
     | '/admin/_dashboard'
-    | '/jobs/$jobId'
     | '/projects/$projectId'
     | '/users/$userId'
-    | '/jobs/'
     | '/projects/'
     | '/users/'
     | '/_pathlessLayout/_nested-layout/route-a'
@@ -304,7 +282,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   PathlessLayoutRoute: typeof PathlessLayoutRouteWithChildren
   DeferredRoute: typeof DeferredRoute
-  JobsRoute: typeof JobsRouteWithChildren
+  JobsRoute: typeof JobsRoute
   ProjectsRoute: typeof ProjectsRouteWithChildren
   RedirectRoute: typeof RedirectRoute
   UsersRoute: typeof UsersRouteWithChildren
@@ -442,13 +420,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectsIndexRouteImport
       parentRoute: typeof ProjectsRoute
     }
-    '/jobs/': {
-      id: '/jobs/'
-      path: '/'
-      fullPath: '/jobs/'
-      preLoaderRoute: typeof JobsIndexRouteImport
-      parentRoute: typeof JobsRoute
-    }
     '/users/$userId': {
       id: '/users/$userId'
       path: '/$userId'
@@ -462,13 +433,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/projects/$projectId'
       preLoaderRoute: typeof ProjectsProjectIdRouteImport
       parentRoute: typeof ProjectsRoute
-    }
-    '/jobs/$jobId': {
-      id: '/jobs/$jobId'
-      path: '/$jobId'
-      fullPath: '/jobs/$jobId'
-      preLoaderRoute: typeof JobsJobIdRouteImport
-      parentRoute: typeof JobsRoute
     }
     '/admin/_dashboard': {
       id: '/admin/_dashboard'
@@ -598,18 +562,6 @@ const PathlessLayoutRouteWithChildren = PathlessLayoutRoute._addFileChildren(
   PathlessLayoutRouteChildren,
 )
 
-interface JobsRouteChildren {
-  JobsJobIdRoute: typeof JobsJobIdRoute
-  JobsIndexRoute: typeof JobsIndexRoute
-}
-
-const JobsRouteChildren: JobsRouteChildren = {
-  JobsJobIdRoute: JobsJobIdRoute,
-  JobsIndexRoute: JobsIndexRoute,
-}
-
-const JobsRouteWithChildren = JobsRoute._addFileChildren(JobsRouteChildren)
-
 interface ProjectsRouteChildren {
   ProjectsProjectIdRoute: typeof ProjectsProjectIdRoute
   ProjectsIndexRoute: typeof ProjectsIndexRoute
@@ -688,7 +640,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   PathlessLayoutRoute: PathlessLayoutRouteWithChildren,
   DeferredRoute: DeferredRoute,
-  JobsRoute: JobsRouteWithChildren,
+  JobsRoute: JobsRoute,
   ProjectsRoute: ProjectsRouteWithChildren,
   RedirectRoute: RedirectRoute,
   UsersRoute: UsersRouteWithChildren,

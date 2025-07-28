@@ -1,4 +1,4 @@
-import { CreateJob, Job, JobWithSteps, UpdateJob, jobSchema, jobWithStepsSchema } from '../types/jobs';
+import { CreateJob, Job, JobWithSteps, UpdateJob, jobSchema, jobWithStepsSchema, JobMonitoringData, jobMonitoringDataSchema, JobRunInfo, jobRunInfoSchema } from '../types/jobs';
 import { z } from "zod";
 
 const API_BASE_URL = '/api';
@@ -48,4 +48,40 @@ export const deleteJob = async (id: string): Promise<void> => {
     const error = await res.json();
     throw new Error(error.error || 'Failed to delete job');
   }
+};
+
+export const getJobMonitoringData = async (id: string): Promise<JobMonitoringData> => {
+  const res = await fetch(`${API_BASE_URL}/jobs/${id}/monitoring`);
+  return handleResponse(res, jobMonitoringDataSchema);
+};
+
+export const getJobStatus = async (id: string): Promise<{
+  status: string;
+  queuePosition?: number;
+  estimatedStartTime?: Date;
+  currentRun?: JobRunInfo;
+}> => {
+  const res = await fetch(`${API_BASE_URL}/jobs/${id}/status`);
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || 'Failed to get job status');
+  }
+  return res.json();
+};
+
+export const getJobRuns = async (id: string): Promise<JobRunInfo[]> => {
+  const res = await fetch(`${API_BASE_URL}/jobs/${id}/runs`);
+  return handleResponse(res, z.array(jobRunInfoSchema));
+};
+
+export const getJobRunDetails = async (id: string, runId: string): Promise<{
+  run: JobRunInfo;
+  pipelineItems: any[];
+}> => {
+  const res = await fetch(`${API_BASE_URL}/jobs/${id}/runs/${runId}`);
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || 'Failed to get job run details');
+  }
+  return res.json();
 };

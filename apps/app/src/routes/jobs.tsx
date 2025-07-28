@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { z } from 'zod';
 import { useQuery } from '@tanstack/react-query';
-import { getJobs, getJob } from '~/api/jobs';
+import { getJobs, getJob, getJobMonitoringData, getJobRuns } from '~/api/jobs';
 import {
   flexRender,
   getCoreRowModel,
@@ -65,6 +65,19 @@ function JobsComponent() {
   const { data: selectedJob, isLoading: jobLoading } = useQuery({
     queryKey: ['job', jobId],
     queryFn: () => getJob(jobId!),
+    enabled: !!jobId,
+  });
+
+  const { data: monitoringData, isLoading: monitoringLoading } = useQuery({
+    queryKey: ['job-monitoring', jobId],
+    queryFn: () => getJobMonitoringData(jobId!),
+    enabled: !!jobId,
+    refetchInterval: 5000, // Refresh every 5 seconds for real-time updates
+  });
+
+  const { data: jobRuns, isLoading: runsLoading } = useQuery({
+    queryKey: ['job-runs', jobId],
+    queryFn: () => getJobRuns(jobId!),
     enabled: !!jobId,
   });
   
@@ -266,6 +279,52 @@ function JobsComponent() {
                   </div>
                 </div>
                 
+                {monitoringData && (
+                  <div>
+                    <h5 className="font-semibold mb-2">Queue Status</h5>
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div className="bg-blue-50 p-3 rounded">
+                        <h6 className="font-medium text-sm">Source Queue</h6>
+                        <div className="text-xs space-y-1">
+                          <p>Waiting: {monitoringData.queueStatus.sourceQueue.waiting}</p>
+                          <p>Active: {monitoringData.queueStatus.sourceQueue.active}</p>
+                          <p>Completed: {monitoringData.queueStatus.sourceQueue.completed}</p>
+                          <p>Failed: {monitoringData.queueStatus.sourceQueue.failed}</p>
+                        </div>
+                      </div>
+                      <div className="bg-green-50 p-3 rounded">
+                        <h6 className="font-medium text-sm">Pipeline Queue</h6>
+                        <div className="text-xs space-y-1">
+                          <p>Waiting: {monitoringData.queueStatus.pipelineQueue.waiting}</p>
+                          <p>Active: {monitoringData.queueStatus.pipelineQueue.active}</p>
+                          <p>Completed: {monitoringData.queueStatus.pipelineQueue.completed}</p>
+                          <p>Failed: {monitoringData.queueStatus.pipelineQueue.failed}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {jobRuns && jobRuns.length > 0 && (
+                  <div>
+                    <h5 className="font-semibold mb-2">Recent Runs</h5>
+                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                      {jobRuns.slice(0, 10).map((run) => (
+                        <div key={run.runId} className="bg-gray-50 p-2 rounded text-xs">
+                          <div className="flex justify-between items-center">
+                            <span className="font-mono">{run.runId.split(':').pop()}</span>
+                            <StatusBadge status={run.status} />
+                          </div>
+                          <div className="text-gray-600 mt-1">
+                            <p>Started: {new Date(run.startedAt).toLocaleString()}</p>
+                            <p>Items: {run.itemsProcessed}/{run.itemsTotal}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <h5 className="font-semibold mb-2">Pipeline Steps</h5>
                   <Table>

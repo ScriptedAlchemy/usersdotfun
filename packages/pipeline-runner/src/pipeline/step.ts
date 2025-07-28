@@ -1,9 +1,10 @@
 import { JobService } from "@usersdotfun/shared-db";
 import { Effect } from "effect";
 import { PluginError, type StepError } from "./errors";
-import type { PipelineStep } from "./interfaces";
+import type { PipelineStep, PipelineExecutionContext } from "./interfaces";
 import { getPlugin, PluginLoaderTag } from "./services";
 import { SchemaValidator } from "./validation";
+import { StateServiceTag, type StateService } from "../services/state.service";
 
 const hydrateSecrets = (config: any) => {
   // TODO: Implement secret hydration logic, e.g., using Mustache
@@ -13,19 +14,46 @@ const hydrateSecrets = (config: any) => {
 export const executeStep = (
   step: PipelineStep,
   input: Record<string, unknown>,
-  jobId: string,
-): Effect.Effect<Record<string, unknown>, StepError, PluginLoaderTag | JobService> =>
+  context: PipelineExecutionContext,
+): Effect.Effect<Record<string, unknown>, StepError, PluginLoaderTag | JobService | StateService> =>
   Effect.gen(function* () {
     const jobService = yield* JobService;
-    const stepId = crypto.randomUUID();
+    const stateService = yield* StateServiceTag;
+    const startTime = new Date();
+    
+    // Create deterministic step ID using context
+    const stepId = `${context.runId}:${step.stepId}:${context.itemIndex}`;
+    const redisStepKey = `pipeline-step:${stepId}`;
+    
+    // Store step data in Redis for real-time monitoring
+    yield* stateService.set(redisStepKey, {
+      stepId,
+      runId: context.runId,
+      itemIndex: context.itemIndex,
+      sourceJobId: context.sourceJobId,
+      jobId: context.jobId,
+      pluginName: step.pluginName,
+      config: step.config,
+      input,
+      status: "processing",
+      startedAt: startTime,
+    }).pipe(
+      Effect.mapError((error) => new PluginError({
+        pluginName: step.pluginName,
+        operation: "execute",
+        message: `Failed to store step state in Redis: ${error.message}`,
+        cause: error,
+      }))
+    );
+    
     yield* jobService.createPipelineStep({
       id: stepId,
-      jobId,
+      jobId: context.jobId,
       stepId: step.stepId,
       pluginName: step.pluginName,
       config: step.config,
       status: "processing",
-      startedAt: new Date(),
+      startedAt: startTime,
       input,
     });
 
@@ -105,11 +133,36 @@ export const executeStep = (
       return yield* Effect.fail(error);
     }
 
+    const completedAt = new Date();
+    
     yield* jobService.updatePipelineStep(stepId, {
       status: "completed",
       output: validatedOutput,
-      completedAt: new Date(),
+      completedAt,
     });
+
+    // Update Redis state with completion
+    yield* stateService.set(redisStepKey, {
+      stepId,
+      runId: context.runId,
+      itemIndex: context.itemIndex,
+      sourceJobId: context.sourceJobId,
+      jobId: context.jobId,
+      pluginName: step.pluginName,
+      config: step.config,
+      input,
+      output: validatedOutput,
+      status: "completed",
+      startedAt: startTime,
+      completedAt,
+    }).pipe(
+      Effect.mapError((error) => new PluginError({
+        pluginName: step.pluginName,
+        operation: "execute",
+        message: `Failed to update step completion state in Redis: ${error.message}`,
+        cause: error,
+      }))
+    );
 
     return validatedOutput;
   }).pipe(
