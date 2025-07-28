@@ -4,31 +4,36 @@ import { auth } from '~/lib/auth'
 const GATEWAY_URL = process.env.GATEWAY_URL || 'http://localhost:3001'
 
 async function proxyHandler({ request, params }: { request: Request; params: { _splat?: string } }) {
-  // Validate session before proxying
+  // Check for existing session (don't create new ones automatically)
   const session = await auth.api.getSession({ headers: request.headers })
   
-  if (!session?.session) {
-    return new Response(JSON.stringify({ error: 'Authentication required' }), { 
-      status: 401,
-      headers: { 'Content-Type': 'application/json' }
-    })
-  }
-
-  // Forward to Hono gateway with validated session
   const gatewayUrl = `${GATEWAY_URL}/api/${params._splat || ''}`
   
-  try {
-    const response = await fetch(gatewayUrl, {
-      method: request.method,
-      headers: {
-        ...Object.fromEntries(request.headers.entries()),
-        'x-user-id': session.user.id,
-        'x-user-role': (session.user as any).role || 'user',
-      },
-      body: request.body,
-    })
+  const fetchOptions: RequestInit = {
+    method: request.method,
+    headers: {
+      ...Object.fromEntries(request.headers.entries()),
+    },
+  }
 
-    // Return the response as-is, preserving status and headers
+  // Only add user context if session exists
+  if (session?.session && session?.user) {
+    fetchOptions.headers = {
+      ...fetchOptions.headers,
+      'x-user-id': session.user.id,
+      'x-user-role': (session.user as any).role || 'user',
+      'x-is-anonymous': (session.user as any).isAnonymous?.toString() || 'false',
+    }
+  }
+
+  // Add body for non-GET requests
+  if (request.method !== 'GET' && request.method !== 'HEAD' && request.body) {
+    fetchOptions.body = request.body
+    ;(fetchOptions as any).duplex = 'half'
+  }
+
+  try {
+    const response = await fetch(gatewayUrl, fetchOptions)
     return new Response(response.body, {
       status: response.status,
       statusText: response.statusText,
@@ -36,8 +41,8 @@ async function proxyHandler({ request, params }: { request: Request; params: { _
     })
   } catch (error) {
     console.error('Gateway proxy error:', error)
-    return new Response(JSON.stringify({ error: 'Failed to connect to gateway' }), {
-      status: 500,
+    return new Response(JSON.stringify({ error: 'Gateway unavailable' }), {
+      status: 502,
       headers: { 'Content-Type': 'application/json' }
     })
   }

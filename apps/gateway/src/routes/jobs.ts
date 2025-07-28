@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { getJobAdapter, HttpError } from '../services/job.service'
 import { getJobMonitoringAdapter } from '../services/job-monitoring-adapter.service'
-import { requireAuth, requireAdmin } from '../middleware/auth'
+import { requireAuth, requireAdmin, requireRealUser } from '../middleware/auth'
 
 const handleError = (c: any, error: any) => {
   console.error('Gateway Error:', {
