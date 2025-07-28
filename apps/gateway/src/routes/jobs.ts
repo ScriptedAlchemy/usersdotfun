@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { getJobAdapter, HttpError } from '../services/job.service'
 import { getJobMonitoringAdapter } from '../services/job-monitoring-adapter.service'
+import { requireAuth, requireAdmin } from '../middleware/auth'
 
 const handleError = (c: any, error: any) => {
   console.error('Gateway Error:', {
@@ -23,17 +24,23 @@ const handleError = (c: any, error: any) => {
 }
 
 export const jobsRouter = new Hono()
-  .get('/', async (c) => {
+  // Health check endpoint (no auth required)
+  .get('/health', (c) => c.json({ status: 'ok' }))
+  
+  // User endpoints (authentication required)
+  .get('/', requireAuth, async (c) => {
     try {
+      const user = c.get('user') as any
       const jobAdapter = await getJobAdapter()
       const jobs = await jobAdapter.getJobs()
+      // Filter jobs by user if needed in the future
       return c.json(jobs)
     } catch (error) {
       return handleError(c, error)
     }
   })
 
-  .get('/:id', async (c) => {
+  .get('/:id', requireAuth, async (c) => {
     try {
       const jobAdapter = await getJobAdapter()
       const job = await jobAdapter.getJobById(c.req.param('id'))
@@ -44,7 +51,8 @@ export const jobsRouter = new Hono()
     }
   })
 
-  .post('/', async (c) => {
+  // Admin-only endpoints
+  .post('/', requireAdmin, async (c) => {
     try {
       const jobAdapter = await getJobAdapter()
       const body = await c.req.json()
@@ -55,7 +63,7 @@ export const jobsRouter = new Hono()
     }
   })
 
-  .put('/:id', async (c) => {
+  .put('/:id', requireAdmin, async (c) => {
     try {
       const jobAdapter = await getJobAdapter()
       const body = await c.req.json()
@@ -66,7 +74,7 @@ export const jobsRouter = new Hono()
     }
   })
 
-  .delete('/:id', async (c) => {
+  .delete('/:id', requireAdmin, async (c) => {
     try {
       const jobAdapter = await getJobAdapter()
       await jobAdapter.deleteJob(c.req.param('id'))
@@ -76,7 +84,8 @@ export const jobsRouter = new Hono()
     }
   })
 
-  .get('/:id/status', async (c) => {
+  // Monitoring endpoints (authenticated users)
+  .get('/:id/status', requireAuth, async (c) => {
     try {
       const monitoringAdapter = await getJobMonitoringAdapter()
       const status = await monitoringAdapter.getJobStatus(c.req.param('id'))
@@ -86,19 +95,17 @@ export const jobsRouter = new Hono()
     }
   })
 
-  .get('/:id/monitoring', async (c) => {
+  .get('/:id/monitoring', requireAuth, async (c) => {
     try {
-      console.log("trying monitoring");
       const monitoringAdapter = await getJobMonitoringAdapter()
       const data = await monitoringAdapter.getJobMonitoringData(c.req.param('id'))
-      console.log("got data monitoring", data);
       return c.json(data)
     } catch (error) {
       return handleError(c, error)
     }
   })
 
-  .get('/:id/runs', async (c) => {
+  .get('/:id/runs', requireAuth, async (c) => {
     try {
       const monitoringAdapter = await getJobMonitoringAdapter()
       const runs = await monitoringAdapter.getJobRuns(c.req.param('id'))
@@ -108,7 +115,7 @@ export const jobsRouter = new Hono()
     }
   })
 
-  .get('/:id/runs/:runId', async (c) => {
+  .get('/:id/runs/:runId', requireAuth, async (c) => {
     try {
       const monitoringAdapter = await getJobMonitoringAdapter()
       const runDetails = await monitoringAdapter.getJobRunDetails(

@@ -1,19 +1,18 @@
 import { betterAuth } from "better-auth";
 import { jwt, anonymous, admin } from "better-auth/plugins";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { db } from "~/db";
+import { db } from "../db";
 import { schema } from "@usersdotfun/shared-db";
-import { reactStartCookies } from "better-auth/react-start";
 
 export const auth = betterAuth({
-  database: drizzleAdapter(db, {
+  database: drizzleAdapter(db, { 
     provider: "pg",
     schema: schema,
   }),
+  baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000",
+  secret: process.env.BETTER_AUTH_SECRET || "your-secret-here",
   plugins: [
-    anonymous({
-      generateName: () => `User_${Math.random().toString(36).substring(7)}`
-    }),
+    anonymous(),
     admin({
       defaultRole: "user",
       adminRoles: ["admin"],
@@ -29,13 +28,12 @@ export const auth = betterAuth({
         }),
         expirationTime: "1h"
       }
-    }),
-    reactStartCookies() // make sure this is the last plugin in the array
+    })
   ],
   session: {
     cookieCache: {
       enabled: true,
-      maxAge: 5 * 60 // 5 minutes cache
+      maxAge: 5 * 60 // 5 minutes cache - reduces DB hits
     }
   }
 });

@@ -4,12 +4,14 @@
     "dev": "bun run --hot src/index.ts"
   },
   "dependencies": {
-    "@usersdotfun/shared-queue": "workspace:*",
     "@usersdotfun/shared-db": "workspace:*",
+    "@usersdotfun/shared-queue": "workspace:*",
+    "better-auth": "^1.3.4",
+    "bullmq": "^5.34.0",
     "effect": "^3.17.2",
     "hono": "^4.8.8",
-    "ioredis": "^5.4.1",
-    "bullmq": "^5.34.0"
+    "hono-rate-limiter": "^0.4.2",
+    "ioredis": "^5.4.1"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"

@@ -1,5 +1,18 @@
 import { z } from "zod";
-import { CreateJob, Job, JobMonitoringData, jobMonitoringDataSchema, JobRunInfo, jobRunInfoSchema, jobSchema, JobWithSteps, jobWithStepsSchema, UpdateJob } from '../types/jobs';
+import { 
+  CreateJob, 
+  Job, 
+  JobMonitoringData, 
+  jobMonitoringDataSchema, 
+  JobRunInfo, 
+  jobRunInfoSchema, 
+  jobSchema, 
+  JobWithSteps, 
+  jobWithStepsSchema, 
+  UpdateJob,
+  JobStatusResponse,
+  JobRunDetailsResponse
+} from '@usersdotfun/shared-types';
 
 const API_BASE_URL = '/api';
 
@@ -9,7 +22,6 @@ async function handleResponse<T>(response: Response, schema: z.Schema<T>): Promi
     throw new Error(error.error || 'API request failed');
   }
   const data = await response.json();
-  console.log("got response", data)
   return schema.parse(data);
 }
 
