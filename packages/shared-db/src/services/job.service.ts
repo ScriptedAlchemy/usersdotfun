@@ -99,6 +99,9 @@ export interface JobService {
   readonly deleteJob: (
     id: string
   ) => Effect.Effect<void, JobNotFoundError | DbError>;
+  readonly retryJob: (
+    id: string
+  ) => Effect.Effect<void, JobNotFoundError | DbError>;
   readonly getStepById: (
     id: string
   ) => Effect.Effect<
@@ -118,6 +121,9 @@ export interface JobService {
     SelectPipelineStep,
     PipelineStepNotFoundError | ValidationError | DbError
   >;
+  readonly retryPipelineStep: (
+    id: string
+  ) => Effect.Effect<void, PipelineStepNotFoundError | DbError>;
 }
 
 export const JobService = Context.GenericTag<JobService>("JobService");
@@ -381,16 +387,55 @@ export const JobServiceLive = Layer.effect(
         )
       );
 
+    const retryJob = (id: string): Effect.Effect<void, JobNotFoundError | DbError> =>
+      Effect.tryPromise({
+        try: () =>
+          db
+            .update(schema.jobs)
+            .set({ status: 'pending', updatedAt: new Date() })
+            .where(eq(schema.jobs.id, id))
+            .returning(),
+        catch: (cause) =>
+          new DbError({ cause, message: "Failed to retry job" }),
+      }).pipe(
+        Effect.flatMap((result) =>
+          requireNonEmptyArray(result, new JobNotFoundError({ jobId: id }))
+        )
+      );
+
+    const retryPipelineStep = (id: string): Effect.Effect<void, PipelineStepNotFoundError | DbError> =>
+      Effect.tryPromise({
+        try: () =>
+          db
+            .update(schema.pipelineSteps)
+            .set({ 
+              status: 'pending', 
+              error: null,
+              output: null,
+              completedAt: null
+            })
+            .where(eq(schema.pipelineSteps.id, id))
+            .returning(),
+        catch: (cause) =>
+          new DbError({ cause, message: "Failed to retry pipeline step" }),
+      }).pipe(
+        Effect.flatMap((result) =>
+          requireNonEmptyArray(result, new PipelineStepNotFoundError({ stepId: id }))
+        )
+      );
+
     return {
       getJobById,
       getJobs,
       createJob,
       updateJob,
       deleteJob,
+      retryJob,
       getStepById,
       getStepsForJob,
       createPipelineStep,
       updatePipelineStep,
+      retryPipelineStep,
     };
   })
 );

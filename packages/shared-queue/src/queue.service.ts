@@ -1,4 +1,4 @@
-import { Job, Queue, type RepeatOptions, Worker } from 'bullmq';
+import { Job, Queue, type RepeatOptions, Worker, type RepeatableJob } from 'bullmq';
 import { Context, Effect, Layer, Runtime, Scope } from 'effect';
 import { RedisConfig } from './redis-config.service';
 
@@ -37,6 +37,24 @@ export interface QueueService {
     data: T,
     options: RepeatOptions
   ) => Effect.Effect<Job<T>, Error>;
+
+  readonly getRepeatableJobs: (
+    queueName: string
+  ) => Effect.Effect<Array<RepeatableJob>, Error>;
+
+
+  readonly addRepeatableIfNotExists: <T extends JobData>(
+    queueName: string,
+    jobName: string,
+    data: T,
+    options: RepeatOptions
+  ) => Effect.Effect<{ added: boolean; job?: Job<T> }, Error>;
+
+  readonly removeRepeatableJob: (
+    queueName: string,
+    jobId: string,
+    jobName?: string
+  ) => Effect.Effect<{ removed: boolean; count: number }, Error>;
 
   readonly createWorker: <T extends JobData, E, R>(
     queueName: string,
@@ -137,6 +155,98 @@ export const QueueServiceLive = Layer.scoped(
             catch: (error) => new Error(`Failed to add repeatable job: ${error}`)
           })
         ),
+
+      getRepeatableJobs: (queueName: string) =>
+        Effect.flatMap(getQueue(queueName), (queue) =>
+          Effect.tryPromise({
+            try: () => queue.getRepeatableJobs(),
+            catch: (error) => new Error(`Failed to get repeatable jobs: ${error}`)
+          })
+        ),
+
+
+      addRepeatableIfNotExists: <T extends JobData>(
+        queueName: string,
+        jobName: string,
+        data: T,
+        options: RepeatOptions
+      ) =>
+        Effect.gen(function* () {
+          const queue = yield* getQueue(queueName);
+          const existingJobs = yield* Effect.tryPromise({
+            try: () => queue.getRepeatableJobs(),
+            catch: (error) => new Error(`Failed to get repeatable jobs: ${error}`)
+          });
+
+          // Check if a job with the same name and pattern already exists
+          // RepeatableJob has properties: key, name, id, endDate, tz, pattern, every
+          const jobId = (data as SourceJobData).jobId;
+          const existingJob = existingJobs.find(job => 
+            job.name === jobName && 
+            job.pattern === options.pattern &&
+            job.key.includes(jobId) // The key often contains job data info
+          );
+
+          if (existingJob) {
+            // Job already exists with same schedule - no need to add
+            return { added: false };
+          }
+
+          // Check if job exists with different schedule - remove old one first
+          const jobWithDifferentSchedule = existingJobs.find(job =>
+            job.name === jobName &&
+            job.key.includes(jobId) &&
+            job.pattern !== options.pattern
+          );
+
+          if (jobWithDifferentSchedule) {
+            // Remove the old job with different schedule using the newer method
+            yield* Effect.tryPromise({
+              try: () => queue.removeJobScheduler(jobWithDifferentSchedule.key),
+              catch: (error) => new Error(`Failed to remove old repeatable job: ${error}`)
+            });
+          }
+
+          // Add the new job
+          const job = yield* Effect.tryPromise({
+            try: () => queue.add(jobName, data, { repeat: options }),
+            catch: (error) => new Error(`Failed to add repeatable job: ${error}`)
+          });
+
+          return { added: true, job };
+        }),
+
+      removeRepeatableJob: (queueName: string, jobId: string, jobName = 'scheduled-source-run') =>
+        Effect.gen(function* () {
+          const queue = yield* getQueue(queueName);
+          const existingJobs = yield* Effect.tryPromise({
+            try: () => queue.getRepeatableJobs(),
+            catch: (error) => new Error(`Failed to get repeatable jobs: ${error}`)
+          });
+
+          // Find all jobs that match the jobId
+          const jobsToRemove = existingJobs.filter(job => 
+            job.name === jobName && job.key.includes(jobId)
+          );
+
+          if (jobsToRemove.length === 0) {
+            return { removed: false, count: 0 };
+          }
+
+          // Remove all matching jobs
+          let removedCount = 0;
+          for (const job of jobsToRemove) {
+            yield* Effect.tryPromise({
+              try: async () => {
+                await queue.removeJobScheduler(job.key);
+                removedCount++;
+              },
+              catch: (error) => new Error(`Failed to remove repeatable job ${job.key}: ${error}`)
+            });
+          }
+
+          return { removed: removedCount > 0, count: removedCount };
+        }),
 
       createWorker: <T extends JobData, E, R>(
         queueName: string,

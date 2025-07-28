@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { deleteJob } from '~/api/jobs'
+import { deleteJob, retryJob } from '~/api/jobs'
 import { Button } from '~/components/ui/button'
 import { toast } from 'sonner'
 import { JobSheet } from './job-sheet'
@@ -19,6 +19,19 @@ export function JobActions({ job }: { job: Job }) {
     },
   });
 
+  const retryMutation = useMutation({
+    mutationFn: () => retryJob(job.id),
+    onSuccess: () => {
+      toast.success('Job retry initiated')
+      queryClient.invalidateQueries({ queryKey: ['jobs'] })
+      queryClient.invalidateQueries({ queryKey: ['job', job.id] })
+      queryClient.invalidateQueries({ queryKey: ['job-monitoring', job.id] })
+    },
+    onError: (error) => {
+      toast.error(`Failed to retry job: ${error.message}`);
+    },
+  });
+
   return (
     <div className="flex gap-2">
       <JobSheet job={job}>
@@ -26,6 +39,16 @@ export function JobActions({ job }: { job: Job }) {
           Edit
         </Button>
       </JobSheet>
+      {(job.status === 'failed' || job.status === 'completed') && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => retryMutation.mutate()}
+          disabled={retryMutation.isPending}
+        >
+          {retryMutation.isPending ? 'Retrying...' : 'Retry'}
+        </Button>
+      )}
       <Button
         variant="destructive"
         size="sm"

@@ -1,5 +1,4 @@
 import type { Pipeline } from '@usersdotfun/pipeline-runner';
-import { Effect } from "effect";
 
 export interface JobDefinition {
   id: string;
@@ -19,9 +18,9 @@ export const jobs: JobDefinition[] = [
     name: "open_crosspost",
     schedule: "*/5 * * * *",
     source: {
-      plugin: "@usersdotfun/masa-source",
-      config: { "apiKey": "PNXGZ4GqWTer9FAUuW2oa2W7aNfSd2GVTkkjBDTPfh3mUQhHi6sT5busrzCZmn3c" },
-      search: "@open_crosspost #feature"
+      "plugin": "@usersdotfun/masa-source",
+      "config": { "apiKey": "PNXGZ4GqWTer9FAUuW2oa2W7aNfSd2GVTkkjBDTPfh3mUQhHi6sT5busrzCZmn3c" },
+      "search": "@open_crosspost #feature"
     },
     pipeline: {
       "id": "test-pipeline",
@@ -60,11 +59,3 @@ export const jobs: JobDefinition[] = [
     }
   }
 ];
-
-export const getJobDefinitionById = (jobId: string): Effect.Effect<JobDefinition, Error> => {
-  const job = jobs.find(j => j.id === jobId);
-  if (!job) {
-    return Effect.fail(new Error(`Job with id ${jobId} not found`));
-  }
-  return Effect.succeed(job);
-}

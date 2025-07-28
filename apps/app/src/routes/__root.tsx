@@ -13,6 +13,7 @@ import * as React from "react";
 import { DefaultCatchBoundary } from "~/components/DefaultCatchBoundary";
 import { NotFound } from "~/components/NotFound";
 import { Toaster } from "~/components/ui/sonner";
+import { WebSocketProvider } from "~/lib/websocket";
 import appCss from "~/styles/app.css?url";
 import { seo } from "~/utils/seo";
 
@@ -87,67 +88,77 @@ export const Route = createRootRouteWithContext<{
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
-      <html>
-        <head>
-          <HeadContent />
-        </head>
-        <body>
-          <div className="p-2 flex gap-2 text-lg">
-            <Link
-              to="/"
-              activeProps={{
-                className: "font-bold",
-              }}
-              activeOptions={{ exact: true }}
-            >
-              Home
-            </Link>{" "}
-            <Link
-              to="/jobs"
-              activeProps={{
-                className: "font-bold",
-              }}
-            >
-              Jobs
-            </Link>{" "}
-            <Link
-              to="/projects"
-              activeProps={{
-                className: "font-bold",
-              }}
-            >
-              Projects
-            </Link>{" "}
-            <Link
-              to="/users"
-              activeProps={{
-                className: "font-bold",
-              }}
-            >
-              Users
-            </Link>{" "}
-            <Link
-              to="/route-a"
-              activeProps={{
-                className: "font-bold",
-              }}
-            >
-              Pathless Layout
-            </Link>{" "}
-            <Link
-              to="/deferred"
-              activeProps={{
-                className: "font-bold",
-              }}
-            >
-              Deferred
-            </Link>{" "}
-          </div>
-          <hr />
-          {children}
-          <Scripts />
-        </body>
-      </html>
+      <WebSocketProvider>
+        <html>
+          <head>
+            <HeadContent />
+          </head>
+          <body>
+            <div className="p-2 flex gap-2 text-lg">
+              <Link
+                to="/"
+                activeProps={{
+                  className: "font-bold",
+                }}
+                activeOptions={{ exact: true }}
+              >
+                Home
+              </Link>{" "}
+              <Link
+                to="/jobs"
+                activeProps={{
+                  className: "font-bold",
+                }}
+              >
+                Jobs
+              </Link>{" "}
+              <Link
+                to="/queues"
+                activeProps={{
+                  className: "font-bold",
+                }}
+              >
+                Queues
+              </Link>{" "}
+              <Link
+                to="/projects"
+                activeProps={{
+                  className: "font-bold",
+                }}
+              >
+                Projects
+              </Link>{" "}
+              <Link
+                to="/users"
+                activeProps={{
+                  className: "font-bold",
+                }}
+              >
+                Users
+              </Link>{" "}
+              <Link
+                to="/route-a"
+                activeProps={{
+                  className: "font-bold",
+                }}
+              >
+                Pathless Layout
+              </Link>{" "}
+              <Link
+                to="/deferred"
+                activeProps={{
+                  className: "font-bold",
+                }}
+              >
+                Deferred
+              </Link>{" "}
+            </div>
+            <hr />
+            {children}
+            <Scripts />
+          </body>
+        </html>
+      </WebSocketProvider>
     </QueryClientProvider>
   );
 }

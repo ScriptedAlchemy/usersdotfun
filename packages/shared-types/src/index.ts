@@ -205,3 +205,178 @@ export type AuthenticatedContext = z.infer<typeof authenticatedContextSchema>;
 export type JobStatusResponse = z.infer<typeof jobStatusResponseSchema>;
 export type JobRunDetailsResponse = z.infer<typeof jobRunDetailsResponseSchema>;
 export type ApiError = z.infer<typeof apiErrorSchema>;
+
+// ============================================================================
+// QUEUE MANAGEMENT TYPES
+// ============================================================================
+
+export const queueOverviewSchema = z.object({
+  name: z.string(),
+  status: z.enum(['active', 'paused']),
+  waiting: z.number(),
+  active: z.number(),
+  completed: z.number(),
+  failed: z.number(),
+  delayed: z.number(),
+});
+
+export const queueItemSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  data: z.any(),
+  progress: z.number(),
+  attemptsMade: z.number(),
+  timestamp: z.number(),
+  processedOn: z.number().optional(),
+  finishedOn: z.number().optional(),
+  failedReason: z.string().optional(),
+  delay: z.number().optional(),
+  priority: z.number(),
+  jobId: z.string().optional(),
+});
+
+export const queueDetailsSchema = queueOverviewSchema.extend({
+  items: z.object({
+    waiting: z.array(queueItemSchema),
+    active: z.array(queueItemSchema),
+    failed: z.array(queueItemSchema),
+    delayed: z.array(queueItemSchema),
+  }),
+  performance: z.object({
+    processingRate: z.number(),
+    averageProcessTime: z.number(),
+    errorRate: z.number(),
+  }),
+});
+
+export const queueActionResultSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+  affectedItems: z.number().optional(),
+});
+
+export type QueueOverview = z.infer<typeof queueOverviewSchema>;
+export type QueueItem = z.infer<typeof queueItemSchema>;
+export type QueueDetails = z.infer<typeof queueDetailsSchema>;
+export type QueueActionResult = z.infer<typeof queueActionResultSchema>;
+
+// ============================================================================
+// WEBSOCKET EVENT TYPES
+// ============================================================================
+
+export const webSocketEventSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('job:status-changed'),
+    data: z.object({
+      jobId: z.string(),
+      status: z.string(),
+      timestamp: z.string().datetime(),
+    }),
+  }),
+  z.object({
+    type: z.literal('job:progress'),
+    data: z.object({
+      jobId: z.string(),
+      progress: z.number(),
+      currentStep: z.string().optional(),
+      runId: z.string().optional(),
+    }),
+  }),
+  z.object({
+    type: z.literal('job:monitoring-update'),
+    data: jobMonitoringDataSchema,
+  }),
+  z.object({
+    type: z.literal('queue:status-update'),
+    data: z.object({
+      sourceQueue: queueStatusSchema,
+      pipelineQueue: queueStatusSchema,
+    }),
+  }),
+  z.object({
+    type: z.literal('pipeline:step-completed'),
+    data: z.object({
+      jobId: z.string(),
+      runId: z.string(),
+      step: pipelineStepSchema,
+    }),
+  }),
+  z.object({
+    type: z.literal('pipeline:step-failed'),
+    data: z.object({
+      jobId: z.string(),
+      runId: z.string(),
+      stepId: z.string(),
+      error: z.string(),
+      timestamp: z.string().datetime(),
+    }),
+  }),
+  z.object({
+    type: z.literal('job:run-started'),
+    data: z.object({
+      jobId: z.string(),
+      run: jobRunInfoSchema,
+    }),
+  }),
+  z.object({
+    type: z.literal('job:run-completed'),
+    data: z.object({
+      jobId: z.string(),
+      run: jobRunInfoSchema,
+    }),
+  }),
+  z.object({
+    type: z.literal('queue:status-changed'),
+    data: z.object({
+      queueName: z.string(),
+      overview: queueOverviewSchema,
+    }),
+  }),
+  z.object({
+    type: z.literal('queue:item-added'),
+    data: z.object({
+      queueName: z.string(),
+      item: queueItemSchema,
+    }),
+  }),
+  z.object({
+    type: z.literal('queue:item-completed'),
+    data: z.object({
+      queueName: z.string(),
+      itemId: z.string(),
+      result: z.any().optional(),
+    }),
+  }),
+  z.object({
+    type: z.literal('queue:item-failed'),
+    data: z.object({
+      queueName: z.string(),
+      itemId: z.string(),
+      error: z.string(),
+    }),
+  }),
+  z.object({
+    type: z.literal('queue:paused'),
+    data: z.object({
+      queueName: z.string(),
+      timestamp: z.string().datetime(),
+    }),
+  }),
+  z.object({
+    type: z.literal('queue:resumed'),
+    data: z.object({
+      queueName: z.string(),
+      timestamp: z.string().datetime(),
+    }),
+  }),
+  z.object({
+    type: z.literal('queue:cleared'),
+    data: z.object({
+      queueName: z.string(),
+      itemsRemoved: z.number(),
+      timestamp: z.string().datetime(),
+    }),
+  }),
+]);
+
+export type WebSocketEvent = z.infer<typeof webSocketEventSchema>;

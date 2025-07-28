@@ -4,7 +4,9 @@ import { logger } from 'hono/logger'
 import { rateLimiter } from 'hono-rate-limiter'
 import { authMiddleware } from './middleware/auth'
 import { jobsRouter } from './routes/jobs'
-import './types/hono' // Import type declarations
+import { queuesRouter } from './routes/queues'
+import websocketRoutes, { websocket } from './routes/websocket'
+import './types/hono'
 
 const app = new Hono()
 
@@ -35,6 +37,8 @@ app.use('*', authMiddleware)
 // Routes
 app.get('/', (c) => c.text('Jobs API'))
 app.route('/api/jobs', jobsRouter)
+app.route('/api/queues', queuesRouter)
+app.route('/api', websocketRoutes)
 
 const port = parseInt(process.env.PORT || '3001')
 console.log(`Gateway running on port ${port}`)
@@ -42,4 +46,5 @@ console.log(`Gateway running on port ${port}`)
 export default {
   port,
   fetch: app.fetch,
+  websocket,
 }

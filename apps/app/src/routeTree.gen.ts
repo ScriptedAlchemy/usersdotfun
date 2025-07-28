@@ -14,6 +14,7 @@ import { createServerRootRoute } from '@tanstack/react-start/server'
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as UsersRouteImport } from './routes/users'
 import { Route as RedirectRouteImport } from './routes/redirect'
+import { Route as QueuesRouteImport } from './routes/queues'
 import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as JobsRouteImport } from './routes/jobs'
 import { Route as DeferredRouteImport } from './routes/deferred'
@@ -52,6 +53,11 @@ const UsersRoute = UsersRouteImport.update({
 const RedirectRoute = RedirectRouteImport.update({
   id: '/redirect',
   path: '/redirect',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const QueuesRoute = QueuesRouteImport.update({
+  id: '/queues',
+  path: '/queues',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProjectsRoute = ProjectsRouteImport.update({
@@ -165,6 +171,7 @@ export interface FileRoutesByFullPath {
   '/deferred': typeof DeferredRoute
   '/jobs': typeof JobsRoute
   '/projects': typeof ProjectsRouteWithChildren
+  '/queues': typeof QueuesRoute
   '/redirect': typeof RedirectRoute
   '/users': typeof UsersRouteWithChildren
   '/admin': typeof AdminDashboardRouteWithChildren
@@ -182,6 +189,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/deferred': typeof DeferredRoute
   '/jobs': typeof JobsRoute
+  '/queues': typeof QueuesRoute
   '/redirect': typeof RedirectRoute
   '/admin': typeof AdminDashboardIndexRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
@@ -200,6 +208,7 @@ export interface FileRoutesById {
   '/deferred': typeof DeferredRoute
   '/jobs': typeof JobsRoute
   '/projects': typeof ProjectsRouteWithChildren
+  '/queues': typeof QueuesRoute
   '/redirect': typeof RedirectRoute
   '/users': typeof UsersRouteWithChildren
   '/_pathlessLayout/_nested-layout': typeof PathlessLayoutNestedLayoutRouteWithChildren
@@ -222,6 +231,7 @@ export interface FileRouteTypes {
     | '/deferred'
     | '/jobs'
     | '/projects'
+    | '/queues'
     | '/redirect'
     | '/users'
     | '/admin'
@@ -239,6 +249,7 @@ export interface FileRouteTypes {
     | '/'
     | '/deferred'
     | '/jobs'
+    | '/queues'
     | '/redirect'
     | '/admin'
     | '/projects/$projectId'
@@ -256,6 +267,7 @@ export interface FileRouteTypes {
     | '/deferred'
     | '/jobs'
     | '/projects'
+    | '/queues'
     | '/redirect'
     | '/users'
     | '/_pathlessLayout/_nested-layout'
@@ -278,6 +290,7 @@ export interface RootRouteChildren {
   DeferredRoute: typeof DeferredRoute
   JobsRoute: typeof JobsRoute
   ProjectsRoute: typeof ProjectsRouteWithChildren
+  QueuesRoute: typeof QueuesRoute
   RedirectRoute: typeof RedirectRoute
   UsersRoute: typeof UsersRouteWithChildren
   AdminRoute: typeof AdminRouteWithChildren
@@ -357,6 +370,13 @@ declare module '@tanstack/react-router' {
       path: '/redirect'
       fullPath: '/redirect'
       preLoaderRoute: typeof RedirectRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/queues': {
+      id: '/queues'
+      path: '/queues'
+      fullPath: '/queues'
+      preLoaderRoute: typeof QueuesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/projects': {
@@ -611,6 +631,7 @@ const rootRouteChildren: RootRouteChildren = {
   DeferredRoute: DeferredRoute,
   JobsRoute: JobsRoute,
   ProjectsRoute: ProjectsRouteWithChildren,
+  QueuesRoute: QueuesRoute,
   RedirectRoute: RedirectRoute,
   UsersRoute: UsersRouteWithChildren,
   AdminRoute: AdminRouteWithChildren,

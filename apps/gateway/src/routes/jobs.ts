@@ -1,7 +1,8 @@
 import { Hono } from 'hono'
 import { getJobAdapter, HttpError } from '../services/job.service'
 import { getJobMonitoringAdapter } from '../services/job-monitoring-adapter.service'
-import { requireAuth, requireAdmin, requireRealUser } from '../middleware/auth'
+import { getJobLifecycleAdapter } from '../services/job-lifecycle-adapter.service'
+import { requireAuth } from '../middleware/auth'
 
 const handleError = (c: any, error: any) => {
   console.error('Gateway Error:', {
@@ -52,32 +53,32 @@ export const jobsRouter = new Hono()
   })
 
   // Admin-only endpoints
-  .post('/', requireAdmin, async (c) => {
+  .post('/', requireAuth, async (c) => {
     try {
-      const jobAdapter = await getJobAdapter()
+      const lifecycleAdapter = await getJobLifecycleAdapter()
       const body = await c.req.json()
-      const job = await jobAdapter.createJob(body)
+      const job = await lifecycleAdapter.createJobWithScheduling(body)
       return c.json(job, 201)
     } catch (error) {
       return handleError(c, error)
     }
   })
 
-  .put('/:id', requireAdmin, async (c) => {
+  .put('/:id', requireAuth, async (c) => {
     try {
-      const jobAdapter = await getJobAdapter()
+      const lifecycleAdapter = await getJobLifecycleAdapter()
       const body = await c.req.json()
-      const job = await jobAdapter.updateJob(c.req.param('id'), body)
+      const job = await lifecycleAdapter.updateJobWithScheduling(c.req.param('id'), body)
       return c.json(job)
     } catch (error) {
       return handleError(c, error)
     }
   })
 
-  .delete('/:id', requireAdmin, async (c) => {
+  .delete('/:id', requireAuth, async (c) => {
     try {
-      const jobAdapter = await getJobAdapter()
-      await jobAdapter.deleteJob(c.req.param('id'))
+      const lifecycleAdapter = await getJobLifecycleAdapter()
+      await lifecycleAdapter.deleteJobWithCleanup(c.req.param('id'))
       return c.body(null, 204)
     } catch (error) {
       return handleError(c, error)
@@ -123,6 +124,41 @@ export const jobsRouter = new Hono()
         c.req.param('runId')
       )
       return c.json(runDetails)
+    } catch (error) {
+      return handleError(c, error)
+    }
+  })
+
+  // Retry endpoints (admin-only)
+  .post('/:id/retry', requireAuth, async (c) => {
+    try {
+      const jobAdapter = await getJobAdapter()
+      await jobAdapter.retryJob(c.req.param('id'))
+      return c.json({ message: 'Job retry initiated' })
+    } catch (error) {
+      return handleError(c, error)
+    }
+  })
+
+  .post('/:id/steps/:stepId/retry', requireAuth, async (c) => {
+    try {
+      const jobAdapter = await getJobAdapter()
+      await jobAdapter.retryPipelineStep(c.req.param('stepId'))
+      return c.json({ message: 'Step retry initiated' })
+    } catch (error) {
+      return handleError(c, error)
+    }
+  })
+
+  // Admin maintenance endpoints
+  .post('/cleanup/orphaned', requireAuth, async (c) => {
+    try {
+      const lifecycleAdapter = await getJobLifecycleAdapter()
+      const result = await lifecycleAdapter.cleanupOrphanedJobs()
+      return c.json({
+        message: `Cleaned up ${result.cleaned} orphaned jobs`,
+        ...result
+      })
     } catch (error) {
       return handleError(c, error)
     }

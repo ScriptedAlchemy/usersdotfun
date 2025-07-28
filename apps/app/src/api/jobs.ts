@@ -98,3 +98,23 @@ export const getJobRunDetails = async (id: string, runId: string): Promise<{
   }
   return res.json();
 };
+
+export const retryJob = async (id: string): Promise<void> => {
+  const res = await fetch(`${API_BASE_URL}/jobs/${id}/retry`, {
+    method: 'POST',
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || 'Failed to retry job');
+  }
+};
+
+export const retryPipelineStep = async (jobId: string, stepId: string): Promise<void> => {
+  const res = await fetch(`${API_BASE_URL}/jobs/${jobId}/steps/${stepId}/retry`, {
+    method: 'POST',
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || 'Failed to retry step');
+  }
+};

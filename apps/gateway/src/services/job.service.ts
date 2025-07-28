@@ -68,6 +68,8 @@ export interface JobAdapter {
   createJob(data: any): Promise<any>
   updateJob(id: string, data: any): Promise<any>
   deleteJob(id: string): Promise<void>
+  retryJob(id: string): Promise<void>
+  retryPipelineStep(id: string): Promise<void>
 }
 
 export class JobAdapterImpl implements JobAdapter {
@@ -136,6 +138,30 @@ export class JobAdapterImpl implements JobAdapter {
       Effect.gen(function* () {
         const jobService = yield* JobService;
         return yield* jobService.deleteJob(id);
+      }).pipe(
+        Effect.provide(AppLayer),
+        Effect.scoped
+      )
+    ).catch(handleEffectError);
+  }
+
+  async retryJob(id: string) {
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const jobService = yield* JobService;
+        return yield* jobService.retryJob(id);
+      }).pipe(
+        Effect.provide(AppLayer),
+        Effect.scoped
+      )
+    ).catch(handleEffectError);
+  }
+
+  async retryPipelineStep(id: string) {
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const jobService = yield* JobService;
+        return yield* jobService.retryPipelineStep(id);
       }).pipe(
         Effect.provide(AppLayer),
         Effect.scoped

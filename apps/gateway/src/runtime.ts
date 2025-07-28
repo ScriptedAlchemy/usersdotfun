@@ -1,9 +1,10 @@
 import { BunTerminal } from "@effect/platform-bun";
 import { DatabaseLive, DatabaseConfig, JobServiceLive } from '@usersdotfun/shared-db';
-import { QueueStatusServiceLive, RedisConfigLive, RedisAppConfig, StateServiceLive } from "@usersdotfun/shared-queue";
+import { QueueStatusServiceLive, QueueServiceLive, RedisConfigLive, RedisAppConfig, StateServiceLive } from "@usersdotfun/shared-queue";
 import { Layer, Logger, LogLevel, ConfigProvider, Effect, Redacted } from 'effect';
 import { AppConfig, AppConfigLive } from './services/config.service';
 import { JobMonitoringServiceLive } from './services/job-monitoring.service';
+import { JobLifecycleServiceLive } from './services/job-lifecycle.service';
 
 // Step 1: Base layers
 const ConfigLayer = AppConfigLive.pipe(
@@ -61,12 +62,24 @@ const QueueStatusServiceLayer = QueueStatusServiceLive.pipe(
   Layer.provide(RedisLayer)
 );
 
-// Step 5: Monitoring layer - depends on other services
+const QueueServiceLayer = QueueServiceLive.pipe(
+  Layer.provide(RedisLayer)
+);
+
+// Step 5: Higher-level service layers - depend on multiple services
 const MonitoringLayer = JobMonitoringServiceLive.pipe(
   Layer.provide(Layer.mergeAll(
     StateServiceLayer,
     JobServiceLayer,
     QueueStatusServiceLayer
+  ))
+);
+
+const JobLifecycleLayer = JobLifecycleServiceLive.pipe(
+  Layer.provide(Layer.mergeAll(
+    JobServiceLayer,
+    QueueServiceLayer,
+    StateServiceLayer
   ))
 );
 
@@ -79,5 +92,7 @@ export const AppLayer = Layer.mergeAll(
   JobServiceLayer,
   StateServiceLayer,
   QueueStatusServiceLayer,
-  MonitoringLayer
+  QueueServiceLayer,
+  MonitoringLayer,
+  JobLifecycleLayer
 );

@@ -4,10 +4,10 @@ import { Database, DatabaseLive, DatabaseConfig, JobService, JobServiceLive } fr
 import { RedisConfigLive, RedisAppConfig, StateService, StateServiceLive, QueueService, QueueServiceLive } from '@usersdotfun/shared-queue';
 import { Effect, Layer, Logger, LogLevel, ConfigProvider, Redacted } from 'effect';
 import { runPromise } from "effect-errors";
-import { jobs } from './jobs';
 import { AppConfig, AppConfigLive } from './config';
 import { createPipelineWorker } from './workers/pipeline.worker';
 import { createSourceWorker } from './workers/source.worker';
+import type { JobDefinition } from './jobs';
 
 // Step 1: Base layers
 const ConfigLayer = AppConfigLive.pipe(
@@ -96,28 +96,41 @@ const program = Effect.gen(function* () {
   const jobService = yield* JobService;
   const stateService = yield* StateService;
 
-  yield* Effect.log('Scheduling jobs...');
+  yield* Effect.log('Fetching scheduled jobs from database...');
+  const dbJobs = yield* jobService.getJobs();
+  const scheduledJobs = dbJobs.filter(job => job.status === 'scheduled');
+
+  const mapToJobDefinition = (dbJob: typeof dbJobs[0]): JobDefinition => ({
+    id: dbJob.id,
+    name: dbJob.name,
+    schedule: dbJob.schedule,
+    source: {
+      plugin: dbJob.sourcePlugin,
+      config: dbJob.sourceConfig,
+      search: dbJob.sourceSearch,
+    },
+    pipeline: dbJob.pipeline,
+  });
+
+  const jobDefinitions = scheduledJobs.map(mapToJobDefinition);
+
+  yield* Effect.log(`Found ${jobDefinitions.length} scheduled jobs to process`);
   yield* Effect.forEach(
-    jobs,
+    jobDefinitions,
     (job) =>
       Effect.gen(function* () {
-        yield* jobService.createJob({
-          id: job.id,
-          name: job.name,
-          schedule: job.schedule,
-          status: 'scheduled',
-          sourcePlugin: job.source.plugin,
-          sourceConfig: job.source.config,
-          sourceSearch: job.source.search,
-          pipeline: job.pipeline,
-        });
-
-        yield* queueService.addRepeatable(
+        const result = yield* queueService.addRepeatableIfNotExists(
           'source-jobs',
           'scheduled-source-run',
           { jobId: job.id },
           { pattern: job.schedule }
         );
+        
+        if (result.added) {
+          yield* Effect.log(`Added repeatable job for ${job.name} (${job.id})`);
+        } else {
+          yield* Effect.log(`Job ${job.name} (${job.id}) already scheduled - skipping`);
+        }
       }),
     { concurrency: 5, discard: true }
   );
