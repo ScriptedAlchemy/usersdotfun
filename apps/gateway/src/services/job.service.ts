@@ -1,6 +1,28 @@
-import { JobNotFoundError, JobService, ValidationError } from '@usersdotfun/shared-db'
-import { Effect, Exit, Runtime, Scope } from 'effect'
+import { JobNotFoundError, JobService, ValidationError, DbError } from '@usersdotfun/shared-db'
+import { Cause, Effect, Exit, Runtime, Scope } from 'effect'
 import { AppRuntime } from '../runtime'
+
+export class HttpError extends Error {
+  constructor(message: string, public status: number) {
+    super(message)
+  }
+}
+
+const handleEffectError = (error: any): never => {
+  if (error instanceof JobNotFoundError) {
+    throw new HttpError('Job not found', 404)
+  }
+  if (error instanceof ValidationError) {
+    throw new HttpError('Validation failed', 400)
+  }
+  if (error instanceof DbError) {
+    throw new HttpError('Database error', 500)
+  }
+  if (Cause.isRuntimeException(error)) {
+    throw new HttpError('Internal server error', 500)
+  }
+  throw new HttpError('An unexpected error occurred', 500)
+}
 
 export interface JobAdapter {
   getJobs(): Promise<any[]>
@@ -32,14 +54,7 @@ export class JobAdapterImpl implements JobAdapter {
         const jobService = yield* JobService
         return yield* jobService.getJobById(id)
       })
-    ).catch(error => {
-      if (error instanceof JobNotFoundError) {
-        const notFoundError = new Error('Job not found')
-          ; (notFoundError as any).status = 404
-        throw notFoundError
-      }
-      throw error
-    })
+    ).catch(handleEffectError)
   }
 
   async createJob(data: any) {
@@ -48,14 +63,7 @@ export class JobAdapterImpl implements JobAdapter {
         const jobService = yield* JobService
         return yield* jobService.createJob(data)
       })
-    ).catch(error => {
-      if (error instanceof ValidationError) {
-        const validationError = new Error('Validation failed')
-          ; (validationError as any).status = 400
-        throw validationError
-      }
-      throw error
-    })
+    ).catch(handleEffectError)
   }
 
   async updateJob(id: string, data: any) {
@@ -64,19 +72,7 @@ export class JobAdapterImpl implements JobAdapter {
         const jobService = yield* JobService
         return yield* jobService.updateJob(id, data)
       })
-    ).catch(error => {
-      if (error instanceof JobNotFoundError) {
-        const notFoundError = new Error('Job not found')
-          ; (notFoundError as any).status = 404
-        throw notFoundError
-      }
-      if (error instanceof ValidationError) {
-        const validationError = new Error('Validation failed')
-          ; (validationError as any).status = 400
-        throw validationError
-      }
-      throw error
-    })
+    ).catch(handleEffectError)
   }
 
   async deleteJob(id: string) {
@@ -85,14 +81,7 @@ export class JobAdapterImpl implements JobAdapter {
         const jobService = yield* JobService
         return yield* jobService.deleteJob(id)
       })
-    ).catch(error => {
-      if (error instanceof JobNotFoundError) {
-        const notFoundError = new Error('Job not found')
-          ; (notFoundError as any).status = 404
-        throw notFoundError
-      }
-      throw error
-    })
+    ).catch(handleEffectError)
   }
 
   async close() {

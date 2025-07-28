@@ -36,7 +36,7 @@ export const DatabaseLive = Layer.scoped(
         )
     );
 
-    const db = drizzle(pool, { schema });
+    const db = drizzle(pool, { schema, casing: "snake_case" });
     return { db };
   })
 );

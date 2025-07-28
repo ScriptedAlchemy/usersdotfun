@@ -4,3 +4,5 @@ export {
   JobNotFoundError,
   PipelineStepNotFoundError
 } from "./services/job.service";
+export { schema } from "./schema";
+export type { DB } from "./schema";

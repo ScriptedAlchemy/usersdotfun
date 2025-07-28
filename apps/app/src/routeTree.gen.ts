@@ -8,29 +8,45 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
+import { createFileRoute } from '@tanstack/react-router'
 import { createServerRootRoute } from '@tanstack/react-start/server'
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as UsersRouteImport } from './routes/users'
 import { Route as RedirectRouteImport } from './routes/redirect'
 import { Route as ProjectsRouteImport } from './routes/projects'
+import { Route as JobsRouteImport } from './routes/jobs'
 import { Route as DeferredRouteImport } from './routes/deferred'
 import { Route as PathlessLayoutRouteImport } from './routes/_pathlessLayout'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as UsersIndexRouteImport } from './routes/users.index'
 import { Route as ProjectsIndexRouteImport } from './routes/projects.index'
+import { Route as JobsIndexRouteImport } from './routes/jobs.index'
 import { Route as UsersUserIdRouteImport } from './routes/users.$userId'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects.$projectId'
+import { Route as JobsJobIdRouteImport } from './routes/jobs.$jobId'
+import { Route as AdminDashboardRouteImport } from './routes/admin/_dashboard'
 import { Route as PathlessLayoutNestedLayoutRouteImport } from './routes/_pathlessLayout/_nested-layout'
+import { Route as AdminDashboardIndexRouteImport } from './routes/admin/_dashboard/index'
 import { Route as ProjectsProjectIdDeepRouteImport } from './routes/projects_.$projectId.deep'
 import { Route as PathlessLayoutNestedLayoutRouteBRouteImport } from './routes/_pathlessLayout/_nested-layout/route-b'
 import { Route as PathlessLayoutNestedLayoutRouteARouteImport } from './routes/_pathlessLayout/_nested-layout/route-a'
+import { Route as AdminDashboardJobsIndexRouteImport } from './routes/admin/_dashboard/jobs/index'
 import { ServerRoute as CustomScriptDotjsServerRouteImport } from './routes/customScript[.]js'
 import { ServerRoute as ApiUsersServerRouteImport } from './routes/api/users'
+import { ServerRoute as ApiJobsServerRouteImport } from './routes/api/jobs'
 import { ServerRoute as ApiUsersUserIdServerRouteImport } from './routes/api/users.$userId'
+import { ServerRoute as ApiJobsJobIdServerRouteImport } from './routes/api/jobs.$jobId'
+import { ServerRoute as ApiAuthSplatServerRouteImport } from './routes/api/auth/$'
 
+const AdminRouteImport = createFileRoute('/admin')()
 const rootServerRouteImport = createServerRootRoute()
 
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UsersRoute = UsersRouteImport.update({
   id: '/users',
   path: '/users',
@@ -44,6 +60,11 @@ const RedirectRoute = RedirectRouteImport.update({
 const ProjectsRoute = ProjectsRouteImport.update({
   id: '/projects',
   path: '/projects',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JobsRoute = JobsRouteImport.update({
+  id: '/jobs',
+  path: '/jobs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DeferredRoute = DeferredRouteImport.update({
@@ -70,6 +91,11 @@ const ProjectsIndexRoute = ProjectsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => ProjectsRoute,
 } as any)
+const JobsIndexRoute = JobsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => JobsRoute,
+} as any)
 const UsersUserIdRoute = UsersUserIdRouteImport.update({
   id: '/$userId',
   path: '/$userId',
@@ -80,11 +106,25 @@ const ProjectsProjectIdRoute = ProjectsProjectIdRouteImport.update({
   path: '/$projectId',
   getParentRoute: () => ProjectsRoute,
 } as any)
+const JobsJobIdRoute = JobsJobIdRouteImport.update({
+  id: '/$jobId',
+  path: '/$jobId',
+  getParentRoute: () => JobsRoute,
+} as any)
+const AdminDashboardRoute = AdminDashboardRouteImport.update({
+  id: '/_dashboard',
+  getParentRoute: () => AdminRoute,
+} as any)
 const PathlessLayoutNestedLayoutRoute =
   PathlessLayoutNestedLayoutRouteImport.update({
     id: '/_nested-layout',
     getParentRoute: () => PathlessLayoutRoute,
   } as any)
+const AdminDashboardIndexRoute = AdminDashboardIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminDashboardRoute,
+} as any)
 const ProjectsProjectIdDeepRoute = ProjectsProjectIdDeepRouteImport.update({
   id: '/projects_/$projectId/deep',
   path: '/projects/$projectId/deep',
@@ -102,6 +142,11 @@ const PathlessLayoutNestedLayoutRouteARoute =
     path: '/route-a',
     getParentRoute: () => PathlessLayoutNestedLayoutRoute,
   } as any)
+const AdminDashboardJobsIndexRoute = AdminDashboardJobsIndexRouteImport.update({
+  id: '/jobs/',
+  path: '/jobs/',
+  getParentRoute: () => AdminDashboardRoute,
+} as any)
 const CustomScriptDotjsServerRoute = CustomScriptDotjsServerRouteImport.update({
   id: '/customScript.js',
   path: '/customScript.js',
@@ -112,140 +157,228 @@ const ApiUsersServerRoute = ApiUsersServerRouteImport.update({
   path: '/api/users',
   getParentRoute: () => rootServerRouteImport,
 } as any)
+const ApiJobsServerRoute = ApiJobsServerRouteImport.update({
+  id: '/api/jobs',
+  path: '/api/jobs',
+  getParentRoute: () => rootServerRouteImport,
+} as any)
 const ApiUsersUserIdServerRoute = ApiUsersUserIdServerRouteImport.update({
   id: '/$userId',
   path: '/$userId',
   getParentRoute: () => ApiUsersServerRoute,
 } as any)
+const ApiJobsJobIdServerRoute = ApiJobsJobIdServerRouteImport.update({
+  id: '/$jobId',
+  path: '/$jobId',
+  getParentRoute: () => ApiJobsServerRoute,
+} as any)
+const ApiAuthSplatServerRoute = ApiAuthSplatServerRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
+  getParentRoute: () => rootServerRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/deferred': typeof DeferredRoute
+  '/jobs': typeof JobsRouteWithChildren
   '/projects': typeof ProjectsRouteWithChildren
   '/redirect': typeof RedirectRoute
   '/users': typeof UsersRouteWithChildren
+  '/admin': typeof AdminDashboardRouteWithChildren
+  '/jobs/$jobId': typeof JobsJobIdRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/users/$userId': typeof UsersUserIdRoute
+  '/jobs/': typeof JobsIndexRoute
   '/projects/': typeof ProjectsIndexRoute
   '/users/': typeof UsersIndexRoute
   '/route-a': typeof PathlessLayoutNestedLayoutRouteARoute
   '/route-b': typeof PathlessLayoutNestedLayoutRouteBRoute
   '/projects/$projectId/deep': typeof ProjectsProjectIdDeepRoute
+  '/admin/': typeof AdminDashboardIndexRoute
+  '/admin/jobs': typeof AdminDashboardJobsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/deferred': typeof DeferredRoute
   '/redirect': typeof RedirectRoute
+  '/admin': typeof AdminDashboardIndexRoute
+  '/jobs/$jobId': typeof JobsJobIdRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/users/$userId': typeof UsersUserIdRoute
+  '/jobs': typeof JobsIndexRoute
   '/projects': typeof ProjectsIndexRoute
   '/users': typeof UsersIndexRoute
   '/route-a': typeof PathlessLayoutNestedLayoutRouteARoute
   '/route-b': typeof PathlessLayoutNestedLayoutRouteBRoute
   '/projects/$projectId/deep': typeof ProjectsProjectIdDeepRoute
+  '/admin/jobs': typeof AdminDashboardJobsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_pathlessLayout': typeof PathlessLayoutRouteWithChildren
   '/deferred': typeof DeferredRoute
+  '/jobs': typeof JobsRouteWithChildren
   '/projects': typeof ProjectsRouteWithChildren
   '/redirect': typeof RedirectRoute
   '/users': typeof UsersRouteWithChildren
   '/_pathlessLayout/_nested-layout': typeof PathlessLayoutNestedLayoutRouteWithChildren
+  '/admin': typeof AdminRouteWithChildren
+  '/admin/_dashboard': typeof AdminDashboardRouteWithChildren
+  '/jobs/$jobId': typeof JobsJobIdRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/users/$userId': typeof UsersUserIdRoute
+  '/jobs/': typeof JobsIndexRoute
   '/projects/': typeof ProjectsIndexRoute
   '/users/': typeof UsersIndexRoute
   '/_pathlessLayout/_nested-layout/route-a': typeof PathlessLayoutNestedLayoutRouteARoute
   '/_pathlessLayout/_nested-layout/route-b': typeof PathlessLayoutNestedLayoutRouteBRoute
   '/projects_/$projectId/deep': typeof ProjectsProjectIdDeepRoute
+  '/admin/_dashboard/': typeof AdminDashboardIndexRoute
+  '/admin/_dashboard/jobs/': typeof AdminDashboardJobsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/deferred'
+    | '/jobs'
     | '/projects'
     | '/redirect'
     | '/users'
+    | '/admin'
+    | '/jobs/$jobId'
     | '/projects/$projectId'
     | '/users/$userId'
+    | '/jobs/'
     | '/projects/'
     | '/users/'
     | '/route-a'
     | '/route-b'
     | '/projects/$projectId/deep'
+    | '/admin/'
+    | '/admin/jobs'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/deferred'
     | '/redirect'
+    | '/admin'
+    | '/jobs/$jobId'
     | '/projects/$projectId'
     | '/users/$userId'
+    | '/jobs'
     | '/projects'
     | '/users'
     | '/route-a'
     | '/route-b'
     | '/projects/$projectId/deep'
+    | '/admin/jobs'
   id:
     | '__root__'
     | '/'
     | '/_pathlessLayout'
     | '/deferred'
+    | '/jobs'
     | '/projects'
     | '/redirect'
     | '/users'
     | '/_pathlessLayout/_nested-layout'
+    | '/admin'
+    | '/admin/_dashboard'
+    | '/jobs/$jobId'
     | '/projects/$projectId'
     | '/users/$userId'
+    | '/jobs/'
     | '/projects/'
     | '/users/'
     | '/_pathlessLayout/_nested-layout/route-a'
     | '/_pathlessLayout/_nested-layout/route-b'
     | '/projects_/$projectId/deep'
+    | '/admin/_dashboard/'
+    | '/admin/_dashboard/jobs/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   PathlessLayoutRoute: typeof PathlessLayoutRouteWithChildren
   DeferredRoute: typeof DeferredRoute
+  JobsRoute: typeof JobsRouteWithChildren
   ProjectsRoute: typeof ProjectsRouteWithChildren
   RedirectRoute: typeof RedirectRoute
   UsersRoute: typeof UsersRouteWithChildren
+  AdminRoute: typeof AdminRouteWithChildren
   ProjectsProjectIdDeepRoute: typeof ProjectsProjectIdDeepRoute
 }
 export interface FileServerRoutesByFullPath {
   '/customScript.js': typeof CustomScriptDotjsServerRoute
+  '/api/jobs': typeof ApiJobsServerRouteWithChildren
   '/api/users': typeof ApiUsersServerRouteWithChildren
+  '/api/auth/$': typeof ApiAuthSplatServerRoute
+  '/api/jobs/$jobId': typeof ApiJobsJobIdServerRoute
   '/api/users/$userId': typeof ApiUsersUserIdServerRoute
 }
 export interface FileServerRoutesByTo {
   '/customScript.js': typeof CustomScriptDotjsServerRoute
+  '/api/jobs': typeof ApiJobsServerRouteWithChildren
   '/api/users': typeof ApiUsersServerRouteWithChildren
+  '/api/auth/$': typeof ApiAuthSplatServerRoute
+  '/api/jobs/$jobId': typeof ApiJobsJobIdServerRoute
   '/api/users/$userId': typeof ApiUsersUserIdServerRoute
 }
 export interface FileServerRoutesById {
   __root__: typeof rootServerRouteImport
   '/customScript.js': typeof CustomScriptDotjsServerRoute
+  '/api/jobs': typeof ApiJobsServerRouteWithChildren
   '/api/users': typeof ApiUsersServerRouteWithChildren
+  '/api/auth/$': typeof ApiAuthSplatServerRoute
+  '/api/jobs/$jobId': typeof ApiJobsJobIdServerRoute
   '/api/users/$userId': typeof ApiUsersUserIdServerRoute
 }
 export interface FileServerRouteTypes {
   fileServerRoutesByFullPath: FileServerRoutesByFullPath
-  fullPaths: '/customScript.js' | '/api/users' | '/api/users/$userId'
+  fullPaths:
+    | '/customScript.js'
+    | '/api/jobs'
+    | '/api/users'
+    | '/api/auth/$'
+    | '/api/jobs/$jobId'
+    | '/api/users/$userId'
   fileServerRoutesByTo: FileServerRoutesByTo
-  to: '/customScript.js' | '/api/users' | '/api/users/$userId'
-  id: '__root__' | '/customScript.js' | '/api/users' | '/api/users/$userId'
+  to:
+    | '/customScript.js'
+    | '/api/jobs'
+    | '/api/users'
+    | '/api/auth/$'
+    | '/api/jobs/$jobId'
+    | '/api/users/$userId'
+  id:
+    | '__root__'
+    | '/customScript.js'
+    | '/api/jobs'
+    | '/api/users'
+    | '/api/auth/$'
+    | '/api/jobs/$jobId'
+    | '/api/users/$userId'
   fileServerRoutesById: FileServerRoutesById
 }
 export interface RootServerRouteChildren {
   CustomScriptDotjsServerRoute: typeof CustomScriptDotjsServerRoute
+  ApiJobsServerRoute: typeof ApiJobsServerRouteWithChildren
   ApiUsersServerRoute: typeof ApiUsersServerRouteWithChildren
+  ApiAuthSplatServerRoute: typeof ApiAuthSplatServerRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/users': {
       id: '/users'
       path: '/users'
@@ -265,6 +398,13 @@ declare module '@tanstack/react-router' {
       path: '/projects'
       fullPath: '/projects'
       preLoaderRoute: typeof ProjectsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/jobs': {
+      id: '/jobs'
+      path: '/jobs'
+      fullPath: '/jobs'
+      preLoaderRoute: typeof JobsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/deferred': {
@@ -302,6 +442,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectsIndexRouteImport
       parentRoute: typeof ProjectsRoute
     }
+    '/jobs/': {
+      id: '/jobs/'
+      path: '/'
+      fullPath: '/jobs/'
+      preLoaderRoute: typeof JobsIndexRouteImport
+      parentRoute: typeof JobsRoute
+    }
     '/users/$userId': {
       id: '/users/$userId'
       path: '/$userId'
@@ -316,12 +463,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectsProjectIdRouteImport
       parentRoute: typeof ProjectsRoute
     }
+    '/jobs/$jobId': {
+      id: '/jobs/$jobId'
+      path: '/$jobId'
+      fullPath: '/jobs/$jobId'
+      preLoaderRoute: typeof JobsJobIdRouteImport
+      parentRoute: typeof JobsRoute
+    }
+    '/admin/_dashboard': {
+      id: '/admin/_dashboard'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminDashboardRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/_pathlessLayout/_nested-layout': {
       id: '/_pathlessLayout/_nested-layout'
       path: ''
       fullPath: ''
       preLoaderRoute: typeof PathlessLayoutNestedLayoutRouteImport
       parentRoute: typeof PathlessLayoutRoute
+    }
+    '/admin/_dashboard/': {
+      id: '/admin/_dashboard/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminDashboardIndexRouteImport
+      parentRoute: typeof AdminDashboardRoute
     }
     '/projects_/$projectId/deep': {
       id: '/projects_/$projectId/deep'
@@ -344,6 +512,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PathlessLayoutNestedLayoutRouteARouteImport
       parentRoute: typeof PathlessLayoutNestedLayoutRoute
     }
+    '/admin/_dashboard/jobs/': {
+      id: '/admin/_dashboard/jobs/'
+      path: '/jobs'
+      fullPath: '/admin/jobs'
+      preLoaderRoute: typeof AdminDashboardJobsIndexRouteImport
+      parentRoute: typeof AdminDashboardRoute
+    }
   }
 }
 declare module '@tanstack/react-start/server' {
@@ -362,12 +537,33 @@ declare module '@tanstack/react-start/server' {
       preLoaderRoute: typeof ApiUsersServerRouteImport
       parentRoute: typeof rootServerRouteImport
     }
+    '/api/jobs': {
+      id: '/api/jobs'
+      path: '/api/jobs'
+      fullPath: '/api/jobs'
+      preLoaderRoute: typeof ApiJobsServerRouteImport
+      parentRoute: typeof rootServerRouteImport
+    }
     '/api/users/$userId': {
       id: '/api/users/$userId'
       path: '/$userId'
       fullPath: '/api/users/$userId'
       preLoaderRoute: typeof ApiUsersUserIdServerRouteImport
       parentRoute: typeof ApiUsersServerRoute
+    }
+    '/api/jobs/$jobId': {
+      id: '/api/jobs/$jobId'
+      path: '/$jobId'
+      fullPath: '/api/jobs/$jobId'
+      preLoaderRoute: typeof ApiJobsJobIdServerRouteImport
+      parentRoute: typeof ApiJobsServerRoute
+    }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatServerRouteImport
+      parentRoute: typeof rootServerRouteImport
     }
   }
 }
@@ -402,6 +598,18 @@ const PathlessLayoutRouteWithChildren = PathlessLayoutRoute._addFileChildren(
   PathlessLayoutRouteChildren,
 )
 
+interface JobsRouteChildren {
+  JobsJobIdRoute: typeof JobsJobIdRoute
+  JobsIndexRoute: typeof JobsIndexRoute
+}
+
+const JobsRouteChildren: JobsRouteChildren = {
+  JobsJobIdRoute: JobsJobIdRoute,
+  JobsIndexRoute: JobsIndexRoute,
+}
+
+const JobsRouteWithChildren = JobsRoute._addFileChildren(JobsRouteChildren)
+
 interface ProjectsRouteChildren {
   ProjectsProjectIdRoute: typeof ProjectsProjectIdRoute
   ProjectsIndexRoute: typeof ProjectsIndexRoute
@@ -428,6 +636,42 @@ const UsersRouteChildren: UsersRouteChildren = {
 
 const UsersRouteWithChildren = UsersRoute._addFileChildren(UsersRouteChildren)
 
+interface AdminDashboardRouteChildren {
+  AdminDashboardIndexRoute: typeof AdminDashboardIndexRoute
+  AdminDashboardJobsIndexRoute: typeof AdminDashboardJobsIndexRoute
+}
+
+const AdminDashboardRouteChildren: AdminDashboardRouteChildren = {
+  AdminDashboardIndexRoute: AdminDashboardIndexRoute,
+  AdminDashboardJobsIndexRoute: AdminDashboardJobsIndexRoute,
+}
+
+const AdminDashboardRouteWithChildren = AdminDashboardRoute._addFileChildren(
+  AdminDashboardRouteChildren,
+)
+
+interface AdminRouteChildren {
+  AdminDashboardRoute: typeof AdminDashboardRouteWithChildren
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminDashboardRoute: AdminDashboardRouteWithChildren,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
+interface ApiJobsServerRouteChildren {
+  ApiJobsJobIdServerRoute: typeof ApiJobsJobIdServerRoute
+}
+
+const ApiJobsServerRouteChildren: ApiJobsServerRouteChildren = {
+  ApiJobsJobIdServerRoute: ApiJobsJobIdServerRoute,
+}
+
+const ApiJobsServerRouteWithChildren = ApiJobsServerRoute._addFileChildren(
+  ApiJobsServerRouteChildren,
+)
+
 interface ApiUsersServerRouteChildren {
   ApiUsersUserIdServerRoute: typeof ApiUsersUserIdServerRoute
 }
@@ -444,9 +688,11 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   PathlessLayoutRoute: PathlessLayoutRouteWithChildren,
   DeferredRoute: DeferredRoute,
+  JobsRoute: JobsRouteWithChildren,
   ProjectsRoute: ProjectsRouteWithChildren,
   RedirectRoute: RedirectRoute,
   UsersRoute: UsersRouteWithChildren,
+  AdminRoute: AdminRouteWithChildren,
   ProjectsProjectIdDeepRoute: ProjectsProjectIdDeepRoute,
 }
 export const routeTree = rootRouteImport
@@ -454,7 +700,9 @@ export const routeTree = rootRouteImport
   ._addFileTypes<FileRouteTypes>()
 const rootServerRouteChildren: RootServerRouteChildren = {
   CustomScriptDotjsServerRoute: CustomScriptDotjsServerRoute,
+  ApiJobsServerRoute: ApiJobsServerRouteWithChildren,
   ApiUsersServerRoute: ApiUsersServerRouteWithChildren,
+  ApiAuthSplatServerRoute: ApiAuthSplatServerRoute,
 }
 export const serverRouteTree = rootServerRouteImport
   ._addFileChildren(rootServerRouteChildren)
