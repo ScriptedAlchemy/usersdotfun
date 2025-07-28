@@ -168,9 +168,14 @@ const CACHE_INVALIDATION_PATTERNS = {
   'queue:item-added': ['queues/status', 'queues/jobs', 'queues/'],
   'queue:item-completed': ['queues/status', 'queues/jobs', 'queues/'],
   'queue:item-failed': ['queues/status', 'queues/jobs', 'queues/'],
+  'queue:item-removed': ['queues/status', 'queues/jobs', 'queues/', 'jobs'],
+  'queue:paused': ['queues/status', 'queues/'],
+  'queue:resumed': ['queues/status', 'queues/'],
+  'queue:cleared': ['queues/status', 'queues/jobs', 'queues/'],
   'job:status-changed': ['jobs', 'queues/jobs'],
   'job:run-started': ['jobs', 'queues/jobs'],
   'job:run-completed': ['jobs', 'queues/jobs'],
+  'job:deleted': ['jobs', 'queues/jobs', 'queues/status', 'queues/'],
 }
 
 // Function to invalidate cache based on patterns

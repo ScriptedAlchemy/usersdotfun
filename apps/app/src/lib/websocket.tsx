@@ -93,6 +93,17 @@ export function WebSocketProvider({ children, url = '/api/ws' }: WebSocketProvid
         queryClient.invalidateQueries({ queryKey: ['all-queue-jobs'] });
         break;
       
+      case 'job:deleted':
+        queryClient.invalidateQueries({ queryKey: ['jobs'] });
+        queryClient.invalidateQueries({ queryKey: ['job', data.jobId] });
+        queryClient.invalidateQueries({ queryKey: ['all-queue-jobs'] });
+        queryClient.invalidateQueries({ queryKey: ['queues', 'overview'] });
+        queryClient.invalidateQueries({ queryKey: ['queues', 'details'] });
+        if (data.queueName) {
+          queryClient.invalidateQueries({ queryKey: ['queues', 'details', data.queueName] });
+        }
+        break;
+      
       case 'job:monitoring-update':
         queryClient.setQueryData(['job-monitoring', data.job.id], data);
         break;
@@ -118,6 +129,24 @@ export function WebSocketProvider({ children, url = '/api/ws' }: WebSocketProvid
       case 'queue:item-added':
       case 'queue:item-completed':
       case 'queue:item-failed':
+        queryClient.invalidateQueries({ queryKey: ['queues', 'overview'] });
+        queryClient.invalidateQueries({ queryKey: ['queues', 'details', data.queueName] });
+        queryClient.invalidateQueries({ queryKey: ['all-queue-jobs'] });
+        break;
+      
+      case 'queue:item-removed':
+        queryClient.invalidateQueries({ queryKey: ['queues', 'overview'] });
+        queryClient.invalidateQueries({ queryKey: ['queues', 'details', data.queueName] });
+        queryClient.invalidateQueries({ queryKey: ['all-queue-jobs'] });
+        if (data.jobId) {
+          queryClient.invalidateQueries({ queryKey: ['job', data.jobId] });
+          queryClient.invalidateQueries({ queryKey: ['jobs'] });
+        }
+        break;
+      
+      case 'queue:paused':
+      case 'queue:resumed':
+      case 'queue:cleared':
         queryClient.invalidateQueries({ queryKey: ['queues', 'overview'] });
         queryClient.invalidateQueries({ queryKey: ['queues', 'details', data.queueName] });
         queryClient.invalidateQueries({ queryKey: ['all-queue-jobs'] });

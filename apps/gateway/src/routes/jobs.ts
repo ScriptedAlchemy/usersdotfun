@@ -3,6 +3,7 @@ import { getJobAdapter, HttpError } from '../services/job.service'
 import { getJobMonitoringAdapter } from '../services/job-monitoring-adapter.service'
 import { getJobLifecycleAdapter } from '../services/job-lifecycle-adapter.service'
 import { requireAuth } from '../middleware/auth'
+import { wsManager } from './websocket'
 
 const handleError = (c: any, error: any) => {
   console.error('Gateway Error:', {
@@ -77,8 +78,31 @@ export const jobsRouter = new Hono()
 
   .delete('/:id', requireAuth, async (c) => {
     try {
+      const jobId = c.req.param('id')
       const lifecycleAdapter = await getJobLifecycleAdapter()
-      await lifecycleAdapter.deleteJobWithCleanup(c.req.param('id'))
+      
+      // Delete the job
+      await lifecycleAdapter.deleteJobWithCleanup(jobId)
+      
+      // Emit WebSocket events for proper cache invalidation
+      wsManager.broadcast({
+        type: 'job:deleted',
+        data: {
+          jobId,
+          timestamp: new Date().toISOString(),
+        },
+      })
+      
+      // Also emit status change for backward compatibility
+      wsManager.broadcast({
+        type: 'job:status-changed',
+        data: {
+          jobId,
+          status: 'deleted',
+          timestamp: new Date().toISOString(),
+        },
+      })
+      
       return c.body(null, 204)
     } catch (error) {
       return handleError(c, error)

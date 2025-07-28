@@ -68,13 +68,18 @@ export async function removeQueueItem(queueName: string, itemId: string): Promis
   return handleResponse(response, queueActionResultSchema);
 }
 
-export async function getAllQueueJobs(status?: string, limit?: number): Promise<{
+export async function getAllQueueJobs(filters?: {
+  status?: string;
+  queueName?: string;
+  limit?: number;
+}): Promise<{
   jobs: Array<QueueItem & { queueName: string; status: string }>;
   total: number;
 }> {
   const params = new URLSearchParams();
-  if (status) params.append('status', status);
-  if (limit) params.append('limit', limit.toString());
+  if (filters?.status) params.append('status', filters.status);
+  if (filters?.queueName) params.append('queueName', filters.queueName);
+  if (filters?.limit) params.append('limit', filters.limit.toString());
   
   const response = await fetch(`${API_BASE_URL}/queues/jobs?${params}`);
   if (!response.ok) {
@@ -82,4 +87,12 @@ export async function getAllQueueJobs(status?: string, limit?: number): Promise<
     throw new Error(error.error || 'Failed to fetch all queue jobs');
   }
   return response.json();
+}
+
+// Backward compatibility function
+export async function getAllQueueJobsByStatus(status?: string, limit?: number): Promise<{
+  jobs: Array<QueueItem & { queueName: string; status: string }>;
+  total: number;
+}> {
+  return getAllQueueJobs({ status, limit });
 }
