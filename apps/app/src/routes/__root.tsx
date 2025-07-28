@@ -25,7 +25,7 @@ export const Route = createRootRouteWithContext<{
     <>
       <ThemeProvider
         attribute="class"
-        defaultTheme="system"
+        defaultTheme="light"
         enableSystem
         disableTransitionOnChange
       >
