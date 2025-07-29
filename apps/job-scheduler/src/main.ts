@@ -1,13 +1,12 @@
 import { BunTerminal } from "@effect/platform-bun";
-import { PluginLoaderLive, StateServiceTag } from '@usersdotfun/pipeline-runner';
-import { Database, DatabaseLive, DatabaseConfig, JobService, JobServiceLive } from '@usersdotfun/shared-db';
-import { RedisConfigLive, RedisAppConfig, StateService, StateServiceLive, QueueService, QueueServiceLive } from '@usersdotfun/shared-queue';
-import { Effect, Layer, Logger, LogLevel, ConfigProvider, Redacted } from 'effect';
+import { EnvironmentServiceLive, PluginLoaderLive, StateServiceTag, SecretsConfigLive } from '@usersdotfun/pipeline-runner';
+import { Database, DatabaseConfig, DatabaseLive, JobService, JobServiceLive } from '@usersdotfun/shared-db';
+import { QueueService, QueueServiceLive, RedisAppConfig, RedisConfigLive, StateService, StateServiceLive } from '@usersdotfun/shared-queue';
+import { ConfigProvider, Effect, Layer, Logger, LogLevel, Redacted } from 'effect';
 import { runPromise } from "effect-errors";
 import { AppConfig, AppConfigLive } from './config';
 import { createPipelineWorker } from './workers/pipeline.worker';
 import { createSourceWorker } from './workers/source.worker';
-import type { JobDefinition } from './jobs';
 
 // Step 1: Base layers
 const ConfigLayer = AppConfigLive.pipe(
@@ -25,7 +24,7 @@ const DatabaseConfigLayer = Layer.effect(
   DatabaseConfig,
   Effect.gen(function* () {
     const appConfig = yield* AppConfig;
-    return { 
+    return {
       connectionString: Redacted.value(appConfig.databaseUrl)
     };
   })
@@ -67,7 +66,17 @@ const JobServiceLayer = JobServiceLive.pipe(
 
 const PluginServiceLayer = PluginLoaderLive;
 
-// Step 5: Pipeline bridge layer - depends on StateService
+// Step 5: SecretsConfig layer - provides configuration for secrets
+const SecretsConfigLayer = SecretsConfigLive.pipe(
+  Layer.provide(Layer.setConfigProvider(ConfigProvider.fromEnv()))
+);
+
+// Step 6: EnvironmentService layer - depends on SecretsConfig
+const EnvironmentServiceLayer = EnvironmentServiceLive.pipe(
+  Layer.provide(SecretsConfigLayer)
+);
+
+// Step 7: Pipeline bridge layer - depends on StateService
 const PipelineStateServiceLayer = Layer.effect(
   StateServiceTag,
   Effect.gen(function* () {
@@ -77,7 +86,7 @@ const PipelineStateServiceLayer = Layer.effect(
   Layer.provide(StateServiceLayer)
 );
 
-// Step 6: Final composition - merge all resolved layers
+// Step 8: Final composition - merge all resolved layers
 const AppLayer = Layer.mergeAll(
   ConfigLayer,
   LoggingLayer,
@@ -87,6 +96,8 @@ const AppLayer = Layer.mergeAll(
   StateServiceLayer,
   JobServiceLayer,
   PluginServiceLayer,
+  SecretsConfigLayer,
+  EnvironmentServiceLayer,
   PipelineStateServiceLayer
 );
 
@@ -100,23 +111,9 @@ const program = Effect.gen(function* () {
   const dbJobs = yield* jobService.getJobs();
   const scheduledJobs = dbJobs.filter(job => job.status === 'scheduled');
 
-  const mapToJobDefinition = (dbJob: typeof dbJobs[0]): JobDefinition => ({
-    id: dbJob.id,
-    name: dbJob.name,
-    schedule: dbJob.schedule,
-    source: {
-      plugin: dbJob.sourcePlugin,
-      config: dbJob.sourceConfig,
-      search: dbJob.sourceSearch,
-    },
-    pipeline: dbJob.pipeline,
-  });
-
-  const jobDefinitions = scheduledJobs.map(mapToJobDefinition);
-
-  yield* Effect.log(`Found ${jobDefinitions.length} scheduled jobs to process`);
+  yield* Effect.log(`Found ${scheduledJobs.length} scheduled jobs to process`);
   yield* Effect.forEach(
-    jobDefinitions,
+    scheduledJobs,
     (job) =>
       Effect.gen(function* () {
         const result = yield* queueService.addRepeatableIfNotExists(
@@ -125,7 +122,7 @@ const program = Effect.gen(function* () {
           { jobId: job.id },
           { pattern: job.schedule }
         );
-        
+
         if (result.added) {
           yield* Effect.log(`Added repeatable job for ${job.name} (${job.id})`);
         } else {

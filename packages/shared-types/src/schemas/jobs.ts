@@ -32,6 +32,9 @@ export const jobDefinitionPipelineSchema = z.object({
   id: z.string(),
   name: z.string(),
   steps: z.array(jobDefinitionPipelineStepSchema),
+  env: z.object({
+    secrets: z.array(z.string()),
+  }).optional(),
 });
 
 // Source schema for JobDefinition

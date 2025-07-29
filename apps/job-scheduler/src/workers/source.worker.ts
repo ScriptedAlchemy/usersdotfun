@@ -1,10 +1,9 @@
 import { getPlugin, PluginError, PluginLoaderTag, SchemaValidator } from '@usersdotfun/pipeline-runner';
-import { JobService, JobNotFoundError } from '@usersdotfun/shared-db';
+import { JobService } from '@usersdotfun/shared-db';
 import { QueueService, StateService, type SourceJobData } from '@usersdotfun/shared-queue';
 import { type Job } from 'bullmq';
 import { Effect, Option } from 'effect';
-import { type JobDefinition } from '../jobs';
-
+import type { JobDefinition } from '@usersdotfun/shared-types';
 interface SourceOutput {
   items: any[];
   nextLastProcessedState?: unknown | null;
@@ -74,7 +73,7 @@ const runSourcePlugin = (jobDefinition: JobDefinition, lastProcessedState: any) 
 const processSourceJob = (job: Job<SourceJobData>) =>
   Effect.gen(function* () {
     const { jobId } = job.data;
-    
+
     const stateService = yield* StateService;
     const queueService = yield* QueueService;
     const jobService = yield* JobService;
@@ -84,7 +83,7 @@ const processSourceJob = (job: Job<SourceJobData>) =>
       Effect.catchTag('JobNotFoundError', (error) =>
         Effect.gen(function* () {
           yield* Effect.log(`Job ${jobId} not found in database. This may be a deleted job with orphaned BullMQ repeatable job.`);
-          
+
           // Store error state in Redis for monitoring
           yield* stateService.set(`job-error:${jobId}`, {
             jobId,
@@ -208,11 +207,11 @@ const processSourceJob = (job: Job<SourceJobData>) =>
         Effect.gen(function* () {
           const stateService = yield* StateService;
           const jobService = yield* JobService;
-          
+
           // Handle JobNotFoundError differently - don't try to update non-existent job
           if (error.message?.includes('not found in database')) {
             yield* Effect.logError(`Skipping job update for deleted job ${job.data.jobId}:`, error);
-            
+
             // Store failure state in Redis for monitoring
             yield* stateService.set(`job-error:${job.data.jobId}`, {
               jobId: job.data.jobId,
@@ -222,16 +221,16 @@ const processSourceJob = (job: Job<SourceJobData>) =>
               attemptsMade: job.attemptsMade,
               shouldRemoveFromQueue: true,
             });
-            
+
             // Don't retry for deleted jobs
             return yield* Effect.fail(error);
           }
-          
+
           // For other errors, try to update job status
           yield* jobService.updateJob(job.data.jobId, { status: 'failed' }).pipe(
             Effect.catchAll(() => Effect.void) // Ignore update failures
           );
-          
+
           yield* Effect.logError("Source job failed", error);
 
           // Re-throw to let BullMQ handle retries

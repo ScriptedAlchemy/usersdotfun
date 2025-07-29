@@ -1,39 +1,21 @@
 import type { Config, Input, Output, Plugin } from "@usersdotfun/core-sdk";
-import type { JSONSchemaType } from "ajv/dist/2020";
-
-export interface Pipeline {
-  id: string;
-  name: string;
-  steps: PipelineStep[];
-}
-
-export interface PipelineStep {
-  pluginName: string;
-  config: Record<string, unknown>;
-  stepId: string;
-}
-
-export interface PluginMetadata {
-  remoteUrl: string;
-  type?: PluginType;
-  configSchema: JSONSchemaType<any>;
-  inputSchema: JSONSchemaType<any>;
-  outputSchema: JSONSchemaType<any>;
-  version?: string;
-  description?: string;
-}
-
-export type PluginType = "transformer" | "distributor" | "source";
+import type { 
+  RuntimePipeline, 
+  RuntimePipelineStep, 
+  PipelineExecutionContext, 
+  PluginMetadata, 
+  PluginRegistry, 
+  RuntimePluginType 
+} from "@usersdotfun/shared-types";
 
 export type PipelinePlugin = Plugin<Input<any>, Output<any>, Config>;
 
-export interface PipelineExecutionContext {
-  runId: string;
-  itemIndex: number;
-  sourceJobId: string;
-  jobId: string;
-}
-
-export interface PluginRegistry {
-  [pluginName: string]: PluginMetadata;
-}
+// Re-export types for backward compatibility
+export type { 
+  RuntimePipeline as Pipeline, 
+  RuntimePipelineStep as PipelineStep, 
+  PipelineExecutionContext, 
+  PluginMetadata, 
+  PluginRegistry, 
+  RuntimePluginType as PluginType 
+};

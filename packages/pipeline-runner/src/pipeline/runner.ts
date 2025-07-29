@@ -5,12 +5,13 @@ import type { Pipeline, PipelineExecutionContext } from "./interfaces";
 import { PluginLoaderTag } from "./services";
 import { executeStep } from "./step";
 import { type StateService } from "../services/state.service";
+import { type EnvironmentService } from "../services/environment.service";
 
 export const executePipeline = (
   pipeline: Pipeline,
   initialInput: Record<string, unknown>,
   context: PipelineExecutionContext,
-): Effect.Effect<unknown, PipelineExecutionError, PluginLoaderTag | JobService | StateService> =>
+): Effect.Effect<unknown, PipelineExecutionError, PluginLoaderTag | JobService | StateService | EnvironmentService> =>
   Effect.gen(function* () {
     let currentInput: Record<string, unknown> = initialInput;
 
@@ -28,7 +29,7 @@ export const executePipelineParallel = (
   pipeline: Pipeline,
   initialInput: Record<string, unknown>,
   context: PipelineExecutionContext,
-): Effect.Effect<unknown[], PipelineExecutionError, PluginLoaderTag | JobService | StateService> =>
+): Effect.Effect<unknown[], PipelineExecutionError, PluginLoaderTag | JobService | StateService | EnvironmentService> =>
   Effect.all(
     pipeline.steps.map((step) => executeStep(step, initialInput, context)),
     { concurrency: "unbounded" }

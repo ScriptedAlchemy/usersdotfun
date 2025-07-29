@@ -5,20 +5,17 @@ import type { PipelineStep, PipelineExecutionContext } from "./interfaces";
 import { getPlugin, PluginLoaderTag } from "./services";
 import { SchemaValidator } from "./validation";
 import { StateServiceTag, type StateService } from "../services/state.service";
-
-const hydrateSecrets = (config: any) => {
-  // TODO: Implement secret hydration logic, e.g., using Mustache
-  return config;
-}
+import { EnvironmentServiceTag, type EnvironmentService } from "../services/environment.service";
 
 export const executeStep = (
   step: PipelineStep,
   input: Record<string, unknown>,
   context: PipelineExecutionContext,
-): Effect.Effect<Record<string, unknown>, StepError, PluginLoaderTag | JobService | StateService> =>
+): Effect.Effect<Record<string, unknown>, StepError, PluginLoaderTag | JobService | StateService | EnvironmentService> =>
   Effect.gen(function* () {
     const jobService = yield* JobService;
     const stateService = yield* StateServiceTag;
+    const environmentService = yield* EnvironmentServiceTag;
     const startTime = new Date();
     
     // Create deterministic step ID using context
@@ -60,16 +57,34 @@ export const executeStep = (
     const loadPlugin = yield* PluginLoaderTag;
     const pluginMeta = yield* getPlugin(step.pluginName);
 
-    const validatedConfig = yield* SchemaValidator.validate(
+    // 1. Initial Validation of Raw Config
+    const validatedRawConfig = yield* SchemaValidator.validate(
       pluginMeta.configSchema,
       step.config,
-      `Step "${step.stepId}" config for plugin "${step.pluginName}`
+      `Step "${step.stepId}" raw config for plugin "${step.pluginName}"`
     );
 
-    // TODO: We will want to inject using a separate service... later
-    // const hydratedConfig = hydrateSecrets(validatedConfig, {});
+    // 2. Secret Hydration
+    const hydratedConfig = yield* environmentService.hydrateSecrets(
+      validatedRawConfig,
+      pluginMeta.configSchema
+    ).pipe(
+      Effect.mapError((error) => new PluginError({
+        pluginName: step.pluginName,
+        operation: "hydrate-secrets",
+        message: `Failed to hydrate secrets for plugin ${step.pluginName} config: ${error.message}`,
+        cause: error,
+      }))
+    );
 
-    const plugin = yield* loadPlugin(step.pluginName, validatedConfig, pluginMeta.version);
+    // 3. Post-Hydration Validation of Config
+    const finalValidatedConfig = yield* SchemaValidator.validate(
+      pluginMeta.configSchema,
+      hydratedConfig,
+      `Step "${step.stepId}" hydrated config for plugin "${step.pluginName}"`
+    );
+
+    const plugin = yield* loadPlugin(step.pluginName, finalValidatedConfig, pluginMeta.version);
 
     const validatedInput = yield* SchemaValidator.validate(
       pluginMeta.inputSchema,

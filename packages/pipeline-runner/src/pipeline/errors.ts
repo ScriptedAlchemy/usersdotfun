@@ -21,7 +21,8 @@ export class PluginError extends Data.TaggedError("PluginError")<{
     | "initialize"
     | "execute"
     | "validate"
-    | "register";
+    | "register"
+    | "hydrate-secrets";
   readonly cause?: unknown;
   readonly retryable?: boolean;
   readonly context?: Record<string, unknown>;
