@@ -7,6 +7,7 @@ import { jobsRouter } from './routes/jobs'
 import { queuesRouter } from './routes/queues'
 import websocketRoutes, { websocket } from './routes/websocket'
 import './types/hono'
+import type { User } from './types/hono'
 
 const app = new Hono()
 
@@ -27,7 +28,7 @@ app.use('*', rateLimiter({
   windowMs: 15 * 60 * 1000, // 15 minutes
   limit: 100,
   keyGenerator: (c) => {
-    const user = c.get('user') as any
+    const user = c.get('user') as User
     return user?.id || c.req.header('x-forwarded-for') || 'anonymous'
   }
 }))

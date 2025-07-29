@@ -59,7 +59,7 @@ export async function requireRealUser(c: Context, next: Next) {
 }
 
 export async function requireAdmin(c: Context, next: Next) {
-  const user = c.get('user') as any // Better-auth user with admin plugin fields
+  const user = c.get('user') as User // Better-auth user with admin plugin fields
 
   if (!c.get('isAuthenticated')) {
     return c.json({ error: 'Authentication required' }, 401)

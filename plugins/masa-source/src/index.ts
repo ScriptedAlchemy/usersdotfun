@@ -127,7 +127,7 @@ export class MasaSourcePlugin
 
       const serviceResults = await service.search(
         validatedServiceOptions,
-        lastProcessedState as any
+        lastProcessedState
       );
 
       return {

@@ -4,12 +4,13 @@ import { Context, Data, Effect, Layer } from "effect";
 import * as Zod from "zod";
 
 import {
+  createJobDefinitionSchema
+} from "@usersdotfun/shared-types/schemas";
+import {
   type CreateJobDefinition,
   type JobDefinition,
   type UpdateJobDefinition,
-  createJobDefinitionSchema,
-  updateJobDefinitionSchema
-} from "@usersdotfun/shared-types";
+} from "@usersdotfun/shared-types/types";
 import { DbError, ValidationError } from "../errors";
 import { schema } from "../schema";
 import {

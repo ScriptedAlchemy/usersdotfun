@@ -36,14 +36,14 @@ export const queuesRouter = new Hono()
   // Get detailed queue information
   .get('/:queueName', requireAuth, async (c) => {
     try {
-      const queueName = c.req.param('queueName')
+      const queueName = c.req.param('queueName') as QueueName;
 
-      if (!VALID_QUEUE_NAMES.includes(queueName as QueueName)) {
+      if (!VALID_QUEUE_NAMES.includes(queueName)) {
         return c.json({ error: 'Invalid queue name' }, 400)
       }
 
       const queueAdapter = await getQueueAdapter()
-      const result = await queueAdapter.getQueueDetails(queueName as any)
+      const result = await queueAdapter.getQueueDetails(queueName)
       return c.json(result)
     } catch (error) {
       return honoErrorHandler(c, error)
@@ -53,17 +53,17 @@ export const queuesRouter = new Hono()
   // Get queue items with pagination
   .get('/:queueName/items', requireAuth, async (c) => {
     try {
-      const queueName = c.req.param('queueName')
+      const queueName = c.req.param('queueName') as QueueName;
       const status = c.req.query('status') || 'waiting' // waiting, active, completed, failed
       const page = parseInt(c.req.query('page') || '1')
       const limit = parseInt(c.req.query('limit') || '50')
 
-      if (!VALID_QUEUE_NAMES.includes(queueName as QueueName)) {
+      if (!VALID_QUEUE_NAMES.includes(queueName)) {
         return c.json({ error: 'Invalid queue name' }, 400)
       }
 
       const queueAdapter = await getQueueAdapter()
-      const result = await queueAdapter.getQueueItems(queueName as QueueName, status, page, limit)
+      const result = await queueAdapter.getQueueItems(queueName, status, page, limit)
       return c.json(result)
     } catch (error) {
       return honoErrorHandler(c, error)
@@ -73,14 +73,14 @@ export const queuesRouter = new Hono()
   // Queue management actions (admin only)
   .post('/:queueName/pause', requireAdmin, async (c) => {
     try {
-      const queueName = c.req.param('queueName')
+      const queueName = c.req.param('queueName') as QueueName;
 
-      if (!VALID_QUEUE_NAMES.includes(queueName as QueueName)) {
+      if (!VALID_QUEUE_NAMES.includes(queueName)) {
         return c.json({ error: 'Invalid queue name' }, 400)
       }
 
       const queueAdapter = await getQueueAdapter()
-      const result = await queueAdapter.pauseQueue(queueName as QueueName)
+      const result = await queueAdapter.pauseQueue(queueName)
 
       if (result.success) {
         // Emit WebSocket event for queue pause
@@ -103,14 +103,14 @@ export const queuesRouter = new Hono()
 
   .post('/:queueName/resume', requireAdmin, async (c) => {
     try {
-      const queueName = c.req.param('queueName')
+      const queueName = c.req.param('queueName') as QueueName;
 
-      if (!VALID_QUEUE_NAMES.includes(queueName as QueueName)) {
+      if (!VALID_QUEUE_NAMES.includes(queueName)) {
         return c.json({ error: 'Invalid queue name' }, 400)
       }
 
       const queueAdapter = await getQueueAdapter()
-      const result = await queueAdapter.resumeQueue(queueName as QueueName)
+      const result = await queueAdapter.resumeQueue(queueName)
 
       if (result.success) {
         // Emit WebSocket event for queue resume
@@ -133,15 +133,15 @@ export const queuesRouter = new Hono()
 
   .delete('/:queueName/clear', requireAdmin, async (c) => {
     try {
-      const queueName = c.req.param('queueName')
+      const queueName = c.req.param('queueName') as QueueName;
       const jobType = c.req.query('type') // completed, failed, or all
 
-      if (!VALID_QUEUE_NAMES.includes(queueName as QueueName)) {
+      if (!VALID_QUEUE_NAMES.includes(queueName)) {
         return c.json({ error: 'Invalid queue name' }, 400)
       }
 
       const queueAdapter = await getQueueAdapter()
-      const result = await queueAdapter.clearQueue(queueName as QueueName, jobType)
+      const result = await queueAdapter.clearQueue(queueName, jobType)
 
       if (result.success) {
         // Emit WebSocket event for queue clear
@@ -168,15 +168,15 @@ export const queuesRouter = new Hono()
 
   .delete('/:queueName/purge', requireAdmin, async (c) => {
     try {
-      const queueName = c.req.param('queueName')
+      const queueName = c.req.param('queueName') as QueueName;
 
-      if (!VALID_QUEUE_NAMES.includes(queueName as QueueName)) {
+      if (!VALID_QUEUE_NAMES.includes(queueName)) {
         return c.json({ error: 'Invalid queue name' }, 400)
       }
 
       // Purge removes ALL jobs (equivalent to clear with type 'all')
       const queueAdapter = await getQueueAdapter()
-      const result = await queueAdapter.clearQueue(queueName as QueueName, 'all')
+      const result = await queueAdapter.clearQueue(queueName, 'all')
 
       if (result.success) {
         return c.json({
@@ -194,15 +194,15 @@ export const queuesRouter = new Hono()
   // Individual job actions
   .delete('/:queueName/jobs/:jobId', requireAdmin, async (c) => {
     try {
-      const queueName = c.req.param('queueName')
+      const queueName = c.req.param('queueName') as QueueName;
       const jobId = c.req.param('jobId')
 
-      if (!VALID_QUEUE_NAMES.includes(queueName as QueueName)) {
+      if (!VALID_QUEUE_NAMES.includes(queueName)) {
         return c.json({ error: 'Invalid queue name' }, 400)
       }
 
       const queueAdapter = await getQueueAdapter()
-      const result = await queueAdapter.removeQueueJob(queueName as QueueName, jobId)
+      const result = await queueAdapter.removeQueueJob(queueName, jobId)
 
       if (result.success) {
         // Emit WebSocket event for job removal
@@ -226,15 +226,15 @@ export const queuesRouter = new Hono()
 
   .post('/:queueName/jobs/:jobId/retry', requireAdmin, async (c) => {
     try {
-      const queueName = c.req.param('queueName')
+      const queueName = c.req.param('queueName') as QueueName;
       const jobId = c.req.param('jobId')
 
-      if (!VALID_QUEUE_NAMES.includes(queueName as QueueName)) {
+      if (!VALID_QUEUE_NAMES.includes(queueName)) {
         return c.json({ error: 'Invalid queue name' }, 400)
       }
 
       const queueAdapter = await getQueueAdapter()
-      const result = await queueAdapter.retryQueueJob(queueName as QueueName, jobId)
+      const result = await queueAdapter.retryQueueJob(queueName, jobId)
 
       if (result.success) {
         // Emit WebSocket event for job retry

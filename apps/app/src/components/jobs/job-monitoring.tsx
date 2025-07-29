@@ -1,12 +1,17 @@
-import { JobMonitoringData, JobStatus } from '@usersdotfun/shared-types';
-import { StatusBadge } from './status-badge';
+import type {
+  JobMonitoringData,
+  JobStatus,
+} from "@usersdotfun/shared-types/types";
 
 interface JobMonitoringProps {
   monitoringData: JobMonitoringData;
   isLoading: boolean;
 }
 
-export function JobMonitoring({ monitoringData, isLoading }: JobMonitoringProps) {
+export function JobMonitoring({
+  monitoringData,
+  isLoading,
+}: JobMonitoringProps) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-32">
@@ -26,10 +31,15 @@ export function JobMonitoring({ monitoringData, isLoading }: JobMonitoringProps)
             <div className="text-xs space-y-1">
               <p>Waiting: {monitoringData.queueStatus.sourceQueue.waiting}</p>
               <p>Active: {monitoringData.queueStatus.sourceQueue.active}</p>
-              <p>Completed: {monitoringData.queueStatus.sourceQueue.completed}</p>
+              <p>
+                Completed: {monitoringData.queueStatus.sourceQueue.completed}
+              </p>
               <p>Failed: {monitoringData.queueStatus.sourceQueue.failed}</p>
               <p>Delayed: {monitoringData.queueStatus.sourceQueue.delayed}</p>
-              <p>Paused: {monitoringData.queueStatus.sourceQueue.paused ? 'Yes' : 'No'}</p>
+              <p>
+                Paused:{" "}
+                {monitoringData.queueStatus.sourceQueue.paused ? "Yes" : "No"}
+              </p>
             </div>
           </div>
           <div className="bg-green-50 p-3 rounded">
@@ -37,20 +47,26 @@ export function JobMonitoring({ monitoringData, isLoading }: JobMonitoringProps)
             <div className="text-xs space-y-1">
               <p>Waiting: {monitoringData.queueStatus.pipelineQueue.waiting}</p>
               <p>Active: {monitoringData.queueStatus.pipelineQueue.active}</p>
-              <p>Completed: {monitoringData.queueStatus.pipelineQueue.completed}</p>
+              <p>
+                Completed: {monitoringData.queueStatus.pipelineQueue.completed}
+              </p>
               <p>Failed: {monitoringData.queueStatus.pipelineQueue.failed}</p>
               <p>Delayed: {monitoringData.queueStatus.pipelineQueue.delayed}</p>
-              <p>Paused: {monitoringData.queueStatus.pipelineQueue.paused ? 'Yes' : 'No'}</p>
+              <p>
+                Paused:{" "}
+                {monitoringData.queueStatus.pipelineQueue.paused ? "Yes" : "No"}
+              </p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Active Jobs */}
-      {(monitoringData.activeJobs.sourceJobs.length > 0 || monitoringData.activeJobs.pipelineJobs.length > 0) && (
+      {(monitoringData.activeJobs.sourceJobs.length > 0 ||
+        monitoringData.activeJobs.pipelineJobs.length > 0) && (
         <div>
           <h5 className="font-semibold mb-2">Active Jobs</h5>
-          
+
           {monitoringData.activeJobs.sourceJobs.length > 0 && (
             <div className="mb-4">
               <h6 className="font-medium text-sm mb-2">Source Jobs</h6>
@@ -92,12 +108,12 @@ export function JobMonitoring({ monitoringData, isLoading }: JobMonitoringProps)
 
 interface ActiveJobCardProps {
   job: JobStatus;
-  type: 'source' | 'pipeline';
+  type: "source" | "pipeline";
 }
 
 function ActiveJobCard({ job, type }: ActiveJobCardProps) {
-  const bgColor = type === 'source' ? 'bg-blue-50' : 'bg-green-50';
-  const progressColor = type === 'source' ? 'bg-blue-600' : 'bg-green-600';
+  const bgColor = type === "source" ? "bg-blue-50" : "bg-green-50";
+  const progressColor = type === "source" ? "bg-blue-600" : "bg-green-600";
 
   return (
     <div className={`${bgColor} p-3 rounded`}>
@@ -106,7 +122,7 @@ function ActiveJobCard({ job, type }: ActiveJobCardProps) {
         <span className="text-xs">Progress: {job.progress}%</span>
       </div>
       <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
-        <div 
+        <div
           className={`${progressColor} h-2 rounded-full transition-all duration-300`}
           style={{ width: `${job.progress}%` }}
         ></div>
@@ -115,8 +131,12 @@ function ActiveJobCard({ job, type }: ActiveJobCardProps) {
         <p>Name: {job.name}</p>
         <p>Attempts: {job.attemptsMade}</p>
         <p>Started: {new Date(job.timestamp).toLocaleString()}</p>
-        {job.processedOn && <p>Processing: {new Date(job.processedOn).toLocaleString()}</p>}
-        {job.failedReason && <p className="text-red-600">Error: {job.failedReason}</p>}
+        {job.processedOn && (
+          <p>Processing: {new Date(job.processedOn).toLocaleString()}</p>
+        )}
+        {job.failedReason && (
+          <p className="text-red-600">Error: {job.failedReason}</p>
+        )}
       </div>
       {job.data && (
         <details className="mt-2">

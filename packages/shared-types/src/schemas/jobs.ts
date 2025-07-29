@@ -102,6 +102,18 @@ export const jobStatusSchema = z.object({
   returnvalue: z.any().optional(),
 });
 
+export const jobStatusSummarySchema = z.object({
+  status: z.string(),
+  queuePosition: z.number().optional(),
+  estimatedStartTime: z.date().optional(),
+  currentRun: jobRunInfoSchema.optional(),
+});
+
+export const jobRunDetailsSchema = z.object({
+  run: jobRunInfoSchema,
+  pipelineItems: z.array(pipelineStepSchema),
+});
+
 export const jobMonitoringDataSchema = z.object({
   job: jobSchema,
   currentState: z.any().optional(),

@@ -1,12 +1,13 @@
 import { Effect } from 'effect';
-import { JobLifecycleService } from './job-lifecycle.service';
 import { AppLayer } from '../runtime';
-import { toHttpError, HttpError } from '../utils/error-handlers';
+import { toHttpError } from '../utils/error-handlers';
+import { JobLifecycleService, type CreateJobPayload, type UpdateJobPayload } from './job-lifecycle.service';
+import type { Job } from '@usersdotfun/shared-types/types';
 
 export interface JobLifecycleAdapter {
   deleteJobWithCleanup(jobId: string): Promise<void>;
-  createJobWithScheduling(jobData: any): Promise<any>;
-  updateJobWithScheduling(jobId: string, jobData: any): Promise<any>;
+  createJobWithScheduling(jobData: CreateJobPayload): Promise<Job>;
+  updateJobWithScheduling(jobId: string, jobData: UpdateJobPayload): Promise<Job>;
   cleanupOrphanedJobs(): Promise<{ cleaned: number; errors: string[] }>;
 }
 
@@ -27,7 +28,7 @@ export class JobLifecycleAdapterImpl implements JobLifecycleAdapter {
     ).catch(handleEffectError);
   }
 
-  async createJobWithScheduling(jobData: any) {
+  async createJobWithScheduling(jobData: CreateJobPayload): Promise<Job> {
     return Effect.runPromise(
       Effect.gen(function* () {
         const jobLifecycleService = yield* JobLifecycleService;
@@ -39,7 +40,7 @@ export class JobLifecycleAdapterImpl implements JobLifecycleAdapter {
     ).catch(handleEffectError);
   }
 
-  async updateJobWithScheduling(jobId: string, jobData: any) {
+  async updateJobWithScheduling(jobId: string, jobData: UpdateJobPayload): Promise<Job> {
     return Effect.runPromise(
       Effect.gen(function* () {
         const jobLifecycleService = yield* JobLifecycleService;
@@ -64,7 +65,7 @@ export class JobLifecycleAdapterImpl implements JobLifecycleAdapter {
   }
 }
 
-let jobLifecycleAdapter: JobLifecycleAdapter | null = null;
+let jobLifecycleAdapter: JobLifecycleAdapter;
 
 export async function getJobLifecycleAdapter(): Promise<JobLifecycleAdapter> {
   if (!jobLifecycleAdapter) {

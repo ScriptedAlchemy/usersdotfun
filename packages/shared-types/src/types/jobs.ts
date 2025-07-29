@@ -10,7 +10,9 @@ import {
   jobDefinitionSourceSchema,
   jobDefinitionSchema,
   createJobDefinitionSchema,
-  updateJobDefinitionSchema
+  updateJobDefinitionSchema,
+  jobStatusSummarySchema,
+  jobRunDetailsSchema,
 } from '../schemas/jobs';
 
 // ============================================================================
@@ -47,6 +49,8 @@ export type UpdateJobDefinition = z.infer<typeof updateJobDefinitionSchema>;
 export type PipelineStep = z.infer<typeof pipelineStepSchema>;
 export type JobRunInfo = z.infer<typeof jobRunInfoSchema>;
 export type JobStatus = z.infer<typeof jobStatusSchema>;
+export type JobStatusSummary = z.infer<typeof jobStatusSummarySchema>;
+export type JobRunDetails = z.infer<typeof jobRunDetailsSchema>;
 export type JobMonitoringData = z.infer<typeof jobMonitoringDataSchema>;
 export type JobWithSteps = z.infer<typeof jobWithStepsSchema>;
 

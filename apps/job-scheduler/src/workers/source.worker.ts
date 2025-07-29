@@ -1,9 +1,9 @@
-import { getPlugin, PluginError, PluginLoaderTag, SchemaValidator, EnvironmentServiceTag, type EnvironmentService } from '@usersdotfun/pipeline-runner';
+import { EnvironmentServiceTag, getPlugin, PluginError, PluginLoaderTag, SchemaValidator } from '@usersdotfun/pipeline-runner';
 import { JobService } from '@usersdotfun/shared-db';
-import { QueueService, StateService, RedisKeys, QUEUE_NAMES } from '@usersdotfun/shared-queue';
+import { QUEUE_NAMES, QueueService, RedisKeys, StateService } from '@usersdotfun/shared-queue';
+import type { JobDefinition, SourceJobData } from '@usersdotfun/shared-types/types';
 import { type Job } from 'bullmq';
 import { Effect, Option } from 'effect';
-import type { JobDefinition, SourceJobData, PipelineJobData } from '@usersdotfun/shared-types/types';
 interface SourceOutput {
   items: any[];
   nextLastProcessedState?: unknown | null;
@@ -13,7 +13,7 @@ const runSourcePlugin = (jobDefinition: JobDefinition, lastProcessedState: any) 
   Effect.gen(function* () {
     const loadPlugin = yield* PluginLoaderTag;
     const environmentService = yield* EnvironmentServiceTag;
-    
+
     // Get plugin metadata first for validation
     const pluginMetadata = yield* getPlugin(jobDefinition.source.plugin);
 

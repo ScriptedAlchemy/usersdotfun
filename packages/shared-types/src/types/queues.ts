@@ -4,7 +4,6 @@ import {
   queueStatusEnum,
   jobTypeEnum,
   queueStatusSchema,
-  jobStatusSchema,
   queueOverviewSchema,
   queueItemSchema,
   queueDetailsSchema,
@@ -24,7 +23,6 @@ export type JobType = z.infer<typeof jobTypeEnum>;
 // ============================================================================
 
 export type QueueStatus = z.infer<typeof queueStatusSchema>;
-export type QueueJobStatus = z.infer<typeof jobStatusSchema>;
 export type QueueOverview = z.infer<typeof queueOverviewSchema>;
 export type QueueItem = z.infer<typeof queueItemSchema>;
 export type QueueDetails = z.infer<typeof queueDetailsSchema>;

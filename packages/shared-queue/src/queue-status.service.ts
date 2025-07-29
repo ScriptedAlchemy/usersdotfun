@@ -2,21 +2,21 @@ import { Context, Effect, Layer } from 'effect';
 import { Queue } from 'bullmq';
 import { RedisConfig } from './redis-config.service';
 import type { QueueName } from './constants/queues';
-import type { QueueStatus, QueueJobStatus } from '@usersdotfun/shared-types/types';
+import type { QueueStatus, JobStatus } from '@usersdotfun/shared-types/types';
 
 export interface QueueStatusService {
   readonly getQueueStatus: (queueName: QueueName) => Effect.Effect<QueueStatus, Error>;
-  readonly getActiveJobs: (queueName: QueueName) => Effect.Effect<QueueJobStatus[], Error>;
-  readonly getWaitingJobs: (queueName: QueueName) => Effect.Effect<QueueJobStatus[], Error>;
-  readonly getCompletedJobs: (queueName: QueueName, start?: number, end?: number) => Effect.Effect<QueueJobStatus[], Error>;
-  readonly getFailedJobs: (queueName: QueueName, start?: number, end?: number) => Effect.Effect<QueueJobStatus[], Error>;
-  readonly getDelayedJobs: (queueName: QueueName, start?: number, end?: number) => Effect.Effect<QueueJobStatus[], Error>;
-  readonly getJobById: (queueName: QueueName, jobId: string) => Effect.Effect<QueueJobStatus | null, Error>;
+  readonly getActiveJobs: (queueName: QueueName) => Effect.Effect<JobStatus[], Error>;
+  readonly getWaitingJobs: (queueName: QueueName) => Effect.Effect<JobStatus[], Error>;
+  readonly getCompletedJobs: (queueName: QueueName, start?: number, end?: number) => Effect.Effect<JobStatus[], Error>;
+  readonly getFailedJobs: (queueName: QueueName, start?: number, end?: number) => Effect.Effect<JobStatus[], Error>;
+  readonly getDelayedJobs: (queueName: QueueName, start?: number, end?: number) => Effect.Effect<JobStatus[], Error>;
+  readonly getJobById: (queueName: QueueName, jobId: string) => Effect.Effect<JobStatus | null, Error>;
 }
 
 export const QueueStatusService = Context.GenericTag<QueueStatusService>('QueueStatusService');
 
-const mapBullJobToJobStatus = (job: any): QueueJobStatus => ({
+const mapBullJobToJobStatus = (job: any): JobStatus => ({
   id: job.id,
   name: job.name,
   data: job.data,

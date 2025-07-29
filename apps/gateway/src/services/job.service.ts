@@ -1,21 +1,18 @@
-import { 
-  JobNotFoundError, 
-  JobService, 
-  ValidationError, 
-  DbError
+import {
+  JobService
 } from '@usersdotfun/shared-db'
 import {
-  type SelectJob,
   type InsertJobData,
-  type UpdateJobData,
-  type SelectPipelineStep
+  type SelectJob,
+  type SelectPipelineStep,
+  type UpdateJobData
 } from '@usersdotfun/shared-db/src/schema'
-import { 
-  type CreateJobDefinition 
-} from '@usersdotfun/shared-types'
-import { Cause, Effect } from 'effect'
+import {
+  type CreateJobDefinition
+} from '@usersdotfun/shared-types/types'
+import { Effect } from 'effect'
 import { AppLayer } from '../runtime'
-import { toHttpError, HttpError } from '../utils/error-handlers'
+import { toHttpError } from '../utils/error-handlers'
 
 const handleEffectError = (error: any): never => {
   throw toHttpError(error);

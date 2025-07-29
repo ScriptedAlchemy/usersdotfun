@@ -3,7 +3,7 @@ import type {
   JobType,
   QueueDetails,
   QueueItem,
-  QueueJobStatus,
+  JobStatus,
   QueueOverview
 } from '@usersdotfun/shared-types/types';
 import { Effect } from 'effect';
@@ -93,7 +93,7 @@ export class QueueAdapterImpl implements QueueAdapter {
           queueStatusService.getDelayedJobs(queueName, 0, 10)
         ]);
 
-        const mapJobToQueueItem = (job: QueueJobStatus) => ({
+        const mapJobToQueueItem = (job: JobStatus) => ({
           id: job.id,
           name: job.name,
           data: job.data,
@@ -143,7 +143,7 @@ export class QueueAdapterImpl implements QueueAdapter {
         const start = (page - 1) * limit;
         const end = start + limit - 1;
 
-        let jobs: QueueJobStatus[];
+        let jobs: JobStatus[];
         switch (status) {
           case 'active':
             jobs = yield* queueStatusService.getActiveJobs(queueName);
@@ -224,7 +224,7 @@ export class QueueAdapterImpl implements QueueAdapter {
             ]);
 
             // Helper function to map job and expose originalJobId
-            const mapJob = (job: QueueJobStatus, jobStatus: string) => ({
+            const mapJob = (job: JobStatus, jobStatus: string) => ({
               id: job.id,
               name: job.name,
               data: job.data,
@@ -258,7 +258,7 @@ export class QueueAdapterImpl implements QueueAdapter {
             continue; // Already added above
           } else {
             // Get jobs from specific status
-            let jobs: QueueJobStatus[];
+            let jobs: JobStatus[];
             switch (status) {
               case 'active':
                 jobs = yield* queueStatusService.getActiveJobs(queueName);

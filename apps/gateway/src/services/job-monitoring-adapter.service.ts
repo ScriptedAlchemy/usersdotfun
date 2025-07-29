@@ -1,25 +1,19 @@
 import type {
   JobMonitoringData,
   JobRunInfo,
-  PipelineStep
-} from '@usersdotfun/shared-types';
+  JobRunDetails,
+  JobStatusSummary,
+} from '@usersdotfun/shared-types/types';
 import { Effect } from 'effect';
 import { toHttpError } from '../utils/error-handlers';
 import { JobMonitoringService } from './job-monitoring.service';
+import { AppLayer } from '../runtime';
 
 export interface JobMonitoringAdapter {
   getJobMonitoringData(jobId: string): Promise<JobMonitoringData>;
-  getJobStatus(jobId: string): Promise<{
-    status: string;
-    queuePosition?: number;
-    estimatedStartTime?: Date;
-    currentRun?: JobRunInfo;
-  }>;
+  getJobStatus(jobId: string): Promise<JobStatusSummary>;
   getJobRuns(jobId: string): Promise<JobRunInfo[]>;
-  getJobRunDetails(jobId: string, runId: string): Promise<{
-    run: JobRunInfo;
-    pipelineItems: PipelineStep[];
-  }>;
+  getJobRunDetails(jobId: string, runId: string): Promise<JobRunDetails>;
 }
 
 const handleEffectError = (error: any): never => {

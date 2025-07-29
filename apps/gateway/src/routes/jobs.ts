@@ -6,6 +6,7 @@ import { requireAuth, requireAdmin } from '../middleware/auth'
 import { getWebSocketManager } from '../services/websocket-manager.service'
 import { honoErrorHandler } from '../utils/error-handlers'
 import { QUEUE_NAMES } from '@usersdotfun/shared-queue'
+import type { User } from '../types/hono'
 
 const wsManager = getWebSocketManager()
 
@@ -16,7 +17,7 @@ export const jobsRouter = new Hono()
   // User endpoints (authentication required)
   .get('/', requireAuth, async (c) => {
     try {
-      const user = c.get('user') as any
+      const user = c.get('user') as User;
       const jobAdapter = await getJobAdapter()
       const jobs = await jobAdapter.getJobs()
       // Filter jobs by user if needed in the future

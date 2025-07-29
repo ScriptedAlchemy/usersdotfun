@@ -124,7 +124,7 @@ const program = Effect.gen(function* () {
           'source-jobs',
           'scheduled-source-run',
           { jobId: job.id },
-          { pattern: job.schedule }
+          { pattern: job.schedule! } // TODO: fix if undefined
         );
 
         if (result.added) {

@@ -1,22 +1,14 @@
 import { JobService } from '@usersdotfun/shared-db';
 import { QueueStatusService, StateService, RedisKeys } from '@usersdotfun/shared-queue';
-import type { JobMonitoringData, JobRunInfo, PipelineStep } from '@usersdotfun/shared-types/types';
+import type { JobMonitoringData, JobRunInfo, PipelineStep, JobStatusSummary, JobRunDetails } from '@usersdotfun/shared-types/types';
 import { QUEUE_NAMES } from '@usersdotfun/shared-queue';
 import { Context, Effect, Layer, Option } from 'effect';
 
 export interface JobMonitoringService {
   readonly getJobMonitoringData: (jobId: string) => Effect.Effect<JobMonitoringData, Error>;
-  readonly getJobStatus: (jobId: string) => Effect.Effect<{
-    status: string;
-    queuePosition?: number;
-    estimatedStartTime?: Date;
-    currentRun?: JobRunInfo;
-  }, Error>;
+  readonly getJobStatus: (jobId: string) => Effect.Effect<JobStatusSummary, Error>;
   readonly getJobRuns: (jobId: string) => Effect.Effect<JobRunInfo[], Error>;
-  readonly getJobRunDetails: (jobId: string, runId: string) => Effect.Effect<{
-    run: JobRunInfo;
-    pipelineItems: PipelineStep[];
-  }, Error>;
+  readonly getJobRunDetails: (jobId: string, runId: string) => Effect.Effect<JobRunDetails, Error>;
 }
 
 export const JobMonitoringService = Context.GenericTag<JobMonitoringService>('JobMonitoringService');
@@ -35,7 +27,7 @@ export const JobMonitoringServiceLive = Layer.effect(
             Effect.gen(function* () {
               const runData = yield* stateService.getJobRun(jobId, runId);
               if (Option.isSome(runData)) {
-                const data = runData.value as any;
+                const data = runData.value;
                 return {
                   runId,
                   status: data.status || 'unknown',
@@ -96,7 +88,7 @@ export const JobMonitoringServiceLive = Layer.effect(
 
               const itemData = yield* stateService.getPipelineItem(runId, itemIndex);
               if (Option.isSome(itemData)) {
-                const data = itemData.value as any;
+                const data = itemData.value;
                 // Only include items for this job
                 if (data.sourceJobId === jobId) {
                   return Option.some({
@@ -158,9 +150,8 @@ export const JobMonitoringServiceLive = Layer.effect(
           const jobActiveSourceJobs = activeSourceJobs.filter(j =>
             j.data?.jobId === jobId
           );
-          // Fix the filter for pipeline jobs - they use sourceJobId, not jobDefinition.id
           const jobActivePipelineJobs = activePipelineJobs.filter(j =>
-            j.data?.sourceJobId === jobId
+            j.data?.jobId === jobId || j.data?.sourceJobId === jobId
           );
 
           return {
@@ -256,7 +247,7 @@ export const JobMonitoringServiceLive = Layer.effect(
 
           return {
             run,
-            pipelineItems: filteredItems,
+            pipelineItems: filteredItems as PipelineStep[],
           };
         }),
     };

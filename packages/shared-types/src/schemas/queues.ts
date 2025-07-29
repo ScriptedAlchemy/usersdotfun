@@ -35,19 +35,6 @@ export const queueStatusSchema = z.object({
   paused: z.boolean(),
 });
 
-export const jobStatusSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  data: z.any(),
-  progress: z.number(),
-  attemptsMade: z.number(),
-  timestamp: z.number(),
-  processedOn: z.number().optional(),
-  finishedOn: z.number().optional(),
-  failedReason: z.string().optional(),
-  returnvalue: z.any().optional(),
-});
-
 export const queueOverviewSchema = z.object({
   name: z.string(),
   status: queueStatusEnum,
