@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { 
   CreateJob, 
+  CreateJobDefinition,
   Job, 
   JobMonitoringData, 
   jobMonitoringDataSchema, 
@@ -47,6 +48,15 @@ export const createJob = async (job: CreateJob): Promise<Job> => {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(job),
+  });
+  return handleResponse(res, jobSchema);
+};
+
+export const createJobDefinition = async (jobDefinition: CreateJobDefinition): Promise<Job> => {
+  const res = await fetch(`${API_BASE_URL}/jobs/definition`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(jobDefinition),
   });
   return handleResponse(res, jobSchema);
 };

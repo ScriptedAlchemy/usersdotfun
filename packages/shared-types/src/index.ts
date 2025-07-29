@@ -2,11 +2,8 @@
 // MAIN EXPORTS
 // ============================================================================
 
-// Re-export all schemas
+// Re-export all schemas (includes both schemas and types)
 export * from './schemas';
-
-// Re-export all types
-export * from './types';
 
 // Re-export utilities
 export * from './utils';

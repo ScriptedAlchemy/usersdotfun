@@ -27,11 +27,9 @@ export async function authMiddleware(c: Context, next: Next) {
       c.set('userRole', userRole)
       c.set('isAnonymous', isAnonymous)
       c.set('isAuthenticated', true)
-      console.log('Gateway auth: Using proxy session', { userId, isAnonymous, role: userRole })
     } else {
-      // No user context from proxy - this is fine for public endpoints
+      // No user context from proxy
       c.set('isAuthenticated', false)
-      console.log('Gateway auth: No user context from proxy')
     }
   } catch (error) {
     console.error('Session validation error:', error)

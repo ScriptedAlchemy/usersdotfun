@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import { Textarea } from "~/components/ui/textarea";
-import { CreateJob, createJobSchema, Job, UpdateJob } from "~/types/jobs";
+import { CreateJob, createJobSchema, Job, UpdateJob } from "@usersdotfun/shared-types";
 
 interface JobDialogProps {
   job?: Job;

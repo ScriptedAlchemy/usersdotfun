@@ -78,7 +78,6 @@ async function proxyHandler({ request, params }: { request: Request; params: { _
     // Check if request is already pending (deduplication)
     const pendingRequest = pendingRequests.get(cacheKey)
     if (pendingRequest) {
-      console.log(`Request deduplication for ${cacheKey}`)
       return pendingRequest
     }
   }
@@ -122,8 +121,6 @@ async function proxyHandler({ request, params }: { request: Request; params: { _
           timestamp: Date.now(),
           ttl
         })
-        
-        console.log(`Cached response for ${cacheKey} with TTL ${ttl}ms`)
         
         return new Response(JSON.stringify(responseData), {
           status: response.status,

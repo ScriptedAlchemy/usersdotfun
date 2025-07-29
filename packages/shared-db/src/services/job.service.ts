@@ -1,38 +1,45 @@
-import { Effect, Context, Layer, Data } from "effect";
-import * as Zod from "zod";
-import { eq } from "drizzle-orm";
 import { randomUUID } from "crypto";
+import { eq } from "drizzle-orm";
+import { Context, Data, Effect, Layer } from "effect";
+import * as Zod from "zod";
 
-import { schema } from "../schema";
-import { Database } from "./db.service";
-import { DbError, ValidationError } from "../errors";
 import {
-  type SelectJob,
+  type CreateJobDefinition,
+  type JobDefinition,
+  type UpdateJobDefinition,
+  createJobDefinitionSchema,
+  updateJobDefinitionSchema
+} from "@usersdotfun/shared-types";
+import { DbError, ValidationError } from "../errors";
+import { schema } from "../schema";
+import {
   type InsertJobData,
+  type SelectJob,
   type UpdateJobData,
-  selectJobSchema,
   insertJobSchema,
+  selectJobSchema,
   updateJobSchema,
 } from "../schema/jobs";
 import {
-  type SelectPipelineStep,
   type InsertPipelineStepData,
+  type SelectPipelineStep,
   type UpdatePipelineStepData,
-  selectPipelineStepSchema,
   insertPipelineStepSchema,
+  selectPipelineStepSchema,
   updatePipelineStepSchema,
 } from "../schema/pipeline-steps";
+import { Database } from "./db.service";
 
 export class JobNotFoundError extends Data.TaggedError("JobNotFoundError")<{
   readonly jobId: string;
-}> {}
+}> { }
 
 export class PipelineStepNotFoundError extends Data.TaggedError(
   "PipelineStepNotFoundError"
 )<{
   readonly stepId: string;
   readonly jobId?: string;
-}> {}
+}> { }
 
 const validateData = <A>(
   zodSchema: Zod.ZodSchema<A>,
@@ -51,12 +58,12 @@ const validateData = <A>(
         message: zodError.message,
         issues: zodError.issues
       });
-      
+
       const validationError = new ValidationError({
         errors: zodError,
         message: "Validation failed",
       });
-      
+
       console.log('Created ValidationError:', {
         validationError,
         errorType: validationError.constructor.name,
@@ -64,7 +71,7 @@ const validateData = <A>(
         errors: validationError.errors,
         message: validationError.message
       });
-      
+
       return validationError;
     },
   });
@@ -81,6 +88,44 @@ const requireNonEmptyArray = <T, E>(
 ): Effect.Effect<void, E> =>
   records.length > 0 ? Effect.void : Effect.fail(notFoundError);
 
+// Mapping functions between JobDefinition and database format
+const mapDbJobToJobDefinition = (dbJob: SelectJob): JobDefinition => ({
+  id: dbJob.id,
+  name: dbJob.name,
+  schedule: dbJob.schedule,
+  source: {
+    plugin: dbJob.sourcePlugin,
+    config: dbJob.sourceConfig,
+    search: dbJob.sourceSearch,
+  },
+  pipeline: dbJob.pipeline,
+});
+
+const mapJobDefinitionToDbJob = (jobDef: CreateJobDefinition): InsertJobData => ({
+  name: jobDef.name,
+  schedule: jobDef.schedule,
+  sourcePlugin: jobDef.source.plugin,
+  sourceConfig: jobDef.source.config,
+  sourceSearch: jobDef.source.search,
+  pipeline: jobDef.pipeline,
+  status: 'pending',
+});
+
+const mapUpdateJobDefinitionToDbJob = (jobDef: UpdateJobDefinition): UpdateJobData => {
+  const result: UpdateJobData = {};
+
+  if (jobDef.name !== undefined) result.name = jobDef.name;
+  if (jobDef.schedule !== undefined) result.schedule = jobDef.schedule;
+  if (jobDef.source !== undefined) {
+    result.sourcePlugin = jobDef.source.plugin;
+    result.sourceConfig = jobDef.source.config;
+    result.sourceSearch = jobDef.source.search;
+  }
+  if (jobDef.pipeline !== undefined) result.pipeline = jobDef.pipeline;
+
+  return result;
+};
+
 export interface JobService {
   readonly getJobById: (
     id: string
@@ -88,6 +133,9 @@ export interface JobService {
   readonly getJobs: () => Effect.Effect<Array<SelectJob>, DbError>;
   readonly createJob: (
     data: InsertJobData
+  ) => Effect.Effect<SelectJob, ValidationError | DbError>;
+  readonly createJobDefinition: (
+    data: CreateJobDefinition
   ) => Effect.Effect<SelectJob, ValidationError | DbError>;
   readonly updateJob: (
     id: string,
@@ -133,7 +181,8 @@ export const JobServiceLive = Layer.effect(
   Effect.gen(function* () {
     const { db } = yield* Database;
 
-    const getJobById = (id: string): Effect.Effect<SelectJob, JobNotFoundError | DbError> =>
+    // Internal helper methods that work with database format
+    const getDbJobById = (id: string): Effect.Effect<SelectJob, JobNotFoundError | DbError> =>
       Effect.tryPromise({
         try: () => db.query.jobs.findFirst({ where: eq(schema.jobs.id, id) }),
         catch: (cause) =>
@@ -155,7 +204,7 @@ export const JobServiceLive = Layer.effect(
         )
       );
 
-    const getJobs = (): Effect.Effect<Array<SelectJob>, DbError> =>
+    const getDbJobs = (): Effect.Effect<Array<SelectJob>, DbError> =>
       Effect.tryPromise({
         try: () => db.query.jobs.findMany(),
         catch: (cause) => new DbError({ cause, message: "Failed to get jobs" }),
@@ -173,7 +222,7 @@ export const JobServiceLive = Layer.effect(
         )
       );
 
-    const createJob = (data: InsertJobData): Effect.Effect<SelectJob, ValidationError | DbError> =>
+    const createDbJob = (data: InsertJobData): Effect.Effect<SelectJob, ValidationError | DbError> =>
       validateData(insertJobSchema, data).pipe(
         Effect.flatMap((validatedData) => {
           const newJob = {
@@ -181,7 +230,7 @@ export const JobServiceLive = Layer.effect(
             id: randomUUID(),
             status: validatedData.status || 'pending'
           };
-          
+
           return Effect.tryPromise({
             try: () =>
               db.insert(schema.jobs).values(newJob).returning(),
@@ -211,7 +260,7 @@ export const JobServiceLive = Layer.effect(
         )
       );
 
-    const updateJob = (
+    const updateDbJob = (
       id: string,
       data: UpdateJobData
     ): Effect.Effect<SelectJob, JobNotFoundError | ValidationError | DbError> =>
@@ -243,6 +292,30 @@ export const JobServiceLive = Layer.effect(
           )
         )
       );
+
+    // Public methods - GET methods return database format, create methods support both formats
+    const getJobById = (id: string): Effect.Effect<SelectJob, JobNotFoundError | DbError> =>
+      getDbJobById(id);
+
+    const getJobs = (): Effect.Effect<Array<SelectJob>, DbError> =>
+      getDbJobs();
+
+    const createJob = (data: InsertJobData): Effect.Effect<SelectJob, ValidationError | DbError> =>
+      createDbJob(data);
+
+    const createJobDefinition = (data: CreateJobDefinition): Effect.Effect<SelectJob, ValidationError | DbError> =>
+      validateData(createJobDefinitionSchema, data).pipe(
+        Effect.flatMap((validatedData) => {
+          const dbJobData = mapJobDefinitionToDbJob(validatedData);
+          return createDbJob(dbJobData);
+        })
+      );
+
+    const updateJob = (
+      id: string,
+      data: UpdateJobData
+    ): Effect.Effect<SelectJob, JobNotFoundError | ValidationError | DbError> =>
+      updateDbJob(id, data);
 
     const deleteJob = (id: string): Effect.Effect<void, JobNotFoundError | DbError> =>
       Effect.tryPromise({
@@ -408,8 +481,8 @@ export const JobServiceLive = Layer.effect(
         try: () =>
           db
             .update(schema.pipelineSteps)
-            .set({ 
-              status: 'pending', 
+            .set({
+              status: 'pending',
               error: null,
               output: null,
               completedAt: null
@@ -428,6 +501,7 @@ export const JobServiceLive = Layer.effect(
       getJobById,
       getJobs,
       createJob,
+      createJobDefinition,
       updateJob,
       deleteJob,
       retryJob,

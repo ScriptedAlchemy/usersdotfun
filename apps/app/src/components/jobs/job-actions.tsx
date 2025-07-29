@@ -3,7 +3,7 @@ import { deleteJob, retryJob } from '~/api/jobs'
 import { Button } from '~/components/ui/button'
 import { toast } from 'sonner'
 import { JobSheet } from './job-sheet'
-import { Job } from '~/types/jobs'
+import { Job } from '@usersdotfun/shared-types'
 
 export function JobActions({ job }: { job: Job }) {
   const queryClient = useQueryClient();

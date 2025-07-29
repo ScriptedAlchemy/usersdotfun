@@ -65,11 +65,22 @@ export const jobsRouter = new Hono()
     }
   })
 
+  .post('/definition', requireAuth, async (c) => {
+    try {
+      const jobAdapter = await getJobAdapter()
+      const body = await c.req.json()
+      const job = await jobAdapter.createJobDefinition(body)
+      return c.json(job, 201)
+    } catch (error) {
+      return handleError(c, error)
+    }
+  })
+
   .put('/:id', requireAuth, async (c) => {
     try {
-      const lifecycleAdapter = await getJobLifecycleAdapter()
+      const jobAdapter = await getJobAdapter()
       const body = await c.req.json()
-      const job = await lifecycleAdapter.updateJobWithScheduling(c.req.param('id'), body)
+      const job = await jobAdapter.updateJob(c.req.param('id'), body)
       return c.json(job)
     } catch (error) {
       return handleError(c, error)
