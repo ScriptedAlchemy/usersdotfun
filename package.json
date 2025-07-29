@@ -12,7 +12,7 @@
   "scripts": {
     "init": "sh scripts/init-dev.sh",
     "build:sdk": "bun run --filter @usersdotfun/core-sdk build",
-    "build:registry": "bun run packages/registry-builder/generate-registry.mjs",
+    "build:registry": "bun run build:sdk && bun run packages/registry-builder/generate-registry.ts",
     "dev:plugins": "bun run --filter \"./plugins/*\" dev",
     "pipeline": "cd packages/pipeline-runner && bun run start",
     "docker:up": "docker-compose up -d",

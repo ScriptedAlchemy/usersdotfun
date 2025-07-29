@@ -1,4 +1,4 @@
-import { getPlugin, PluginError, PluginLoaderTag, SchemaValidator } from '@usersdotfun/pipeline-runner';
+import { getPlugin, PluginError, PluginLoaderTag, SchemaValidator, EnvironmentServiceTag, type EnvironmentService } from '@usersdotfun/pipeline-runner';
 import { JobService } from '@usersdotfun/shared-db';
 import { QueueService, StateService, type SourceJobData } from '@usersdotfun/shared-queue';
 import { type Job } from 'bullmq';
@@ -12,7 +12,40 @@ interface SourceOutput {
 const runSourcePlugin = (jobDefinition: JobDefinition, lastProcessedState: any) =>
   Effect.gen(function* () {
     const loadPlugin = yield* PluginLoaderTag;
-    const plugin = yield* loadPlugin(jobDefinition.source.plugin, jobDefinition.source.config);
+    const environmentService = yield* EnvironmentServiceTag;
+    
+    // Get plugin metadata first for validation
+    const pluginMetadata = yield* getPlugin(jobDefinition.source.plugin);
+
+    // 1. Validate raw config against configSchema
+    const validatedRawConfig = yield* SchemaValidator.validate(
+      pluginMetadata.configSchema,
+      jobDefinition.source.config,
+      `${jobDefinition.name}:config`
+    );
+
+    // 2. Hydrate secrets
+    const hydratedConfig = yield* environmentService.hydrateSecrets(
+      validatedRawConfig,
+      pluginMetadata.configSchema
+    ).pipe(
+      Effect.mapError((error) => new PluginError({
+        pluginName: jobDefinition.source.plugin,
+        operation: "hydrate-secrets",
+        message: `Failed to hydrate secrets for plugin ${jobDefinition.source.plugin} config: ${error.message}`,
+        cause: error,
+      }))
+    );
+
+    // 3. Re-validate hydrated config
+    const finalValidatedConfig = yield* SchemaValidator.validate(
+      pluginMetadata.configSchema,
+      hydratedConfig,
+      `${jobDefinition.name}:hydrated-config`
+    );
+
+    // 4. Load plugin with validated config
+    const plugin = yield* loadPlugin(jobDefinition.source.plugin, finalValidatedConfig, pluginMetadata.version);
 
     if (plugin.type !== 'source') {
       return yield* Effect.fail(
@@ -23,8 +56,6 @@ const runSourcePlugin = (jobDefinition: JobDefinition, lastProcessedState: any) 
         })
       );
     }
-
-    const pluginMetadata = yield* getPlugin(jobDefinition.source.plugin);
     const input = {
       searchOptions: jobDefinition.source.search,
       lastProcessedState: lastProcessedState,

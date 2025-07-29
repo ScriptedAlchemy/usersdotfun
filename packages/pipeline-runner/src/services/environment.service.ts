@@ -36,6 +36,7 @@ export const createEnvironmentService = (
       schema: JSONSchemaType<any>
     ): Effect.Effect<T, PluginError> =>
       Effect.gen(function* () {
+        console.log("HYDRATING");
         const stringifiedConfig = yield* Effect.try({
           try: () => JSON.stringify(config),
           catch: (error) =>
@@ -72,6 +73,8 @@ export const createEnvironmentService = (
         }
 
         const populatedConfigString = Mustache.render(stringifiedConfig, view);
+
+        console.log("populatedConfigString", populatedConfigString);
 
         return yield* Effect.try({
           try: () => JSON.parse(populatedConfigString) as T,

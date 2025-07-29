@@ -133,13 +133,14 @@
     "packages/registry-builder": {
       "name": "@usersdotfun/registry-builder",
       "dependencies": {
+        "@usersdotfun/core-sdk": "workspace:*",
         "zod": "^4.0.8",
       },
       "devDependencies": {
         "@types/bun": "latest",
       },
       "peerDependencies": {
-        "typescript": "^5",
+        "typescript": "^5.0.0",
       },
     },
     "packages/shared-db": {
