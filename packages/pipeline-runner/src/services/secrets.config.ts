@@ -1,4 +1,4 @@
-import { Config, Context, Effect, Layer } from "effect";
+import { Config, Context, Layer } from "effect";
 
 export interface SecretsConfig {
   readonly secretNames: ReadonlyArray<string>;

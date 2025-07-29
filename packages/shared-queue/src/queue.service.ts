@@ -1,6 +1,7 @@
 import { Job, Queue, Worker, type RepeatableJob, type RepeatOptions } from 'bullmq';
 import { Context, Effect, Layer, Runtime, Scope } from 'effect';
 import type { JobData, QueueName } from './constants/queues';
+import type { JobType } from '@usersdotfun/shared-types/types';
 import { RedisConfig } from './redis-config.service';
 
 export interface QueueService {
@@ -52,7 +53,7 @@ export interface QueueService {
 
   readonly clearQueue: (
     queueName: QueueName,
-    jobType?: 'completed' | 'failed' | 'all'
+    jobType?: JobType
   ) => Effect.Effect<{ removed: number }, Error>;
 
   readonly removeJob: (

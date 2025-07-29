@@ -1,43 +1,22 @@
 import { Context, Effect, Layer } from 'effect';
 import { Queue } from 'bullmq';
 import { RedisConfig } from './redis-config.service';
-
-export interface QueueStatus {
-  readonly name: string;
-  readonly waiting: number;
-  readonly active: number;
-  readonly completed: number;
-  readonly failed: number;
-  readonly delayed: number;
-  readonly paused: boolean;
-}
-
-export interface JobStatus {
-  readonly id: string;
-  readonly name: string;
-  readonly data: any;
-  readonly progress: number;
-  readonly attemptsMade: number;
-  readonly timestamp: number;
-  readonly processedOn?: number;
-  readonly finishedOn?: number;
-  readonly failedReason?: string;
-  readonly returnvalue?: any;
-}
+import type { QueueName } from './constants/queues';
+import type { QueueStatus, QueueJobStatus } from '@usersdotfun/shared-types/types';
 
 export interface QueueStatusService {
-  readonly getQueueStatus: (queueName: string) => Effect.Effect<QueueStatus, Error>;
-  readonly getActiveJobs: (queueName: string) => Effect.Effect<JobStatus[], Error>;
-  readonly getWaitingJobs: (queueName: string) => Effect.Effect<JobStatus[], Error>;
-  readonly getCompletedJobs: (queueName: string, start?: number, end?: number) => Effect.Effect<JobStatus[], Error>;
-  readonly getFailedJobs: (queueName: string, start?: number, end?: number) => Effect.Effect<JobStatus[], Error>;
-  readonly getDelayedJobs: (queueName: string, start?: number, end?: number) => Effect.Effect<JobStatus[], Error>;
-  readonly getJobById: (queueName: string, jobId: string) => Effect.Effect<JobStatus | null, Error>;
+  readonly getQueueStatus: (queueName: QueueName) => Effect.Effect<QueueStatus, Error>;
+  readonly getActiveJobs: (queueName: QueueName) => Effect.Effect<QueueJobStatus[], Error>;
+  readonly getWaitingJobs: (queueName: QueueName) => Effect.Effect<QueueJobStatus[], Error>;
+  readonly getCompletedJobs: (queueName: QueueName, start?: number, end?: number) => Effect.Effect<QueueJobStatus[], Error>;
+  readonly getFailedJobs: (queueName: QueueName, start?: number, end?: number) => Effect.Effect<QueueJobStatus[], Error>;
+  readonly getDelayedJobs: (queueName: QueueName, start?: number, end?: number) => Effect.Effect<QueueJobStatus[], Error>;
+  readonly getJobById: (queueName: QueueName, jobId: string) => Effect.Effect<QueueJobStatus | null, Error>;
 }
 
 export const QueueStatusService = Context.GenericTag<QueueStatusService>('QueueStatusService');
 
-const mapBullJobToJobStatus = (job: any): JobStatus => ({
+const mapBullJobToJobStatus = (job: any): QueueJobStatus => ({
   id: job.id,
   name: job.name,
   data: job.data,

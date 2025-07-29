@@ -1,17 +1,22 @@
-import { QueueService, QueueStatusService, type JobStatus } from '@usersdotfun/shared-queue';
-import { QUEUE_NAMES } from '@usersdotfun/shared-queue';
+import { QUEUE_NAMES, QueueService, QueueStatusService, type QueueName } from '@usersdotfun/shared-queue';
+import type {
+  JobType,
+  QueueDetails,
+  QueueItem,
+  QueueJobStatus,
+  QueueOverview
+} from '@usersdotfun/shared-types/types';
 import { Effect } from 'effect';
 import { AppLayer } from '../runtime';
 import { toHttpError } from '../utils/error-handlers';
-import type { QueueOverview, QueueDetails, QueueItem } from '@usersdotfun/shared-types/types';
 
 export interface QueueAdapter {
   getQueuesOverview(): Promise<{
     queues: Record<string, QueueOverview>;
     timestamp: string;
   }>;
-  getQueueDetails(queueName: string): Promise<QueueDetails>;
-  getQueueItems(queueName: string, status: string, page: number, limit: number): Promise<{
+  getQueueDetails(queueName: QueueName): Promise<QueueDetails>;
+  getQueueItems(queueName: QueueName, status: string, page: number, limit: number): Promise<{
     items: QueueItem[];
     pagination: {
       page: number;
@@ -20,14 +25,14 @@ export interface QueueAdapter {
     };
   }>;
   getAllJobs(status?: string, limit?: number): Promise<{
-    jobs: Array<QueueItem & { queueName: string; status: string }>;
+    jobs: Array<QueueItem & { queueName: QueueName; status: string }>;
     total: number;
   }>;
-  pauseQueue(queueName: string): Promise<{ success: boolean; message: string }>;
-  resumeQueue(queueName: string): Promise<{ success: boolean; message: string }>;
-  clearQueue(queueName: string, jobType?: string): Promise<{ success: boolean; itemsRemoved: number; message: string }>;
-  removeQueueJob(queueName: string, jobId: string): Promise<{ success: boolean; message: string }>;
-  retryQueueJob(queueName: string, jobId: string): Promise<{ success: boolean; message: string }>;
+  pauseQueue(queueName: QueueName): Promise<{ success: boolean; message: string }>;
+  resumeQueue(queueName: QueueName): Promise<{ success: boolean; message: string }>;
+  clearQueue(queueName: QueueName, jobType?: string): Promise<{ success: boolean; itemsRemoved: number; message: string }>;
+  removeQueueJob(queueName: QueueName, jobId: string): Promise<{ success: boolean; message: string }>;
+  retryQueueJob(queueName: QueueName, jobId: string): Promise<{ success: boolean; message: string }>;
 }
 
 const handleEffectError = (error: any): never => {
@@ -75,48 +80,52 @@ export class QueueAdapterImpl implements QueueAdapter {
     ).catch(handleEffectError);
   }
 
-  async getQueueDetails(queueName: string) {
+  async getQueueDetails(queueName: QueueName) {
     return Effect.runPromise(
       Effect.gen(function* () {
         const queueStatusService = yield* QueueStatusService;
 
-        const [status, activeJobs, waitingJobs, failedJobs] = yield* Effect.all([
+        const [status, activeJobs, waitingJobs, failedJobs, delayedJobs] = yield* Effect.all([
           queueStatusService.getQueueStatus(queueName),
           queueStatusService.getActiveJobs(queueName),
           queueStatusService.getWaitingJobs(queueName),
-          queueStatusService.getFailedJobs(queueName, 0, 10) // Get last 10 failed jobs
+          queueStatusService.getFailedJobs(queueName, 0, 10),
+          queueStatusService.getDelayedJobs(queueName, 0, 10)
         ]);
+
+        const mapJobToQueueItem = (job: QueueJobStatus) => ({
+          id: job.id,
+          name: job.name,
+          data: job.data,
+          progress: job.progress,
+          attemptsMade: job.attemptsMade,
+          timestamp: job.timestamp,
+          processedOn: job.processedOn,
+          finishedOn: job.finishedOn,
+          failedReason: job.failedReason,
+          delay: undefined,
+          priority: 0,
+          jobId: job.data?.jobId
+        });
 
         return {
           name: status.name,
           status: status.paused ? 'paused' as const : 'active' as const,
-          counts: {
-            waiting: status.waiting,
-            active: status.active,
-            completed: status.completed,
-            failed: status.failed,
-            delayed: status.delayed
+          waiting: status.waiting,
+          active: status.active,
+          completed: status.completed,
+          failed: status.failed,
+          delayed: status.delayed,
+          items: {
+            active: activeJobs.map(mapJobToQueueItem),
+            waiting: waitingJobs.slice(0, 10).map(mapJobToQueueItem),
+            failed: failedJobs.map(mapJobToQueueItem),
+            delayed: delayedJobs.map(mapJobToQueueItem)
           },
-          jobs: {
-            active: activeJobs.map(job => ({
-              id: job.id,
-              name: job.name,
-              progress: job.progress,
-              attemptsMade: job.attemptsMade,
-              processedOn: job.processedOn
-            })),
-            waiting: waitingJobs.slice(0, 10).map(job => ({
-              id: job.id,
-              name: job.name,
-              timestamp: job.timestamp
-            })),
-            failed: failedJobs.map(job => ({
-              id: job.id,
-              name: job.name,
-              failedReason: job.failedReason,
-              attemptsMade: job.attemptsMade,
-              finishedOn: job.finishedOn
-            }))
+          performance: {
+            processingRate: 0, // TODO: Calculate actual processing rate
+            averageProcessTime: 0, // TODO: Calculate actual average process time
+            errorRate: status.failed / (status.completed + status.failed + 1) // Avoid division by zero
           }
         };
       }).pipe(
@@ -126,7 +135,7 @@ export class QueueAdapterImpl implements QueueAdapter {
     ).catch(handleEffectError);
   }
 
-  async getQueueItems(queueName: string, status: string, page: number, limit: number) {
+  async getQueueItems(queueName: QueueName, status: string, page: number, limit: number) {
     return Effect.runPromise(
       Effect.gen(function* () {
         const queueStatusService = yield* QueueStatusService;
@@ -134,7 +143,7 @@ export class QueueAdapterImpl implements QueueAdapter {
         const start = (page - 1) * limit;
         const end = start + limit - 1;
 
-        let jobs: JobStatus[];
+        let jobs: QueueJobStatus[];
         switch (status) {
           case 'active':
             jobs = yield* queueStatusService.getActiveJobs(queueName);
@@ -185,7 +194,7 @@ export class QueueAdapterImpl implements QueueAdapter {
         const queueService = yield* QueueService;
         const queueNames = [QUEUE_NAMES.SOURCE_JOBS, QUEUE_NAMES.PIPELINE_JOBS];
 
-        let allJobs: Array<QueueItem & { queueName: string; status: string; originalJobId?: string }> = [];
+        let allJobs: Array<QueueItem & { queueName: QueueName; status: string; originalJobId?: string }> = [];
 
         for (const queueName of queueNames) {
           // Get repeatable jobs (scheduled patterns) - these are important to show!
@@ -215,7 +224,7 @@ export class QueueAdapterImpl implements QueueAdapter {
             ]);
 
             // Helper function to map job and expose originalJobId
-            const mapJob = (job: JobStatus, jobStatus: string) => ({
+            const mapJob = (job: QueueJobStatus, jobStatus: string) => ({
               id: job.id,
               name: job.name,
               data: job.data,
@@ -249,7 +258,7 @@ export class QueueAdapterImpl implements QueueAdapter {
             continue; // Already added above
           } else {
             // Get jobs from specific status
-            let jobs: JobStatus[];
+            let jobs: QueueJobStatus[];
             switch (status) {
               case 'active':
                 jobs = yield* queueStatusService.getActiveJobs(queueName);
@@ -304,7 +313,7 @@ export class QueueAdapterImpl implements QueueAdapter {
     ).catch(handleEffectError);
   }
 
-  async pauseQueue(queueName: string) {
+  async pauseQueue(queueName: QueueName) {
     return Effect.runPromise(
       Effect.gen(function* () {
         const queueService = yield* QueueService;
@@ -326,7 +335,7 @@ export class QueueAdapterImpl implements QueueAdapter {
     });
   }
 
-  async resumeQueue(queueName: string) {
+  async resumeQueue(queueName: QueueName) {
     return Effect.runPromise(
       Effect.gen(function* () {
         const queueService = yield* QueueService;
@@ -348,11 +357,11 @@ export class QueueAdapterImpl implements QueueAdapter {
     });
   }
 
-  async clearQueue(queueName: string, jobType?: string) {
+  async clearQueue(queueName: QueueName, jobType?: string) {
     return Effect.runPromise(
       Effect.gen(function* () {
         const queueService = yield* QueueService;
-        const validJobType = jobType === 'completed' || jobType === 'failed' || jobType === 'all' ? jobType : 'all';
+        const validJobType: JobType = (jobType === 'completed' || jobType === 'failed' || jobType === 'all') ? jobType as JobType : 'all';
         const result = yield* queueService.clearQueue(queueName, validJobType);
         return {
           success: true,
@@ -373,7 +382,7 @@ export class QueueAdapterImpl implements QueueAdapter {
     });
   }
 
-  async removeQueueJob(queueName: string, jobId: string) {
+  async removeQueueJob(queueName: QueueName, jobId: string) {
     return Effect.runPromise(
       Effect.gen(function* () {
         const queueService = yield* QueueService;
@@ -403,7 +412,7 @@ export class QueueAdapterImpl implements QueueAdapter {
     });
   }
 
-  async retryQueueJob(queueName: string, jobId: string) {
+  async retryQueueJob(queueName: QueueName, jobId: string) {
     return Effect.runPromise(
       Effect.gen(function* () {
         const queueService = yield* QueueService;

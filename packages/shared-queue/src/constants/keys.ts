@@ -1,5 +1,4 @@
-import type { JobRunInfo, PipelineStep, JobError } from '@usersdotfun/shared-types/types';
-import type { QueueStatus } from 'src/queue-status.service';
+import type { JobRunInfo, PipelineStep, JobError, QueueStatus } from '@usersdotfun/shared-types/types';
 
 /**
  * A type-safe representation of a Redis key.

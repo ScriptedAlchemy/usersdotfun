@@ -1,5 +1,5 @@
 import { JobService, JobNotFoundError } from '@usersdotfun/shared-db';
-import { QueueService, StateService } from '@usersdotfun/shared-queue';
+import { QueueService, StateService, RedisKeys } from '@usersdotfun/shared-queue';
 import { Context, Effect, Layer } from 'effect';
 import { QUEUE_NAMES } from '@usersdotfun/shared-queue';
 
@@ -32,7 +32,7 @@ export const JobLifecycleServiceLive = Layer.effect(
         }
         
         // Clean up Redis state
-        yield* stateService.delete(jobId).pipe(
+        yield* stateService.delete(RedisKeys.jobState(jobId)).pipe(
           Effect.catchAll(() => Effect.void) // Ignore if state doesn't exist
         );
         
@@ -44,11 +44,16 @@ export const JobLifecycleServiceLive = Layer.effect(
         yield* Effect.forEach(
           runIds,
           (runId) => Effect.all([
-            stateService.delete(`job-run:${jobId}:${runId}`),
+            stateService.delete(RedisKeys.jobRun(jobId, runId)),
             // Clean up pipeline items for this run
-            stateService.getKeys(`pipeline-item:${runId}:*`).pipe(
+            stateService.getKeys(`pipeline:${runId}:item:*`).pipe(
               Effect.flatMap((keys) =>
-                Effect.forEach(keys, (key) => stateService.delete(key), { discard: true })
+                Effect.forEach(keys, (key) => {
+                  // Extract itemIndex from key to create proper RedisKey
+                  const parts = key.split(':');
+                  const itemIndex = parseInt(parts[parts.length - 1] || '0');
+                  return stateService.delete(RedisKeys.pipelineItem(runId, itemIndex));
+                }, { discard: true })
               )
             )
           ], { discard: true }),
@@ -58,12 +63,12 @@ export const JobLifecycleServiceLive = Layer.effect(
         );
         
         // Clean up run history list
-        yield* stateService.delete(`job-runs:${jobId}:history`).pipe(
+        yield* stateService.delete(RedisKeys.jobRunHistory(jobId)).pipe(
           Effect.catchAll(() => Effect.void)
         );
         
         // Clean up any error states
-        yield* stateService.delete(`job-error:${jobId}`).pipe(
+        yield* stateService.delete(RedisKeys.jobError(jobId)).pipe(
           Effect.catchAll(() => Effect.void)
         );
         

@@ -1,12 +1,11 @@
 
-import type { Config } from "@usersdotfun/core-sdk";
+import type { Config, PluginMetadata } from "@usersdotfun/core-sdk";
 import { Cache, Duration, Effect, Schedule } from "effect";
 import {
   PluginError
 } from "../pipeline/errors";
 import type {
   PipelinePlugin,
-  PluginMetadata
 } from "../pipeline/interfaces";
 import { ModuleFederationTag } from "./mf.service";
 
