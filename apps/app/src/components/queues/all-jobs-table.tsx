@@ -13,7 +13,10 @@ import {
 } from '@tanstack/react-table';
 import { getAllQueueJobs, getQueuesOverview, retryQueueItem, removeQueueItem } from '~/api/queues';
 import { getJob, getJobMonitoringData, getJobRuns } from '~/api/jobs';
-import { QueueItem } from '@usersdotfun/shared-types';
+import { queueItemSchema } from '@usersdotfun/shared-types';
+import { z } from 'zod';
+
+type QueueItem = z.infer<typeof queueItemSchema>;
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '~/components/ui/table';
 import { Badge } from '~/components/ui/badge';
@@ -35,7 +38,7 @@ import {
   AlertDialogTitle,
 } from '~/components/ui/alert-dialog';
 
-type AllJobsItem = QueueItem & { queueName: string; status: string };
+type AllJobsItem = QueueItem & { queueName: string; status: string; originalJobId?: string };
 
 interface AllJobsTableProps {
   className?: string;
@@ -80,12 +83,12 @@ export function AllJobsTable({ className }: AllJobsTableProps) {
   });
 
   // Fetch job details when a queue item is selected
-  const parsedJobId = selectedQueueItem ? parseQueueJobId(selectedQueueItem.id).jobId : null;
+  const actualJobId = selectedQueueItem?.originalJobId || (selectedQueueItem ? parseQueueJobId(selectedQueueItem.id).jobId : null);
   
   const { data: selectedJob, isLoading: jobLoading, error: jobError } = useQuery({
-    queryKey: ['job', parsedJobId],
-    queryFn: () => getJob(parsedJobId!),
-    enabled: !!parsedJobId && parsedJobId !== selectedQueueItem?.id,
+    queryKey: ['job', actualJobId],
+    queryFn: () => getJob(actualJobId!),
+    enabled: !!actualJobId && actualJobId !== selectedQueueItem?.id,
     staleTime: 30000,
     gcTime: 5 * 60 * 1000,
     retry: (failureCount, error: any) => {
@@ -96,9 +99,9 @@ export function AllJobsTable({ className }: AllJobsTableProps) {
   });
 
   const { data: monitoringData, isLoading: monitoringLoading, error: monitoringError } = useQuery({
-    queryKey: ['job-monitoring', parsedJobId],
-    queryFn: () => getJobMonitoringData(parsedJobId!),
-    enabled: !!parsedJobId && parsedJobId !== selectedQueueItem?.id && !jobError?.isNotFound,
+    queryKey: ['job-monitoring', actualJobId],
+    queryFn: () => getJobMonitoringData(actualJobId!),
+    enabled: !!actualJobId && actualJobId !== selectedQueueItem?.id && !jobError?.isNotFound,
     staleTime: 15000,
     gcTime: 3 * 60 * 1000,
     refetchInterval: isConnected ? 60000 : 15000,
@@ -111,9 +114,9 @@ export function AllJobsTable({ className }: AllJobsTableProps) {
   });
 
   const { data: jobRuns, isLoading: runsLoading, error: runsError } = useQuery({
-    queryKey: ['job-runs', parsedJobId],
-    queryFn: () => getJobRuns(parsedJobId!),
-    enabled: !!parsedJobId && parsedJobId !== selectedQueueItem?.id && !jobError?.isNotFound,
+    queryKey: ['job-runs', actualJobId],
+    queryFn: () => getJobRuns(actualJobId!),
+    enabled: !!actualJobId && actualJobId !== selectedQueueItem?.id && !jobError?.isNotFound,
     staleTime: 45000,
     gcTime: 5 * 60 * 1000,
     refetchInterval: isConnected ? 90000 : 30000,
@@ -192,8 +195,8 @@ export function AllJobsTable({ className }: AllJobsTableProps) {
 
   const handleJobIdClick = (queueItem: AllJobsItem, e: React.MouseEvent) => {
     e.stopPropagation();
-    const parsedId = parseQueueJobId(queueItem.id);
-    navigate({ to: '/jobs', search: { jobId: parsedId.jobId } });
+    const actualJobId = queueItem.originalJobId || parseQueueJobId(queueItem.id).jobId;
+    navigate({ to: '/jobs', search: { jobId: actualJobId } });
   };
 
   const handleRetry = (queueItem: AllJobsItem, e: React.MouseEvent) => {
@@ -298,6 +301,7 @@ export function AllJobsTable({ className }: AllJobsTableProps) {
             case 'completed': return 'bg-green-100 text-green-800';
             case 'failed': return 'bg-red-100 text-red-800';
             case 'delayed': return 'bg-purple-100 text-purple-800';
+            case 'scheduled': return 'bg-indigo-100 text-indigo-800';
             default: return 'bg-gray-100 text-gray-800';
           }
         };
@@ -463,6 +467,7 @@ export function AllJobsTable({ className }: AllJobsTableProps) {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="scheduled">Scheduled</SelectItem>
                     <SelectItem value="active">Active</SelectItem>
                     <SelectItem value="waiting">Waiting</SelectItem>
                     <SelectItem value="completed">Completed</SelectItem>

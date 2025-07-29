@@ -107,13 +107,17 @@ const program = Effect.gen(function* () {
   const jobService = yield* JobService;
   const stateService = yield* StateService;
 
-  yield* Effect.log('Fetching scheduled jobs from database...');
+  yield* Effect.log('Fetching jobs from database...');
   const dbJobs = yield* jobService.getJobs();
   const pendingJobs = dbJobs.filter(job => job.status === 'pending');
+  const scheduledJobs = pendingJobs.filter(job => job.schedule && job.schedule.trim() !== '');
+  const immediateJobs = pendingJobs.filter(job => !job.schedule || job.schedule.trim() === '');
 
-  yield* Effect.log(`Found ${pendingJobs.length} scheduled jobs to process`);
+  yield* Effect.log(`Found ${scheduledJobs.length} scheduled jobs and ${immediateJobs.length} immediate jobs to process`);
+  
+  // Process scheduled jobs (repeatable)
   yield* Effect.forEach(
-    pendingJobs,
+    scheduledJobs,
     (job) =>
       Effect.gen(function* () {
         const result = yield* queueService.addRepeatableIfNotExists(
@@ -128,6 +132,22 @@ const program = Effect.gen(function* () {
         } else {
           yield* Effect.log(`Job ${job.name} (${job.id}) already scheduled - skipping`);
         }
+      }),
+    { concurrency: 5, discard: true }
+  );
+
+  // Process immediate jobs (one-time execution)
+  yield* Effect.forEach(
+    immediateJobs,
+    (job) =>
+      Effect.gen(function* () {
+        yield* queueService.add(
+          'source-jobs',
+          'immediate-source-run',
+          { jobId: job.id },
+          { delay: 1000 }
+        );
+        yield* Effect.log(`Added immediate job for ${job.name} (${job.id})`);
       }),
     { concurrency: 5, discard: true }
   );

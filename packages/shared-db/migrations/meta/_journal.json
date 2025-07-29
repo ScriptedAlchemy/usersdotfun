@@ -15,6 +15,13 @@
       "when": 1753725055063,
       "tag": "0001_handy_skaar",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1753790276100,
+      "tag": "0002_low_whistler",
+      "breakpoints": true
     }
   ]
 }

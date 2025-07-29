@@ -29,7 +29,7 @@ export const createJobSchema = jobSchema
         }
       },
       { message: "Invalid cron expression" }
-    ),
+    ).optional(),
     sourceConfig: jsonString.nullable(),
     sourceSearch: jsonString.nullable(),
     pipeline: jsonString.nullable(),
@@ -54,3 +54,13 @@ export const apiErrorSchema = z.object({
   details: z.string().optional(),
   code: z.string().optional(),
 });
+
+// ============================================================================
+// TYPE EXPORTS
+// ============================================================================
+
+export type CreateJob = z.infer<typeof createJobSchema>;
+export type UpdateJob = z.infer<typeof updateJobSchema>;
+export type JobStatusResponse = z.infer<typeof jobStatusResponseSchema>;
+export type JobRunDetailsResponse = z.infer<typeof jobRunDetailsResponseSchema>;
+export type ApiError = z.infer<typeof apiErrorSchema>;

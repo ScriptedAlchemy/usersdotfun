@@ -46,7 +46,7 @@ export const jobDefinitionSourceSchema = z.object({
 
 // JobDefinition schema - the primary interface for API operations
 export const jobDefinitionSchema = z.object({
-  id: z.string(),
+  id: z.string().optional(),
   name: z.string(),
   schedule: z.string().refine(
     (val) => {
@@ -58,7 +58,7 @@ export const jobDefinitionSchema = z.object({
       }
     },
     { message: "Invalid cron expression" }
-  ),
+  ).optional(),
   source: jobDefinitionSourceSchema,
   pipeline: jobDefinitionPipelineSchema,
 });
@@ -73,7 +73,7 @@ export const updateJobDefinitionSchema = createJobDefinitionSchema.partial();
 export const dbJobSchema = z.object({
   id: z.string(),
   name: z.string(),
-  schedule: z.string(),
+  schedule: z.string().nullable(),
   status: z.string(),
   sourcePlugin: z.string(),
   sourceConfig: z.any().nullable(),

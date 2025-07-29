@@ -92,7 +92,7 @@ const requireNonEmptyArray = <T, E>(
 const mapDbJobToJobDefinition = (dbJob: SelectJob): JobDefinition => ({
   id: dbJob.id,
   name: dbJob.name,
-  schedule: dbJob.schedule,
+  schedule: dbJob.schedule ?? undefined,
   source: {
     plugin: dbJob.sourcePlugin,
     config: dbJob.sourceConfig,

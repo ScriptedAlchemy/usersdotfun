@@ -3,11 +3,9 @@ import type { JobDefinition } from '@usersdotfun/shared-types';
 
 export const jobs: JobDefinition[] = [
   {
-    "id": "8e5d8f9b-4cf5-4fb9-b6a3-fce362da6d96",
     "name": "open_crosspost",
-    "schedule": "* * * * *",
     "source": {
-      "plugin": "@usersdotfun/masa-source",
+      "plugin": "@curatedotfun/masa-source",
       "config": { "apiKey": "{{MASA_API_KEY}}" },
       "search": "@open_crosspost #feature"
     },

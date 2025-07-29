@@ -101,7 +101,7 @@ const processSourceJob = (job: Job<SourceJobData>) =>
     const jobDefinition: JobDefinition = {
       id: dbJob.id,
       name: dbJob.name,
-      schedule: dbJob.schedule,
+      schedule: dbJob.schedule ?? undefined,
       source: {
         plugin: dbJob.sourcePlugin,
         config: dbJob.sourceConfig,
@@ -242,7 +242,12 @@ const processSourceJob = (job: Job<SourceJobData>) =>
 export const createSourceWorker = Effect.gen(function* () {
   const queueService = yield* QueueService;
 
-  yield* queueService.createWorker('source-jobs', (job: Job<SourceJobData>) =>
-    processSourceJob(job)
-  );
+  yield* queueService.createWorker('source-jobs', (job: Job<SourceJobData>) => {
+    // Handle both scheduled and immediate jobs
+    if (job.name === 'scheduled-source-run' || job.name === 'immediate-source-run' || job.name === 'poll-source') {
+      return processSourceJob(job);
+    } else {
+      return Effect.logWarning(`Unknown job type: ${job.name}`);
+    }
+  });
 });

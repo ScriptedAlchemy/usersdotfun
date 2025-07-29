@@ -6,7 +6,7 @@ import { pipelineSteps } from "./pipeline-steps";
 export const jobs = pgTable("jobs", {
   id: varchar("id", { length: 255 }).primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
-  schedule: varchar("schedule", { length: 255 }).notNull(),
+  schedule: varchar("schedule", { length: 255 }),
   status: varchar("status", { length: 50 }).notNull(),
   sourcePlugin: varchar("source_plugin", { length: 255 }).notNull(),
   sourceConfig: jsonb("source_config"),
@@ -26,7 +26,7 @@ export type NewJob = typeof jobs.$inferInsert;
 export const selectJobSchema = z.object({
   id: z.uuid(),
   name: z.string(),
-  schedule: z.string(),
+  schedule: z.string().nullable(),
   status: z.string(),
   sourcePlugin: z.string(),
   sourceConfig: z.any().nullable(),
@@ -39,7 +39,7 @@ export const selectJobSchema = z.object({
 export const insertJobSchema = z.object({
   id: z.uuid("Invalid UUID format for job ID").optional(),
   name: z.string().min(1),
-  schedule: z.string().min(1),
+  schedule: z.string().min(1).optional().nullable(),
   status: z.string().min(1).optional(),
   sourcePlugin: z.string().min(1),
   sourceConfig: z.any().optional().nullable(),

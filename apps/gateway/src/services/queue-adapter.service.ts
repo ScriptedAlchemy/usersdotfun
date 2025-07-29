@@ -243,11 +243,28 @@ export class QueueAdapterImpl implements QueueAdapter {
     return Effect.runPromise(
       Effect.gen(function* () {
         const queueStatusService = yield* QueueStatusService;
+        const queueService = yield* QueueService;
         const queueNames = ['source-jobs', 'pipeline-jobs'];
         
-        let allJobs: Array<QueueItem & { queueName: string; status: string }> = [];
+        let allJobs: Array<QueueItem & { queueName: string; status: string; originalJobId?: string }> = [];
         
         for (const queueName of queueNames) {
+          // Get repeatable jobs (scheduled patterns) - these are important to show!
+          const repeatableJobs = yield* queueService.getRepeatableJobs(queueName);
+          
+          // Add repeatable jobs as "scheduled" status
+          allJobs.push(...repeatableJobs.map(job => ({
+            id: job.key, // Use the repeatable job key as ID
+            name: job.name,
+            data: { pattern: job.pattern, every: job.every }, // Show schedule info
+            progress: 0,
+            attemptsMade: 0,
+            timestamp: Date.now(), // Current time for sorting
+            originalJobId: job.key.includes(':') ? job.key.split(':')[1] : undefined, // Extract jobId from key if possible
+            queueName,
+            status: 'scheduled'
+          })));
+
           if (!status || status === 'all') {
             // Get jobs from all statuses
             const [activeJobs, waitingJobs, completedJobs, failedJobs] = yield* Effect.all([
@@ -257,8 +274,8 @@ export class QueueAdapterImpl implements QueueAdapter {
               queueStatusService.getFailedJobs(queueName, 0, 50)
             ]);
 
-            // Add active jobs
-            allJobs.push(...activeJobs.map(job => ({
+            // Helper function to map job and expose originalJobId
+            const mapJob = (job: JobStatus, jobStatus: string) => ({
               id: job.id,
               name: job.name,
               data: job.data,
@@ -268,54 +285,25 @@ export class QueueAdapterImpl implements QueueAdapter {
               processedOn: job.processedOn,
               finishedOn: job.finishedOn,
               failedReason: job.failedReason,
+              originalJobId: job.data?.jobId, // ⭐ Expose the actual database job ID
               queueName,
-              status: 'active'
-            })));
+              status: jobStatus
+            });
+
+            // Add active jobs
+            allJobs.push(...activeJobs.map(job => mapJob(job, 'active')));
 
             // Add waiting jobs
-            allJobs.push(...waitingJobs.map(job => ({
-              id: job.id,
-              name: job.name,
-              data: job.data,
-              progress: job.progress,
-              attemptsMade: job.attemptsMade,
-              timestamp: job.timestamp,
-              processedOn: job.processedOn,
-              finishedOn: job.finishedOn,
-              failedReason: job.failedReason,
-              queueName,
-              status: 'waiting'
-            })));
+            allJobs.push(...waitingJobs.map(job => mapJob(job, 'waiting')));
 
             // Add completed jobs
-            allJobs.push(...completedJobs.map(job => ({
-              id: job.id,
-              name: job.name,
-              data: job.data,
-              progress: job.progress,
-              attemptsMade: job.attemptsMade,
-              timestamp: job.timestamp,
-              processedOn: job.processedOn,
-              finishedOn: job.finishedOn,
-              failedReason: job.failedReason,
-              queueName,
-              status: 'completed'
-            })));
+            allJobs.push(...completedJobs.map(job => mapJob(job, 'completed')));
 
             // Add failed jobs
-            allJobs.push(...failedJobs.map(job => ({
-              id: job.id,
-              name: job.name,
-              data: job.data,
-              progress: job.progress,
-              attemptsMade: job.attemptsMade,
-              timestamp: job.timestamp,
-              processedOn: job.processedOn,
-              finishedOn: job.finishedOn,
-              failedReason: job.failedReason,
-              queueName,
-              status: 'failed'
-            })));
+            allJobs.push(...failedJobs.map(job => mapJob(job, 'failed')));
+          } else if (status === 'scheduled') {
+            // Only return repeatable jobs for scheduled status
+            continue; // Already added above
           } else {
             // Get jobs from specific status
             let jobs: JobStatus[];
@@ -346,6 +334,7 @@ export class QueueAdapterImpl implements QueueAdapter {
               processedOn: job.processedOn,
               finishedOn: job.finishedOn,
               failedReason: job.failedReason,
+              originalJobId: job.data?.jobId, // ⭐ Expose the actual database job ID
               queueName,
               status
             })));

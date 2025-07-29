@@ -62,7 +62,9 @@ export function JobSheet({ job, children, open, onOpenChange }: JobSheetProps) {
     resolver: zodResolver(createJobSchema),
     defaultValues: job
       ? {
-          ...job,
+          name: job.name,
+          schedule: job.schedule || undefined,
+          sourcePlugin: job.sourcePlugin,
           sourceConfig: JSON.stringify(job.sourceConfig, null, 2),
           sourceSearch: JSON.stringify(job.sourceSearch, null, 2),
           pipeline: JSON.stringify(job.pipeline, null, 2),
@@ -86,6 +88,7 @@ export function JobSheet({ job, children, open, onOpenChange }: JobSheetProps) {
     if (job) {
       reset({
         ...job,
+        schedule: job.schedule || undefined, // Convert null to undefined
         sourceConfig: JSON.stringify(job.sourceConfig, null, 2),
         sourceSearch: JSON.stringify(job.sourceSearch, null, 2),
         pipeline: JSON.stringify(job.pipeline, null, 2),
@@ -94,7 +97,7 @@ export function JobSheet({ job, children, open, onOpenChange }: JobSheetProps) {
       // Convert job to JobDefinition format for JSON editor
       const jobDefinition: CreateJobDefinition = {
         name: job.name,
-        schedule: job.schedule,
+        schedule: job.schedule || undefined, // Convert null to undefined
         source: {
           plugin: job.sourcePlugin,
           config: job.sourceConfig,
@@ -191,6 +194,7 @@ export function JobSheet({ job, children, open, onOpenChange }: JobSheetProps) {
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="schedule" className="text-right">
                     Schedule
+                    <span className="text-xs text-gray-500 block">Optional</span>
                   </Label>
                   <Controller
                     name="schedule"
@@ -199,7 +203,10 @@ export function JobSheet({ job, children, open, onOpenChange }: JobSheetProps) {
                       <div className="col-span-3">
                         <Select
                           onValueChange={(value) => {
-                            if (value === "custom") {
+                            if (value === "none") {
+                              setScheduleType("none");
+                              field.onChange(undefined);
+                            } else if (value === "custom") {
                               setScheduleType("custom");
                               field.onChange("");
                             } else {
@@ -207,12 +214,13 @@ export function JobSheet({ job, children, open, onOpenChange }: JobSheetProps) {
                               field.onChange(value);
                             }
                           }}
-                          defaultValue={field.value}
+                          defaultValue={field.value || "none"}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Select a schedule" />
+                            <SelectValue placeholder="Select a schedule or run immediately" />
                           </SelectTrigger>
                           <SelectContent>
+                            <SelectItem value="none">Run immediately (no schedule)</SelectItem>
                             {schedulePresets.map((preset) => (
                               <SelectItem key={preset.value} value={preset.value}>
                                 {preset.label}
@@ -223,9 +231,14 @@ export function JobSheet({ job, children, open, onOpenChange }: JobSheetProps) {
                         {scheduleType === "custom" && (
                           <Input
                             {...field}
-                            placeholder="* * * * *"
+                            placeholder="* * * * * (cron expression)"
                             className="mt-2"
                           />
+                        )}
+                        {scheduleType === "none" && (
+                          <p className="text-xs text-gray-600 mt-1">
+                            Job will run immediately when created/activated
+                          </p>
                         )}
                       </div>
                     )}

@@ -59,6 +59,17 @@ export const jobsRouter = new Hono()
       const lifecycleAdapter = await getJobLifecycleAdapter()
       const body = await c.req.json()
       const job = await lifecycleAdapter.createJobWithScheduling(body)
+      
+      // Emit WebSocket events for proper cache invalidation
+      wsManager.broadcast({
+        type: 'job:status-changed',
+        data: {
+          jobId: job.id,
+          status: job.status,
+          timestamp: new Date().toISOString(),
+        },
+      })
+      
       return c.json(job, 201)
     } catch (error) {
       return handleError(c, error)
@@ -67,9 +78,20 @@ export const jobsRouter = new Hono()
 
   .post('/definition', requireAuth, async (c) => {
     try {
-      const jobAdapter = await getJobAdapter()
+      const lifecycleAdapter = await getJobLifecycleAdapter()
       const body = await c.req.json()
-      const job = await jobAdapter.createJobDefinition(body)
+      const job = await lifecycleAdapter.createJobWithScheduling(body)
+      
+      // Emit WebSocket events for proper cache invalidation
+      wsManager.broadcast({
+        type: 'job:status-changed',
+        data: {
+          jobId: job.id,
+          status: job.status,
+          timestamp: new Date().toISOString(),
+        },
+      })
+      
       return c.json(job, 201)
     } catch (error) {
       return handleError(c, error)
@@ -78,9 +100,9 @@ export const jobsRouter = new Hono()
 
   .put('/:id', requireAuth, async (c) => {
     try {
-      const jobAdapter = await getJobAdapter()
+      const lifecycleAdapter = await getJobLifecycleAdapter()
       const body = await c.req.json()
-      const job = await jobAdapter.updateJob(c.req.param('id'), body)
+      const job = await lifecycleAdapter.updateJobWithScheduling(c.req.param('id'), body)
       return c.json(job)
     } catch (error) {
       return handleError(c, error)
@@ -167,8 +189,16 @@ export const jobsRouter = new Hono()
   // Retry endpoints (admin-only)
   .post('/:id/retry', requireAuth, async (c) => {
     try {
+      const lifecycleAdapter = await getJobLifecycleAdapter()
       const jobAdapter = await getJobAdapter()
+      
+      // First retry the job in the database (sets status to 'pending')
       await jobAdapter.retryJob(c.req.param('id'))
+      
+      // Then get the updated job and handle scheduling
+      const updatedJob = await jobAdapter.getJobById(c.req.param('id'))
+      await lifecycleAdapter.updateJobWithScheduling(c.req.param('id'), { status: 'pending' })
+      
       return c.json({ message: 'Job retry initiated' })
     } catch (error) {
       return handleError(c, error)
