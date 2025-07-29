@@ -37,7 +37,7 @@
   },
   "include": [
     "src/**/*"
-  ],
+, "../shared-queue/src/redis", "../shared-queue/src/queue-constants.ts"  ],
   "exclude": [
     "node_modules",
     "dist"

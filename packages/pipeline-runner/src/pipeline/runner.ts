@@ -1,14 +1,15 @@
 import { JobService } from "@usersdotfun/shared-db";
 import { Effect } from "effect";
 import { type PipelineExecutionError } from "./errors";
-import type { Pipeline, PipelineExecutionContext } from "./interfaces";
 import { PluginLoaderTag } from "./services";
 import { executeStep } from "./step";
-import { type StateService } from "../services/state.service";
+import type { StateService } from "@usersdotfun/shared-queue";
 import { type EnvironmentService } from "../services/environment.service";
+import type { PipelineExecutionContext } from "./interfaces";
+import type { JobDefinitionPipeline } from "@usersdotfun/shared-types/types";
 
 export const executePipeline = (
-  pipeline: Pipeline,
+  pipeline: JobDefinitionPipeline,
   initialInput: Record<string, unknown>,
   context: PipelineExecutionContext,
 ): Effect.Effect<unknown, PipelineExecutionError, PluginLoaderTag | JobService | StateService | EnvironmentService> =>
@@ -26,7 +27,7 @@ export const executePipeline = (
 
 // Parallel execution variant
 export const executePipelineParallel = (
-  pipeline: Pipeline,
+  pipeline: JobDefinitionPipeline,
   initialInput: Record<string, unknown>,
   context: PipelineExecutionContext,
 ): Effect.Effect<unknown[], PipelineExecutionError, PluginLoaderTag | JobService | StateService | EnvironmentService> =>

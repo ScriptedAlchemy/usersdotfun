@@ -1,24 +1,11 @@
-import { Job, Queue, type RepeatOptions, Worker, type RepeatableJob } from 'bullmq';
+import { Job, Queue, Worker, type RepeatableJob, type RepeatOptions } from 'bullmq';
 import { Context, Effect, Layer, Runtime, Scope } from 'effect';
+import type { JobData, QueueName } from './constants/queues';
 import { RedisConfig } from './redis-config.service';
-
-export interface SourceJobData {
-  jobId: string;
-}
-
-export interface PipelineJobData {
-  jobDefinition: any;
-  item: Record<string, unknown>;
-  runId: string;
-  itemIndex: number;
-  sourceJobId: string;
-}
-
-export type JobData = SourceJobData | PipelineJobData;
 
 export interface QueueService {
   readonly add: <T extends JobData>(
-    queueName: string,
+    queueName: QueueName,
     jobName: string,
     data: T,
     options?: {
@@ -32,54 +19,54 @@ export interface QueueService {
   ) => Effect.Effect<Job<T>, Error>;
 
   readonly addRepeatable: <T extends JobData>(
-    queueName: string,
+    queueName: QueueName,
     jobName: string,
     data: T,
     options: RepeatOptions
   ) => Effect.Effect<Job<T>, Error>;
 
   readonly getRepeatableJobs: (
-    queueName: string
+    queueName: QueueName
   ) => Effect.Effect<Array<RepeatableJob>, Error>;
 
   readonly addRepeatableIfNotExists: <T extends JobData>(
-    queueName: string,
+    queueName: QueueName,
     jobName: string,
     data: T,
     options: RepeatOptions
   ) => Effect.Effect<{ added: boolean; job?: Job<T> }, Error>;
 
   readonly removeRepeatableJob: (
-    queueName: string,
+    queueName: QueueName,
     jobId: string,
     jobName?: string
   ) => Effect.Effect<{ removed: boolean; count: number }, Error>;
 
   readonly pauseQueue: (
-    queueName: string
+    queueName: QueueName
   ) => Effect.Effect<void, Error>;
 
   readonly resumeQueue: (
-    queueName: string
+    queueName: QueueName
   ) => Effect.Effect<void, Error>;
 
   readonly clearQueue: (
-    queueName: string,
+    queueName: QueueName,
     jobType?: 'completed' | 'failed' | 'all'
   ) => Effect.Effect<{ removed: number }, Error>;
 
   readonly removeJob: (
-    queueName: string,
+    queueName: QueueName,
     jobId: string
   ) => Effect.Effect<{ removed: boolean; reason?: string }, Error>;
 
   readonly retryJob: (
-    queueName: string,
+    queueName: QueueName,
     jobId: string
   ) => Effect.Effect<{ retried: boolean; reason?: string }, Error>;
 
   readonly createWorker: <T extends JobData, E, R>(
-    queueName: string,
+    queueName: QueueName,
     processor: (job: Job<T>) => Effect.Effect<void, E, R>
   ) => Effect.Effect<Worker<T, any, string>, Error, R | Scope.Scope>;
 }
@@ -147,7 +134,7 @@ export const QueueServiceLive = Layer.scoped(
 
     return {
       add: <T extends JobData>(
-        queueName: string,
+        queueName: QueueName,
         jobName: string,
         data: T,
         options?: {
@@ -164,7 +151,7 @@ export const QueueServiceLive = Layer.scoped(
         ),
 
       addRepeatable: <T extends JobData>(
-        queueName: string,
+        queueName: QueueName,
         jobName: string,
         data: T,
         options: RepeatOptions
@@ -178,7 +165,7 @@ export const QueueServiceLive = Layer.scoped(
           })
         ),
 
-      getRepeatableJobs: (queueName: string) =>
+      getRepeatableJobs: (queueName: QueueName) =>
         Effect.flatMap(getQueue(queueName), (queue) =>
           Effect.tryPromise({
             try: () => queue.getRepeatableJobs(),
@@ -188,7 +175,7 @@ export const QueueServiceLive = Layer.scoped(
 
 
       addRepeatableIfNotExists: <T extends JobData>(
-        queueName: string,
+        queueName: QueueName,
         jobName: string,
         data: T,
         options: RepeatOptions
@@ -202,9 +189,9 @@ export const QueueServiceLive = Layer.scoped(
 
           // Check if a job with the same name and pattern already exists
           // RepeatableJob has properties: key, name, id, endDate, tz, pattern, every
-          const jobId = (data as SourceJobData).jobId;
-          const existingJob = existingJobs.find(job => 
-            job.name === jobName && 
+          const jobId = (data as JobData).jobId;
+          const existingJob = existingJobs.find(job =>
+            job.name === jobName &&
             job.pattern === options.pattern &&
             job.key.includes(jobId) // The key often contains job data info
           );
@@ -238,7 +225,7 @@ export const QueueServiceLive = Layer.scoped(
           return { added: true, job };
         }),
 
-      removeRepeatableJob: (queueName: string, jobId: string, jobName = 'scheduled-source-run') =>
+      removeRepeatableJob: (queueName: QueueName, jobId: string, jobName = 'scheduled-source-run') =>
         Effect.gen(function* () {
           const queue = yield* getQueue(queueName);
           const existingJobs = yield* Effect.tryPromise({
@@ -247,7 +234,7 @@ export const QueueServiceLive = Layer.scoped(
           });
 
           // Find all jobs that match the jobId
-          const jobsToRemove = existingJobs.filter(job => 
+          const jobsToRemove = existingJobs.filter(job =>
             job.name === jobName && job.key.includes(jobId)
           );
 
@@ -270,7 +257,7 @@ export const QueueServiceLive = Layer.scoped(
           return { removed: removedCount > 0, count: removedCount };
         }),
 
-      pauseQueue: (queueName: string) =>
+      pauseQueue: (queueName: QueueName) =>
         Effect.flatMap(getQueue(queueName), (queue) =>
           Effect.tryPromise({
             try: () => queue.pause(),
@@ -278,7 +265,7 @@ export const QueueServiceLive = Layer.scoped(
           })
         ),
 
-      resumeQueue: (queueName: string) =>
+      resumeQueue: (queueName: QueueName) =>
         Effect.flatMap(getQueue(queueName), (queue) =>
           Effect.tryPromise({
             try: () => queue.resume(),
@@ -286,7 +273,7 @@ export const QueueServiceLive = Layer.scoped(
           })
         ),
 
-      clearQueue: (queueName: string, jobType = 'all') =>
+      clearQueue: (queueName: QueueName, jobType = 'all') =>
         Effect.gen(function* () {
           const queue = yield* getQueue(queueName);
           let totalRemoved = 0;
@@ -333,10 +320,10 @@ export const QueueServiceLive = Layer.scoped(
           return { removed: totalRemoved };
         }),
 
-      removeJob: (queueName: string, jobId: string) =>
+      removeJob: (queueName: QueueName, jobId: string) =>
         Effect.gen(function* () {
           const queue = yield* getQueue(queueName);
-          
+
           // Get the job first to check its state
           const job = yield* Effect.tryPromise({
             try: () => queue.getJob(jobId),
@@ -367,10 +354,10 @@ export const QueueServiceLive = Layer.scoped(
           return { removed: true };
         }),
 
-      retryJob: (queueName: string, jobId: string) =>
+      retryJob: (queueName: QueueName, jobId: string) =>
         Effect.gen(function* () {
           const queue = yield* getQueue(queueName);
-          
+
           // Get the job first
           const job = yield* Effect.tryPromise({
             try: () => queue.getJob(jobId),
@@ -405,7 +392,7 @@ export const QueueServiceLive = Layer.scoped(
         }),
 
       createWorker: <T extends JobData, E, R>(
-        queueName: string,
+        queueName: QueueName,
         processor: (job: Job<T>) => Effect.Effect<void, E, R>
       ) =>
         Effect.gen(function* () {
@@ -419,7 +406,7 @@ export const QueueServiceLive = Layer.scoped(
               throw error;
             }
           };
-          
+
           const worker = yield* Effect.acquireRelease(
             Effect.sync(() => new Worker<T>(queueName, bullProcessor, {
               connection: connectionConfig,

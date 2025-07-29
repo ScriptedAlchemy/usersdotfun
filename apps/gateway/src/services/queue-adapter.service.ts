@@ -1,64 +1,9 @@
+import { QueueService, QueueStatusService, type JobStatus } from '@usersdotfun/shared-queue';
+import { QUEUE_NAMES } from '@usersdotfun/shared-queue';
 import { Effect } from 'effect';
-import { QueueStatusService, QueueService, type QueueStatus, type JobStatus } from '@usersdotfun/shared-queue';
 import { AppLayer } from '../runtime';
-import { toHttpError, HttpError } from '../utils/error-handlers';
-import { QUEUE_NAMES } from '../constants/queue-names';
-
-export interface QueueOverview {
-  name: string;
-  status: 'active' | 'paused';
-  waiting: number;
-  active: number;
-  completed: number;
-  failed: number;
-  delayed: number;
-}
-
-export interface QueueDetails {
-  name: string;
-  status: 'active' | 'paused';
-  counts: {
-    waiting: number;
-    active: number;
-    completed: number;
-    failed: number;
-    delayed: number;
-  };
-  jobs: {
-    active: Array<{
-      id: string;
-      name: string;
-      progress: number;
-      attemptsMade: number;
-      processedOn?: number;
-    }>;
-    waiting: Array<{
-      id: string;
-      name: string;
-      timestamp: number;
-    }>;
-    failed: Array<{
-      id: string;
-      name: string;
-      failedReason?: string;
-      attemptsMade: number;
-      finishedOn?: number;
-    }>;
-  };
-}
-
-export interface QueueItem {
-  id: string;
-  name: string;
-  data: any;
-  progress: number;
-  attemptsMade: number;
-  timestamp: number;
-  processedOn?: number;
-  finishedOn?: number;
-  failedReason?: string;
-  status: string;
-}
+import { toHttpError } from '../utils/error-handlers';
+import type { QueueOverview, QueueDetails, QueueItem } from '@usersdotfun/shared-types/types';
 
 export interface QueueAdapter {
   getQueuesOverview(): Promise<{
@@ -94,7 +39,7 @@ export class QueueAdapterImpl implements QueueAdapter {
     return Effect.runPromise(
       Effect.gen(function* () {
         const queueStatusService = yield* QueueStatusService;
-        
+
         const [sourceStatus, pipelineStatus] = yield* Effect.all([
           queueStatusService.getQueueStatus(QUEUE_NAMES.SOURCE_JOBS),
           queueStatusService.getQueueStatus(QUEUE_NAMES.PIPELINE_JOBS)
@@ -134,7 +79,7 @@ export class QueueAdapterImpl implements QueueAdapter {
     return Effect.runPromise(
       Effect.gen(function* () {
         const queueStatusService = yield* QueueStatusService;
-        
+
         const [status, activeJobs, waitingJobs, failedJobs] = yield* Effect.all([
           queueStatusService.getQueueStatus(queueName),
           queueStatusService.getActiveJobs(queueName),
@@ -185,10 +130,10 @@ export class QueueAdapterImpl implements QueueAdapter {
     return Effect.runPromise(
       Effect.gen(function* () {
         const queueStatusService = yield* QueueStatusService;
-        
+
         const start = (page - 1) * limit;
         const end = start + limit - 1;
-        
+
         let jobs: JobStatus[];
         switch (status) {
           case 'active':
@@ -239,13 +184,13 @@ export class QueueAdapterImpl implements QueueAdapter {
         const queueStatusService = yield* QueueStatusService;
         const queueService = yield* QueueService;
         const queueNames = [QUEUE_NAMES.SOURCE_JOBS, QUEUE_NAMES.PIPELINE_JOBS];
-        
+
         let allJobs: Array<QueueItem & { queueName: string; status: string; originalJobId?: string }> = [];
-        
+
         for (const queueName of queueNames) {
           // Get repeatable jobs (scheduled patterns) - these are important to show!
           const repeatableJobs = yield* queueService.getRepeatableJobs(queueName);
-          
+
           // Add repeatable jobs as "scheduled" status
           allJobs.push(...repeatableJobs.map(job => ({
             id: job.key, // Use the repeatable job key as ID
@@ -433,7 +378,7 @@ export class QueueAdapterImpl implements QueueAdapter {
       Effect.gen(function* () {
         const queueService = yield* QueueService;
         const result = yield* queueService.removeJob(queueName, jobId);
-        
+
         if (result.removed) {
           return {
             success: true,
@@ -463,7 +408,7 @@ export class QueueAdapterImpl implements QueueAdapter {
       Effect.gen(function* () {
         const queueService = yield* QueueService;
         const result = yield* queueService.retryJob(queueName, jobId);
-        
+
         if (result.retried) {
           return {
             success: true,

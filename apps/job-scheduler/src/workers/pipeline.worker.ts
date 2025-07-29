@@ -1,8 +1,9 @@
 import { executePipeline } from '@usersdotfun/pipeline-runner';
 import { JobService } from '@usersdotfun/shared-db';
-import { QueueService, StateService, type PipelineJobData } from '@usersdotfun/shared-queue';
+import { QueueService, StateService, RedisKeys, QUEUE_NAMES } from '@usersdotfun/shared-queue';
 import { type Job } from 'bullmq';
 import { Effect } from 'effect';
+import type { PipelineJobData } from '@usersdotfun/shared-types/types';
 
 const processPipelineJob = (job: Job<PipelineJobData>) =>
   Effect.gen(function* () {
@@ -13,13 +14,18 @@ const processPipelineJob = (job: Job<PipelineJobData>) =>
     yield* Effect.log(`Processing pipeline for item ${itemIndex} (run: ${runId}): ${JSON.stringify(item)}`);
 
     // Store pipeline item state
-    yield* stateService.set(`pipeline-item:${runId}:${itemIndex}`, {
-      runId,
-      sourceJobId,
-      itemIndex,
+    yield* stateService.set(RedisKeys.pipelineItem(runId, itemIndex), {
+      id: `${runId}:${itemIndex}`,
+      jobId: sourceJobId,
+      stepId: `pipeline-${itemIndex}`,
+      pluginName: 'pipeline-processor',
+      config: null,
+      input: item,
+      output: null,
+      error: null,
       status: 'processing',
-      startedAt: new Date(),
-      item,
+      startedAt: new Date().toISOString(),
+      completedAt: null,
     });
 
     try {
@@ -31,36 +37,43 @@ const processPipelineJob = (job: Job<PipelineJobData>) =>
           itemIndex,
           sourceJobId,
           jobId: sourceJobId,
+          env: jobDefinition.pipeline.env || { secrets: [] },
         }
       );
 
       yield* Effect.log(`Pipeline completed for item ${itemIndex} (run: ${runId}) with result: ${JSON.stringify(result)}`);
 
       // Update pipeline item state with success
-      yield* stateService.set(`pipeline-item:${runId}:${itemIndex}`, {
-        runId,
-        sourceJobId,
-        itemIndex,
+      yield* stateService.set(RedisKeys.pipelineItem(runId, itemIndex), {
+        id: `${runId}:${itemIndex}`,
+        jobId: sourceJobId,
+        stepId: `pipeline-${itemIndex}`,
+        pluginName: 'pipeline-processor',
+        config: null,
+        input: item,
+        output: result,
+        error: null,
         status: 'completed',
-        startedAt: new Date(),
-        completedAt: new Date(),
-        item,
-        result,
+        startedAt: new Date().toISOString(),
+        completedAt: new Date().toISOString(),
       });
 
     } catch (error) {
       yield* Effect.logError(`Pipeline failed for item ${itemIndex} (run: ${runId})`, error);
 
       // Update pipeline item state with failure
-      yield* stateService.set(`pipeline-item:${runId}:${itemIndex}`, {
-        runId,
-        sourceJobId,
-        itemIndex,
-        status: 'failed',
-        startedAt: new Date(),
-        completedAt: new Date(),
-        item,
+      yield* stateService.set(RedisKeys.pipelineItem(runId, itemIndex), {
+        id: `${runId}:${itemIndex}`,
+        jobId: sourceJobId,
+        stepId: `pipeline-${itemIndex}`,
+        pluginName: 'pipeline-processor',
+        config: null,
+        input: item,
+        output: null,
         error: error instanceof Error ? error.message : String(error),
+        status: 'failed',
+        startedAt: new Date().toISOString(),
+        completedAt: new Date().toISOString(),
       });
 
       yield* jobService.updateJob(sourceJobId, { status: 'failed' });
@@ -71,7 +84,7 @@ const processPipelineJob = (job: Job<PipelineJobData>) =>
 export const createPipelineWorker = Effect.gen(function* () {
   const queueService = yield* QueueService;
 
-  yield* queueService.createWorker('pipeline-jobs', (job: Job<PipelineJobData>) =>
+  yield* queueService.createWorker(QUEUE_NAMES.PIPELINE_JOBS, (job: Job<PipelineJobData>) =>
     processPipelineJob(job)
   );
 });

@@ -2,8 +2,8 @@ import { Context, Effect, Layer } from "effect";
 import { ModuleFederationLive } from "../services/mf.service";
 import { createPluginCache, loadPlugin } from "../services/plugin.service";
 import { PluginError } from "./errors";
-import type { PluginMetadata, PluginRegistry } from "./interfaces";
 import registryData from "../../../registry-builder/registry.json" with { type: "json" };
+import type { PluginMetadata, PluginRegistry } from "@usersdotfun/core-sdk";
 
 const getPluginMetadata = (pluginName: string): PluginMetadata | undefined =>
   (registryData as PluginRegistry)[pluginName];

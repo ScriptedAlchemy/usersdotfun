@@ -36,12 +36,12 @@ export class WebSocketManager {
     const connection = this.connections.get(connectionId);
     if (connection) {
       connection.subscriptions.add(eventType);
-      
+
       if (!this.subscriptions.has(eventType)) {
         this.subscriptions.set(eventType, new Set());
       }
       this.subscriptions.get(eventType)!.add(connectionId);
-      
+
       console.log(`Connection ${connectionId} subscribed to ${eventType}`);
     }
   }
@@ -50,7 +50,7 @@ export class WebSocketManager {
     const connection = this.connections.get(connectionId);
     if (connection) {
       connection.subscriptions.delete(eventType);
-      
+
       const subscribers = this.subscriptions.get(eventType);
       if (subscribers) {
         subscribers.delete(connectionId);
@@ -58,7 +58,7 @@ export class WebSocketManager {
           this.subscriptions.delete(eventType);
         }
       }
-      
+
       console.log(`Connection ${connectionId} unsubscribed from ${eventType}`);
     }
   }

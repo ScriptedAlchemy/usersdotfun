@@ -3,3 +3,5 @@ export * from './state.service';
 export * from './queue.service';
 export * from './queue-status.service';
 export * from './config';
+export * from './constants/keys';
+export * from './constants/queues';

@@ -1,9 +1,9 @@
 import { getPlugin, PluginError, PluginLoaderTag, SchemaValidator, EnvironmentServiceTag, type EnvironmentService } from '@usersdotfun/pipeline-runner';
 import { JobService } from '@usersdotfun/shared-db';
-import { QueueService, StateService, type SourceJobData } from '@usersdotfun/shared-queue';
+import { QueueService, StateService, RedisKeys, QUEUE_NAMES } from '@usersdotfun/shared-queue';
 import { type Job } from 'bullmq';
 import { Effect, Option } from 'effect';
-import type { JobDefinition } from '@usersdotfun/shared-types';
+import type { JobDefinition, SourceJobData, PipelineJobData } from '@usersdotfun/shared-types/types';
 interface SourceOutput {
   items: any[];
   nextLastProcessedState?: unknown | null;
@@ -116,7 +116,7 @@ const processSourceJob = (job: Job<SourceJobData>) =>
           yield* Effect.log(`Job ${jobId} not found in database. This may be a deleted job with orphaned BullMQ repeatable job.`);
 
           // Store error state in Redis for monitoring
-          yield* stateService.set(`job-error:${jobId}`, {
+          yield* stateService.set(RedisKeys.jobError(jobId), {
             jobId,
             error: 'Job not found in database',
             timestamp: new Date(),
@@ -149,11 +149,10 @@ const processSourceJob = (job: Job<SourceJobData>) =>
     yield* jobService.updateJob(jobId, { status: 'processing' });
 
     // Store run information
-    yield* stateService.set(`job-run:${jobId}:${runId}`, {
+    yield* stateService.set(RedisKeys.jobRun(jobId, runId), {
       runId,
-      jobId,
       status: 'running',
-      startedAt: runStartTime,
+      startedAt: runStartTime.toISOString(),
       itemsProcessed: 0,
       itemsTotal: 0,
     });
@@ -161,7 +160,7 @@ const processSourceJob = (job: Job<SourceJobData>) =>
     // Add to run history
     yield* stateService.addToRunHistory(jobId, runId);
 
-    const lastProcessedState = yield* stateService.get(jobId);
+    const lastProcessedState = yield* stateService.get(RedisKeys.jobState(jobId));
     const stateValue = Option.isSome(lastProcessedState) ? lastProcessedState.value : null;
 
     const sourceResult = yield* runSourcePlugin(jobDefinition, stateValue);
@@ -170,24 +169,24 @@ const processSourceJob = (job: Job<SourceJobData>) =>
       yield* Effect.log(`Enqueuing ${sourceResult.items.length} items for pipeline (run: ${runId}).`);
 
       // Update run with total items
-      yield* stateService.set(`job-run:${jobId}:${runId}`, {
+      yield* stateService.set(RedisKeys.jobRun(jobId, runId), {
         runId,
-        jobId,
         status: 'processing',
-        startedAt: runStartTime,
+        startedAt: runStartTime.toISOString(),
         itemsProcessed: 0,
         itemsTotal: sourceResult.items.length,
       });
 
       yield* Effect.forEach(
         sourceResult.items,
-        (item, index) => queueService.add('pipeline-jobs', 'process-item',
+        (item, index) => queueService.add(QUEUE_NAMES.PIPELINE_JOBS, 'process-item',
           {
             jobDefinition,
             item,
             runId,
             itemIndex: index,
-            sourceJobId: jobId
+            sourceJobId: jobId,
+            jobId: jobId
           },
           {
             attempts: 3, backoff: { type: 'exponential', delay: 2000 }
@@ -198,34 +197,32 @@ const processSourceJob = (job: Job<SourceJobData>) =>
 
     if (sourceResult.nextLastProcessedState) {
       yield* Effect.log(`New state found. Re-enqueuing poll job for ${jobId}.`);
-      yield* stateService.set(jobId, sourceResult.nextLastProcessedState);
+      yield* stateService.set(RedisKeys.jobState(jobId), sourceResult.nextLastProcessedState);
 
       // Update run status
-      yield* stateService.set(`job-run:${jobId}:${runId}`, {
+      yield* stateService.set(RedisKeys.jobRun(jobId, runId), {
         runId,
-        jobId,
         status: 'polling',
-        startedAt: runStartTime,
+        startedAt: runStartTime.toISOString(),
         itemsProcessed: sourceResult.items.length,
         itemsTotal: sourceResult.items.length,
-        nextState: sourceResult.nextLastProcessedState,
+        state: sourceResult.nextLastProcessedState,
       });
 
-      yield* queueService.add('source-jobs', 'poll-source',
+      yield* queueService.add(QUEUE_NAMES.SOURCE_JOBS, 'poll-source',
         { jobId },
         { delay: 5000 } // 5 second delay before polling again
       );
     } else {
       yield* Effect.log(`Polling complete for ${jobId}. Clearing state.`);
-      yield* stateService.delete(jobId);
+      yield* stateService.delete(RedisKeys.jobState(jobId));
 
       // Mark run as completed
-      yield* stateService.set(`job-run:${jobId}:${runId}`, {
+      yield* stateService.set(RedisKeys.jobRun(jobId, runId), {
         runId,
-        jobId,
         status: 'completed',
-        startedAt: runStartTime,
-        completedAt: new Date(),
+        startedAt: runStartTime.toISOString(),
+        completedAt: new Date().toISOString(),
         itemsProcessed: sourceResult.items.length,
         itemsTotal: sourceResult.items.length,
       });
@@ -244,7 +241,7 @@ const processSourceJob = (job: Job<SourceJobData>) =>
             yield* Effect.logError(`Skipping job update for deleted job ${job.data.jobId}:`, error);
 
             // Store failure state in Redis for monitoring
-            yield* stateService.set(`job-error:${job.data.jobId}`, {
+            yield* stateService.set(RedisKeys.jobError(job.data.jobId), {
               jobId: job.data.jobId,
               error: error.message,
               timestamp: new Date(),
@@ -273,7 +270,7 @@ const processSourceJob = (job: Job<SourceJobData>) =>
 export const createSourceWorker = Effect.gen(function* () {
   const queueService = yield* QueueService;
 
-  yield* queueService.createWorker('source-jobs', (job: Job<SourceJobData>) => {
+  yield* queueService.createWorker(QUEUE_NAMES.SOURCE_JOBS, (job: Job<SourceJobData>) => {
     // Handle both scheduled and immediate jobs
     if (job.name === 'scheduled-source-run' || job.name === 'immediate-source-run' || job.name === 'poll-source') {
       return processSourceJob(job);

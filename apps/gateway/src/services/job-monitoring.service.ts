@@ -1,44 +1,8 @@
 import { JobService } from '@usersdotfun/shared-db';
-import { QueueStatusService, StateService, type JobStatus, type QueueStatus } from '@usersdotfun/shared-queue';
+import { QueueStatusService, StateService } from '@usersdotfun/shared-queue';
+import type { JobMonitoringData, JobRunInfo, PipelineStep } from '@usersdotfun/shared-types/types';
+import { QUEUE_NAMES } from '@usersdotfun/shared-queue';
 import { Context, Effect, Layer, Option } from 'effect';
-import { QUEUE_NAMES } from '../constants/queue-names';
-
-export interface JobRunInfo {
-  readonly runId: string;
-  readonly status: string;
-  readonly startedAt: Date;
-  readonly completedAt?: Date;
-  readonly itemsProcessed: number;
-  readonly itemsTotal: number;
-  readonly state?: unknown;
-}
-
-export interface PipelineStepInfo {
-  readonly runId: string;
-  readonly sourceJobId: string;
-  readonly itemIndex: number;
-  readonly status: string;
-  readonly startedAt: Date;
-  readonly completedAt?: Date;
-  readonly item: unknown;
-  readonly result?: unknown;
-  readonly error?: string;
-}
-
-export interface JobMonitoringData {
-  readonly job: any;
-  readonly currentState?: unknown;
-  readonly queueStatus: {
-    readonly sourceQueue: QueueStatus;
-    readonly pipelineQueue: QueueStatus;
-  };
-  readonly activeJobs: {
-    readonly sourceJobs: JobStatus[];
-    readonly pipelineJobs: JobStatus[];
-  };
-  readonly recentRuns: JobRunInfo[];
-  readonly pipelineSteps: PipelineStepInfo[];
-}
 
 export interface JobMonitoringService {
   readonly getJobMonitoringData: (jobId: string) => Effect.Effect<JobMonitoringData, Error>;
@@ -51,7 +15,7 @@ export interface JobMonitoringService {
   readonly getJobRuns: (jobId: string) => Effect.Effect<JobRunInfo[], Error>;
   readonly getJobRunDetails: (jobId: string, runId: string) => Effect.Effect<{
     run: JobRunInfo;
-    pipelineItems: any[];
+    pipelineItems: PipelineStep[];
   }, Error>;
 }
 
@@ -114,7 +78,7 @@ export const JobMonitoringServiceLive = Layer.effect(
         return runs;
       }).pipe(Effect.catchAll(() => Effect.succeed([])));
 
-    const getPipelineStepsFromRedis = (jobId: string): Effect.Effect<PipelineStepInfo[], Error> =>
+    const getPipelineStepsFromRedis = (jobId: string): Effect.Effect<PipelineStep[], Error> =>
       Effect.gen(function* () {
         // Get all pipeline item keys for this job
         const keys = yield* stateService.getKeys(`pipeline-item:*`);
@@ -129,7 +93,7 @@ export const JobMonitoringServiceLive = Layer.effect(
               const parts = key.split(':');
               const runId = parts[1] || '';
               const itemIndex = parseInt(parts[2] || '0');
-              
+
               const itemData = yield* stateService.getPipelineItem(runId, itemIndex);
               if (Option.isSome(itemData)) {
                 const data = itemData.value as any;
@@ -145,7 +109,7 @@ export const JobMonitoringServiceLive = Layer.effect(
                     item: data.item,
                     result: data.result,
                     error: data.error,
-                  } as PipelineStepInfo);
+                  } as PipelineStep);
                 }
               }
               return Option.none();
@@ -155,7 +119,7 @@ export const JobMonitoringServiceLive = Layer.effect(
 
         return pipelineItems
           .filter(Option.isSome)
-          .map((item) => (item as Option.Some<PipelineStepInfo>).value)
+          .map((item) => (item as Option.Some<PipelineStep>).value)
           .sort((a, b) => a.startedAt.getTime() - b.startedAt.getTime());
       }).pipe(Effect.catchAll(() => Effect.succeed([])));
 
@@ -185,11 +149,11 @@ export const JobMonitoringServiceLive = Layer.effect(
             getPipelineStepsFromRedis(jobId),
           ]);
 
-          const jobActiveSourceJobs = activeSourceJobs.filter(j => 
+          const jobActiveSourceJobs = activeSourceJobs.filter(j =>
             j.data?.jobId === jobId
           );
           // Fix the filter for pipeline jobs - they use sourceJobId, not jobDefinition.id
-          const jobActivePipelineJobs = activePipelineJobs.filter(j => 
+          const jobActivePipelineJobs = activePipelineJobs.filter(j =>
             j.data?.sourceJobId === jobId
           );
 

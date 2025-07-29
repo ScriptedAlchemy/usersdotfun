@@ -1,9 +1,11 @@
+import type {
+  JobMonitoringData,
+  JobRunInfo,
+  PipelineStep
+} from '@usersdotfun/shared-types';
 import { Effect } from 'effect';
-import { JobMonitoringService, type JobMonitoringData, type JobRunInfo } from './job-monitoring.service';
-import { JobNotFoundError, ValidationError, DbError } from '@usersdotfun/shared-db';
-import { Cause } from 'effect';
-import { AppLayer } from '../runtime';
-import { toHttpError, HttpError } from '../utils/error-handlers';
+import { toHttpError } from '../utils/error-handlers';
+import { JobMonitoringService } from './job-monitoring.service';
 
 export interface JobMonitoringAdapter {
   getJobMonitoringData(jobId: string): Promise<JobMonitoringData>;
@@ -16,7 +18,7 @@ export interface JobMonitoringAdapter {
   getJobRuns(jobId: string): Promise<JobRunInfo[]>;
   getJobRunDetails(jobId: string, runId: string): Promise<{
     run: JobRunInfo;
-    pipelineItems: any[];
+    pipelineItems: PipelineStep[];
   }>;
 }
 

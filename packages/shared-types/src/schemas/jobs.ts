@@ -20,18 +20,11 @@ export const pipelineStepSchema = z.object({
   completedAt: z.string().datetime().nullable(),
 });
 
-// Pipeline step schema for JobDefinition (matches pipeline-runner interface)
-export const jobDefinitionPipelineStepSchema = z.object({
-  pluginName: z.string(),
-  config: z.record(z.string(), z.unknown()),
-  stepId: z.string(),
-});
-
 // Pipeline schema for JobDefinition
 export const jobDefinitionPipelineSchema = z.object({
   id: z.string(),
   name: z.string(),
-  steps: z.array(jobDefinitionPipelineStepSchema),
+  steps: z.array(pipelineStepSchema),
   env: z.object({
     secrets: z.array(z.string()),
   }).optional(),
@@ -127,23 +120,6 @@ export const jobMonitoringDataSchema = z.object({
 export const jobWithStepsSchema = jobSchema.extend({
   steps: z.array(pipelineStepSchema),
 });
-
-// TypeScript types
-export type JobDefinitionPipelineStep = z.infer<typeof jobDefinitionPipelineStepSchema>;
-export type JobDefinitionPipeline = z.infer<typeof jobDefinitionPipelineSchema>;
-export type JobDefinitionSource = z.infer<typeof jobDefinitionSourceSchema>;
-export type JobDefinition = z.infer<typeof jobDefinitionSchema>;
-export type CreateJobDefinition = z.infer<typeof createJobDefinitionSchema>;
-export type UpdateJobDefinition = z.infer<typeof updateJobDefinitionSchema>;
-export type DbJob = z.infer<typeof dbJobSchema>;
-export type PipelineStep = z.infer<typeof pipelineStepSchema>;
-export type JobRunInfo = z.infer<typeof jobRunInfoSchema>;
-export type JobStatus = z.infer<typeof jobStatusSchema>;
-export type JobMonitoringData = z.infer<typeof jobMonitoringDataSchema>;
-export type JobWithSteps = z.infer<typeof jobWithStepsSchema>;
-
-// Legacy type aliases for backward compatibility
-export type Job = DbJob;
 
 // Import queueStatusSchema for the lazy reference
 import { queueStatusSchema } from './queues';

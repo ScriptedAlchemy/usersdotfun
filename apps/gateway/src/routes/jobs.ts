@@ -5,7 +5,7 @@ import { getJobLifecycleAdapter } from '../services/job-lifecycle-adapter.servic
 import { requireAuth, requireAdmin } from '../middleware/auth'
 import { getWebSocketManager } from '../services/websocket-manager.service'
 import { honoErrorHandler } from '../utils/error-handlers'
-import { QUEUE_NAMES } from '../constants/queue-names'
+import { QUEUE_NAMES } from '@usersdotfun/shared-queue'
 
 const wsManager = getWebSocketManager()
 
@@ -177,7 +177,7 @@ export const jobsRouter = new Hono()
       wsManager.broadcast({
         type: 'queue:job-retried',
         data: {
-          queueName: QUEUE_NAMES,
+          queueName: QUEUE_NAMES.SOURCE_JOBS,
           job: finalJob,
           timestamp: new Date().toISOString(),
         },

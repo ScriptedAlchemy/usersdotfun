@@ -1,3 +1,4 @@
+import type { JSONSchemaType } from "ajv/dist/2020";
 import { z } from 'zod';
 
 // Helpers
@@ -72,8 +73,24 @@ export interface Plugin<
   OutputType extends Output<z.ZodAny>,
   ConfigType extends Config,
 > {
-  readonly type: 'transformer' | 'source' | 'destination';
+  readonly type: PluginType;
   initialize(config?: ConfigType): Promise<void>;
   execute(input: InputType): Promise<OutputType>;
   shutdown(): Promise<void>;
+}
+
+export type PluginType = "transformer" | "distributor" | "source";
+
+export interface PluginMetadata {
+  remoteUrl: string;
+  type?: PluginType;
+  configSchema: JSONSchemaType<any>;
+  inputSchema: JSONSchemaType<any>;
+  outputSchema: JSONSchemaType<any>;
+  version?: string;
+  description?: string;
+}
+
+export interface PluginRegistry {
+  [pluginName: string]: PluginMetadata;
 }

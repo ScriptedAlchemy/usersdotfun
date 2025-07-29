@@ -1,7 +1,7 @@
 import { JobService, JobNotFoundError } from '@usersdotfun/shared-db';
 import { QueueService, StateService } from '@usersdotfun/shared-queue';
 import { Context, Effect, Layer } from 'effect';
-import { QUEUE_NAMES } from '../constants/queue-names';
+import { QUEUE_NAMES } from '@usersdotfun/shared-queue';
 
 export interface JobLifecycleService {
   readonly deleteJobWithCleanup: (jobId: string) => Effect.Effect<void, JobNotFoundError | Error>;

@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { VALID_QUEUE_NAMES, type QueueName } from '../constants/queue-names'
+import { VALID_QUEUE_NAMES, type QueueName } from '@usersdotfun/shared-queue'
 import { requireAdmin, requireAuth } from '../middleware/auth'
 import { getQueueAdapter } from '../services/queue-adapter.service'
 import { getWebSocketManager } from '../services/websocket-manager.service'
