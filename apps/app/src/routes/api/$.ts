@@ -65,7 +65,6 @@ async function proxyHandler({ request, params }: { request: Request; params: { _
   if (shouldCache(method, path)) {
     const cachedEntry = cache.get(cacheKey)
     if (cachedEntry && isValidCacheEntry(cachedEntry)) {
-      console.log(`Cache hit for ${cacheKey}`)
       return new Response(JSON.stringify(cachedEntry.data), {
         status: 200,
         headers: { 

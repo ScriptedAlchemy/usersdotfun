@@ -109,11 +109,11 @@ const program = Effect.gen(function* () {
 
   yield* Effect.log('Fetching scheduled jobs from database...');
   const dbJobs = yield* jobService.getJobs();
-  const scheduledJobs = dbJobs.filter(job => job.status === 'scheduled');
+  const pendingJobs = dbJobs.filter(job => job.status === 'pending');
 
-  yield* Effect.log(`Found ${scheduledJobs.length} scheduled jobs to process`);
+  yield* Effect.log(`Found ${pendingJobs.length} scheduled jobs to process`);
   yield* Effect.forEach(
-    scheduledJobs,
+    pendingJobs,
     (job) =>
       Effect.gen(function* () {
         const result = yield* queueService.addRepeatableIfNotExists(
