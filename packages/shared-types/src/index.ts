@@ -394,6 +394,22 @@ export const webSocketEventSchema = z.discriminatedUnion('type', [
       timestamp: z.string().datetime(),
     }),
   }),
+  z.object({
+    type: z.literal('queue:job-removed'),
+    data: z.object({
+      queueName: z.string(),
+      jobId: z.string(),
+      timestamp: z.string().datetime(),
+    }),
+  }),
+  z.object({
+    type: z.literal('queue:job-retried'),
+    data: z.object({
+      queueName: z.string(),
+      jobId: z.string(),
+      timestamp: z.string().datetime(),
+    }),
+  }),
 ]);
 
 export type WebSocketEvent = z.infer<typeof webSocketEventSchema>;

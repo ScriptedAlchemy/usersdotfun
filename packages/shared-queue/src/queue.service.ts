@@ -42,7 +42,6 @@ export interface QueueService {
     queueName: string
   ) => Effect.Effect<Array<RepeatableJob>, Error>;
 
-
   readonly addRepeatableIfNotExists: <T extends JobData>(
     queueName: string,
     jobName: string,
@@ -55,6 +54,29 @@ export interface QueueService {
     jobId: string,
     jobName?: string
   ) => Effect.Effect<{ removed: boolean; count: number }, Error>;
+
+  readonly pauseQueue: (
+    queueName: string
+  ) => Effect.Effect<void, Error>;
+
+  readonly resumeQueue: (
+    queueName: string
+  ) => Effect.Effect<void, Error>;
+
+  readonly clearQueue: (
+    queueName: string,
+    jobType?: 'completed' | 'failed' | 'all'
+  ) => Effect.Effect<{ removed: number }, Error>;
+
+  readonly removeJob: (
+    queueName: string,
+    jobId: string
+  ) => Effect.Effect<{ removed: boolean; reason?: string }, Error>;
+
+  readonly retryJob: (
+    queueName: string,
+    jobId: string
+  ) => Effect.Effect<{ retried: boolean; reason?: string }, Error>;
 
   readonly createWorker: <T extends JobData, E, R>(
     queueName: string,
@@ -246,6 +268,140 @@ export const QueueServiceLive = Layer.scoped(
           }
 
           return { removed: removedCount > 0, count: removedCount };
+        }),
+
+      pauseQueue: (queueName: string) =>
+        Effect.flatMap(getQueue(queueName), (queue) =>
+          Effect.tryPromise({
+            try: () => queue.pause(),
+            catch: (error) => new Error(`Failed to pause queue ${queueName}: ${error}`)
+          })
+        ),
+
+      resumeQueue: (queueName: string) =>
+        Effect.flatMap(getQueue(queueName), (queue) =>
+          Effect.tryPromise({
+            try: () => queue.resume(),
+            catch: (error) => new Error(`Failed to resume queue ${queueName}: ${error}`)
+          })
+        ),
+
+      clearQueue: (queueName: string, jobType = 'all') =>
+        Effect.gen(function* () {
+          const queue = yield* getQueue(queueName);
+          let totalRemoved = 0;
+
+          if (jobType === 'completed' || jobType === 'all') {
+            const completedRemoved = yield* Effect.tryPromise({
+              try: () => queue.clean(0, 0, 'completed'),
+              catch: (error) => new Error(`Failed to clean completed jobs: ${error}`)
+            });
+            totalRemoved += completedRemoved.length;
+          }
+
+          if (jobType === 'failed' || jobType === 'all') {
+            const failedRemoved = yield* Effect.tryPromise({
+              try: () => queue.clean(0, 0, 'failed'),
+              catch: (error) => new Error(`Failed to clean failed jobs: ${error}`)
+            });
+            totalRemoved += failedRemoved.length;
+          }
+
+          if (jobType === 'all') {
+            // Also clean delayed jobs (waiting jobs are handled differently)
+            const delayedRemoved = yield* Effect.tryPromise({
+              try: () => queue.clean(0, 0, 'delayed'),
+              catch: (error) => new Error(`Failed to clean delayed jobs: ${error}`)
+            });
+            totalRemoved += delayedRemoved.length;
+
+            // For waiting jobs, we need to remove them individually since clean() doesn't support 'waiting'
+            const waitingJobs = yield* Effect.tryPromise({
+              try: () => queue.getWaiting(),
+              catch: (error) => new Error(`Failed to get waiting jobs: ${error}`)
+            });
+
+            for (const job of waitingJobs) {
+              yield* Effect.tryPromise({
+                try: () => job.remove(),
+                catch: (error) => new Error(`Failed to remove waiting job ${job.id}: ${error}`)
+              });
+              totalRemoved++;
+            }
+          }
+
+          return { removed: totalRemoved };
+        }),
+
+      removeJob: (queueName: string, jobId: string) =>
+        Effect.gen(function* () {
+          const queue = yield* getQueue(queueName);
+          
+          // Get the job first to check its state
+          const job = yield* Effect.tryPromise({
+            try: () => queue.getJob(jobId),
+            catch: (error) => new Error(`Failed to get job ${jobId}: ${error}`)
+          });
+
+          if (!job) {
+            return { removed: false, reason: 'Job not found' };
+          }
+
+          // Check if job is active - don't allow removal of active jobs
+          const activeJobs = yield* Effect.tryPromise({
+            try: () => queue.getActive(),
+            catch: (error) => new Error(`Failed to get active jobs: ${error}`)
+          });
+
+          const isActive = activeJobs.some(activeJob => activeJob.id === jobId);
+          if (isActive) {
+            return { removed: false, reason: 'Cannot remove active job' };
+          }
+
+          // Remove the job
+          yield* Effect.tryPromise({
+            try: () => job.remove(),
+            catch: (error) => new Error(`Failed to remove job ${jobId}: ${error}`)
+          });
+
+          return { removed: true };
+        }),
+
+      retryJob: (queueName: string, jobId: string) =>
+        Effect.gen(function* () {
+          const queue = yield* getQueue(queueName);
+          
+          // Get the job first
+          const job = yield* Effect.tryPromise({
+            try: () => queue.getJob(jobId),
+            catch: (error) => new Error(`Failed to get job ${jobId}: ${error}`)
+          });
+
+          if (!job) {
+            return { retried: false, reason: 'Job not found' };
+          }
+
+          // Check job state - only retry failed jobs or completed jobs that can be retried
+          const jobState = yield* Effect.tryPromise({
+            try: () => job.getState(),
+            catch: (error) => new Error(`Failed to get job state: ${error}`)
+          });
+
+          if (jobState === 'active') {
+            return { retried: false, reason: 'Cannot retry active job' };
+          }
+
+          if (jobState === 'waiting' || jobState === 'delayed') {
+            return { retried: false, reason: 'Job is already queued' };
+          }
+
+          // Retry the job
+          yield* Effect.tryPromise({
+            try: () => job.retry(),
+            catch: (error) => new Error(`Failed to retry job ${jobId}: ${error}`)
+          });
+
+          return { retried: true };
         }),
 
       createWorker: <T extends JobData, E, R>(

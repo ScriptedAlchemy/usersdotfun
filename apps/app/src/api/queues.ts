@@ -54,18 +54,26 @@ export async function purgeFailedJobs(queueName: string): Promise<QueueActionRes
   return handleResponse(response, queueActionResultSchema);
 }
 
-export async function retryQueueItem(queueName: string, itemId: string): Promise<QueueActionResult> {
+export async function retryQueueItem(queueName: string, itemId: string): Promise<{ message: string }> {
   const response = await fetch(`${API_BASE_URL}/queues/${queueName}/jobs/${itemId}/retry`, {
     method: 'POST',
   });
-  return handleResponse(response, queueActionResultSchema);
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to retry queue item');
+  }
+  return response.json();
 }
 
-export async function removeQueueItem(queueName: string, itemId: string): Promise<QueueActionResult> {
+export async function removeQueueItem(queueName: string, itemId: string): Promise<{ message: string }> {
   const response = await fetch(`${API_BASE_URL}/queues/${queueName}/jobs/${itemId}`, {
     method: 'DELETE',
   });
-  return handleResponse(response, queueActionResultSchema);
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to remove queue item');
+  }
+  return response.json();
 }
 
 export async function getAllQueueJobs(filters?: {

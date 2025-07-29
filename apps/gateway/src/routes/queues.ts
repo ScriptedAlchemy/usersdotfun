@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { requireAuth } from '../middleware/auth'
 import { HttpError } from '../services/job.service'
 import { getQueueAdapter } from '../services/queue-adapter.service'
+import { wsManager } from './websocket'
 
 const handleError = (c: any, error: any) => {
   console.error('Queue Gateway Error:', {
@@ -95,9 +96,23 @@ export const queuesRouter = new Hono()
         return c.json({ error: 'Invalid queue name' }, 400)
       }
 
-      // TODO: Implement queue pause functionality
-      // This would require extending the QueueService to support pause/resume operations
-      return c.json({ message: 'Queue pause functionality not yet implemented' }, 501)
+      const queueAdapter = await getQueueAdapter()
+      const result = await queueAdapter.pauseQueue(queueName)
+      
+      if (result.success) {
+        // Emit WebSocket event for queue pause
+        wsManager.broadcast({
+          type: 'queue:paused',
+          data: {
+            queueName,
+            timestamp: new Date().toISOString()
+          }
+        })
+        
+        return c.json({ message: result.message })
+      } else {
+        return c.json({ error: result.message }, 500)
+      }
     } catch (error) {
       return handleError(c, error)
     }
@@ -111,8 +126,23 @@ export const queuesRouter = new Hono()
         return c.json({ error: 'Invalid queue name' }, 400)
       }
 
-      // TODO: Implement queue resume functionality
-      return c.json({ message: 'Queue resume functionality not yet implemented' }, 501)
+      const queueAdapter = await getQueueAdapter()
+      const result = await queueAdapter.resumeQueue(queueName)
+      
+      if (result.success) {
+        // Emit WebSocket event for queue resume
+        wsManager.broadcast({
+          type: 'queue:resumed',
+          data: {
+            queueName,
+            timestamp: new Date().toISOString()
+          }
+        })
+        
+        return c.json({ message: result.message })
+      } else {
+        return c.json({ error: result.message }, 500)
+      }
     } catch (error) {
       return handleError(c, error)
     }
@@ -121,13 +151,33 @@ export const queuesRouter = new Hono()
   .delete('/:queueName/clear', requireAuth, async (c) => {
     try {
       const queueName = c.req.param('queueName')
+      const jobType = c.req.query('type') // completed, failed, or all
       
       if (!['source-jobs', 'pipeline-jobs'].includes(queueName)) {
         return c.json({ error: 'Invalid queue name' }, 400)
       }
 
-      // TODO: Implement queue clear functionality
-      return c.json({ message: 'Queue clear functionality not yet implemented' }, 501)
+      const queueAdapter = await getQueueAdapter()
+      const result = await queueAdapter.clearQueue(queueName, jobType)
+      
+      if (result.success) {
+        // Emit WebSocket event for queue clear
+        wsManager.broadcast({
+          type: 'queue:cleared',
+          data: {
+            queueName,
+            itemsRemoved: result.itemsRemoved,
+            timestamp: new Date().toISOString()
+          }
+        })
+        
+        return c.json({ 
+          message: result.message,
+          itemsRemoved: result.itemsRemoved
+        })
+      } else {
+        return c.json({ error: result.message }, 500)
+      }
     } catch (error) {
       return handleError(c, error)
     }
@@ -141,8 +191,18 @@ export const queuesRouter = new Hono()
         return c.json({ error: 'Invalid queue name' }, 400)
       }
 
-      // TODO: Implement queue purge functionality
-      return c.json({ message: 'Queue purge functionality not yet implemented' }, 501)
+      // Purge removes ALL jobs (equivalent to clear with type 'all')
+      const queueAdapter = await getQueueAdapter()
+      const result = await queueAdapter.clearQueue(queueName, 'all')
+      
+      if (result.success) {
+        return c.json({ 
+          message: `Purged all jobs from queue ${queueName}`,
+          itemsRemoved: result.itemsRemoved
+        })
+      } else {
+        return c.json({ error: result.message }, 500)
+      }
     } catch (error) {
       return handleError(c, error)
     }
@@ -158,8 +218,24 @@ export const queuesRouter = new Hono()
         return c.json({ error: 'Invalid queue name' }, 400)
       }
 
-      // TODO: Implement individual job removal
-      return c.json({ message: 'Job removal functionality not yet implemented' }, 501)
+      const queueAdapter = await getQueueAdapter()
+      const result = await queueAdapter.removeQueueJob(queueName, jobId)
+      
+      if (result.success) {
+        // Emit WebSocket event for job removal
+        wsManager.broadcast({
+          type: 'queue:job-removed',
+          data: {
+            queueName,
+            jobId,
+            timestamp: new Date().toISOString()
+          }
+        })
+        
+        return c.json({ message: result.message })
+      } else {
+        return c.json({ error: result.message }, 400)
+      }
     } catch (error) {
       return handleError(c, error)
     }
@@ -174,8 +250,24 @@ export const queuesRouter = new Hono()
         return c.json({ error: 'Invalid queue name' }, 400)
       }
 
-      // TODO: Implement individual job retry
-      return c.json({ message: 'Job retry functionality not yet implemented' }, 501)
+      const queueAdapter = await getQueueAdapter()
+      const result = await queueAdapter.retryQueueJob(queueName, jobId)
+      
+      if (result.success) {
+        // Emit WebSocket event for job retry
+        wsManager.broadcast({
+          type: 'queue:job-retried',
+          data: {
+            queueName,
+            jobId,
+            timestamp: new Date().toISOString()
+          }
+        })
+        
+        return c.json({ message: result.message })
+      } else {
+        return c.json({ error: result.message }, 400)
+      }
     } catch (error) {
       return handleError(c, error)
     }

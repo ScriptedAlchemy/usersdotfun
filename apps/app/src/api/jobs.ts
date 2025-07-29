@@ -19,7 +19,14 @@ const API_BASE_URL = '/api';
 async function handleResponse<T>(response: Response, schema: z.Schema<T>): Promise<T> {
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || 'API request failed');
+    const errorMessage = error.error || 'API request failed';
+    
+    // Create a more specific error object with status information
+    const apiError = new Error(errorMessage) as Error & { status: number; isNotFound: boolean };
+    apiError.status = response.status;
+    apiError.isNotFound = response.status === 404;
+    
+    throw apiError;
   }
   const data = await response.json();
   return schema.parse(data);

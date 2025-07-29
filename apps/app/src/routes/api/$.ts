@@ -172,6 +172,8 @@ const CACHE_INVALIDATION_PATTERNS = {
   'queue:paused': ['queues/status', 'queues/'],
   'queue:resumed': ['queues/status', 'queues/'],
   'queue:cleared': ['queues/status', 'queues/jobs', 'queues/'],
+  'queue:job-removed': ['queues/status', 'queues/jobs', 'queues/', 'jobs'],
+  'queue:job-retried': ['queues/status', 'queues/jobs', 'queues/', 'jobs'],
   'job:status-changed': ['jobs', 'queues/jobs'],
   'job:run-started': ['jobs', 'queues/jobs'],
   'job:run-completed': ['jobs', 'queues/jobs'],

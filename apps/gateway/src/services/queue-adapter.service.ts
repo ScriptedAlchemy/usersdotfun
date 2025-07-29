@@ -77,6 +77,11 @@ export interface QueueAdapter {
     jobs: Array<QueueItem & { queueName: string; status: string }>;
     total: number;
   }>;
+  pauseQueue(queueName: string): Promise<{ success: boolean; message: string }>;
+  resumeQueue(queueName: string): Promise<{ success: boolean; message: string }>;
+  clearQueue(queueName: string, jobType?: string): Promise<{ success: boolean; itemsRemoved: number; message: string }>;
+  removeQueueJob(queueName: string, jobId: string): Promise<{ success: boolean; message: string }>;
+  retryQueueJob(queueName: string, jobId: string): Promise<{ success: boolean; message: string }>;
 }
 
 const handleEffectError = (error: any): never => {
@@ -362,6 +367,135 @@ export class QueueAdapterImpl implements QueueAdapter {
         Effect.scoped
       )
     ).catch(handleEffectError);
+  }
+
+  async pauseQueue(queueName: string) {
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const queueService = yield* QueueService;
+        yield* queueService.pauseQueue(queueName);
+        return {
+          success: true,
+          message: `Queue ${queueName} paused successfully`
+        };
+      }).pipe(
+        Effect.provide(AppLayer),
+        Effect.scoped
+      )
+    ).catch((error) => {
+      console.error('Failed to pause queue:', error);
+      return {
+        success: false,
+        message: `Failed to pause queue: ${error?.message || 'Unknown error'}`
+      };
+    });
+  }
+
+  async resumeQueue(queueName: string) {
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const queueService = yield* QueueService;
+        yield* queueService.resumeQueue(queueName);
+        return {
+          success: true,
+          message: `Queue ${queueName} resumed successfully`
+        };
+      }).pipe(
+        Effect.provide(AppLayer),
+        Effect.scoped
+      )
+    ).catch((error) => {
+      console.error('Failed to resume queue:', error);
+      return {
+        success: false,
+        message: `Failed to resume queue: ${error?.message || 'Unknown error'}`
+      };
+    });
+  }
+
+  async clearQueue(queueName: string, jobType?: string) {
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const queueService = yield* QueueService;
+        const validJobType = jobType === 'completed' || jobType === 'failed' || jobType === 'all' ? jobType : 'all';
+        const result = yield* queueService.clearQueue(queueName, validJobType);
+        return {
+          success: true,
+          itemsRemoved: result.removed,
+          message: `Cleared ${result.removed} jobs from queue ${queueName}`
+        };
+      }).pipe(
+        Effect.provide(AppLayer),
+        Effect.scoped
+      )
+    ).catch((error) => {
+      console.error('Failed to clear queue:', error);
+      return {
+        success: false,
+        itemsRemoved: 0,
+        message: `Failed to clear queue: ${error?.message || 'Unknown error'}`
+      };
+    });
+  }
+
+  async removeQueueJob(queueName: string, jobId: string) {
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const queueService = yield* QueueService;
+        const result = yield* queueService.removeJob(queueName, jobId);
+        
+        if (result.removed) {
+          return {
+            success: true,
+            message: `Job ${jobId} removed successfully`
+          };
+        } else {
+          return {
+            success: false,
+            message: result.reason || `Failed to remove job ${jobId}`
+          };
+        }
+      }).pipe(
+        Effect.provide(AppLayer),
+        Effect.scoped
+      )
+    ).catch((error) => {
+      console.error('Failed to remove job:', error);
+      return {
+        success: false,
+        message: `Failed to remove job: ${error?.message || 'Unknown error'}`
+      };
+    });
+  }
+
+  async retryQueueJob(queueName: string, jobId: string) {
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const queueService = yield* QueueService;
+        const result = yield* queueService.retryJob(queueName, jobId);
+        
+        if (result.retried) {
+          return {
+            success: true,
+            message: `Job ${jobId} retried successfully`
+          };
+        } else {
+          return {
+            success: false,
+            message: result.reason || `Failed to retry job ${jobId}`
+          };
+        }
+      }).pipe(
+        Effect.provide(AppLayer),
+        Effect.scoped
+      )
+    ).catch((error) => {
+      console.error('Failed to retry job:', error);
+      return {
+        success: false,
+        message: `Failed to retry job: ${error?.message || 'Unknown error'}`
+      };
+    });
   }
 }
 

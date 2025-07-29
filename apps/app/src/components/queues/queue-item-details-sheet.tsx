@@ -16,6 +16,9 @@ interface QueueItemDetailsSheetProps {
   isJobLoading?: boolean;
   isMonitoringLoading?: boolean;
   isRunsLoading?: boolean;
+  jobError?: any;
+  monitoringError?: any;
+  runsError?: any;
   onClose: () => void;
 }
 
@@ -29,6 +32,9 @@ export function QueueItemDetailsSheet({
   isJobLoading = false,
   isMonitoringLoading = false,
   isRunsLoading = false,
+  jobError,
+  monitoringError,
+  runsError,
   onClose,
 }: QueueItemDetailsSheetProps) {
   if (!queueItem) {
@@ -188,6 +194,21 @@ export function QueueItemDetailsSheet({
         <div className="flex items-center justify-center h-16">
           <div className="animate-pulse text-sm">Loading job details...</div>
         </div>
+      ) : jobError?.isNotFound ? (
+        <div className="bg-orange-50 border border-orange-200 rounded p-3">
+          <p className="text-sm text-orange-800">
+            <strong>Job Not Found:</strong> The job associated with this queue item (ID: <span className="font-mono">{parsedId.jobId}</span>) has been deleted or is no longer available.
+          </p>
+          <p className="text-xs text-orange-600 mt-1">
+            This is normal if the job was recently deleted. The queue item will be processed based on its current state.
+          </p>
+        </div>
+      ) : jobError ? (
+        <div className="bg-red-50 border border-red-200 rounded p-3">
+          <p className="text-sm text-red-800">
+            <strong>Error loading job details:</strong> {jobError.message}
+          </p>
+        </div>
       ) : job ? (
         <>
           {/* Job Configuration */}
@@ -231,20 +252,52 @@ export function QueueItemDetailsSheet({
           </div>
 
           {/* Real-time Monitoring */}
-          {monitoringData && (
+          {isMonitoringLoading ? (
+            <div className="flex items-center justify-center h-16">
+              <div className="animate-pulse text-sm">Loading monitoring data...</div>
+            </div>
+          ) : monitoringError?.isNotFound ? (
+            <div className="bg-orange-50 border border-orange-200 rounded p-3">
+              <p className="text-sm text-orange-800">
+                Monitoring data not available for this job.
+              </p>
+            </div>
+          ) : monitoringError ? (
+            <div className="bg-red-50 border border-red-200 rounded p-3">
+              <p className="text-sm text-red-800">
+                <strong>Error loading monitoring data:</strong> {monitoringError.message}
+              </p>
+            </div>
+          ) : monitoringData ? (
             <JobMonitoring 
               monitoringData={monitoringData} 
               isLoading={isMonitoringLoading} 
             />
-          )}
+          ) : null}
 
           {/* Job Runs */}
-          {jobRuns && (
+          {isRunsLoading ? (
+            <div className="flex items-center justify-center h-16">
+              <div className="animate-pulse text-sm">Loading job runs...</div>
+            </div>
+          ) : runsError?.isNotFound ? (
+            <div className="bg-orange-50 border border-orange-200 rounded p-3">
+              <p className="text-sm text-orange-800">
+                No job runs found for this job.
+              </p>
+            </div>
+          ) : runsError ? (
+            <div className="bg-red-50 border border-red-200 rounded p-3">
+              <p className="text-sm text-red-800">
+                <strong>Error loading job runs:</strong> {runsError.message}
+              </p>
+            </div>
+          ) : jobRuns ? (
             <JobRuns 
               jobRuns={jobRuns} 
               isLoading={isRunsLoading} 
             />
-          )}
+          ) : null}
 
           {/* Pipeline Steps */}
           <PipelineViewer 

@@ -135,13 +135,16 @@ export function WebSocketProvider({ children, url = '/api/ws' }: WebSocketProvid
         break;
       
       case 'queue:item-removed':
-        queryClient.invalidateQueries({ queryKey: ['queues', 'overview'] });
-        queryClient.invalidateQueries({ queryKey: ['queues', 'details', data.queueName] });
-        queryClient.invalidateQueries({ queryKey: ['all-queue-jobs'] });
-        if (data.jobId) {
-          queryClient.invalidateQueries({ queryKey: ['job', data.jobId] });
-          queryClient.invalidateQueries({ queryKey: ['jobs'] });
-        }
+        // Use a slight delay to allow optimistic updates to complete first
+        setTimeout(() => {
+          queryClient.invalidateQueries({ queryKey: ['queues', 'overview'] });
+          queryClient.invalidateQueries({ queryKey: ['queues', 'details', data.queueName] });
+          queryClient.invalidateQueries({ queryKey: ['all-queue-jobs'] });
+          if (data.jobId) {
+            queryClient.invalidateQueries({ queryKey: ['job', data.jobId] });
+            queryClient.invalidateQueries({ queryKey: ['jobs'] });
+          }
+        }, 100);
         break;
       
       case 'queue:paused':
@@ -150,6 +153,32 @@ export function WebSocketProvider({ children, url = '/api/ws' }: WebSocketProvid
         queryClient.invalidateQueries({ queryKey: ['queues', 'overview'] });
         queryClient.invalidateQueries({ queryKey: ['queues', 'details', data.queueName] });
         queryClient.invalidateQueries({ queryKey: ['all-queue-jobs'] });
+        break;
+      
+      case 'queue:job-removed':
+        // Delay invalidation to avoid interfering with optimistic updates
+        setTimeout(() => {
+          queryClient.invalidateQueries({ queryKey: ['queues', 'overview'] });
+          queryClient.invalidateQueries({ queryKey: ['queues', 'details', data.queueName] });
+          // Only invalidate all-queue-jobs if there's no pending optimistic update
+          const hasOptimisticUpdate = queryClient.isMutating({ mutationKey: ['removeQueueItem'] });
+          if (!hasOptimisticUpdate) {
+            queryClient.invalidateQueries({ queryKey: ['all-queue-jobs'] });
+          }
+          queryClient.invalidateQueries({ queryKey: ['jobs'] });
+          if (data.jobId) {
+            queryClient.invalidateQueries({ queryKey: ['job', data.jobId] });
+          }
+        }, 200);
+        break;
+      
+      case 'queue:job-retried':
+        queryClient.invalidateQueries({ queryKey: ['queues', 'overview'] });
+        queryClient.invalidateQueries({ queryKey: ['queues', 'details', data.queueName] });
+        queryClient.invalidateQueries({ queryKey: ['all-queue-jobs'] });
+        if (data.jobId) {
+          queryClient.invalidateQueries({ queryKey: ['job', data.jobId] });
+        }
         break;
     }
 

@@ -82,32 +82,47 @@ export function AllJobsTable({ className }: AllJobsTableProps) {
   // Fetch job details when a queue item is selected
   const parsedJobId = selectedQueueItem ? parseQueueJobId(selectedQueueItem.id).jobId : null;
   
-  const { data: selectedJob, isLoading: jobLoading } = useQuery({
+  const { data: selectedJob, isLoading: jobLoading, error: jobError } = useQuery({
     queryKey: ['job', parsedJobId],
     queryFn: () => getJob(parsedJobId!),
     enabled: !!parsedJobId && parsedJobId !== selectedQueueItem?.id,
     staleTime: 30000,
     gcTime: 5 * 60 * 1000,
+    retry: (failureCount, error: any) => {
+      // Don't retry if it's a 404 (job not found)
+      if (error?.isNotFound) return false;
+      return failureCount < 3;
+    },
   });
 
-  const { data: monitoringData, isLoading: monitoringLoading } = useQuery({
+  const { data: monitoringData, isLoading: monitoringLoading, error: monitoringError } = useQuery({
     queryKey: ['job-monitoring', parsedJobId],
     queryFn: () => getJobMonitoringData(parsedJobId!),
-    enabled: !!parsedJobId && parsedJobId !== selectedQueueItem?.id,
+    enabled: !!parsedJobId && parsedJobId !== selectedQueueItem?.id && !jobError?.isNotFound,
     staleTime: 15000,
     gcTime: 3 * 60 * 1000,
     refetchInterval: isConnected ? 60000 : 15000,
     refetchIntervalInBackground: false,
+    retry: (failureCount, error: any) => {
+      // Don't retry if it's a 404 (job not found)
+      if (error?.isNotFound) return false;
+      return failureCount < 3;
+    },
   });
 
-  const { data: jobRuns, isLoading: runsLoading } = useQuery({
+  const { data: jobRuns, isLoading: runsLoading, error: runsError } = useQuery({
     queryKey: ['job-runs', parsedJobId],
     queryFn: () => getJobRuns(parsedJobId!),
-    enabled: !!parsedJobId && parsedJobId !== selectedQueueItem?.id,
+    enabled: !!parsedJobId && parsedJobId !== selectedQueueItem?.id && !jobError?.isNotFound,
     staleTime: 45000,
     gcTime: 5 * 60 * 1000,
     refetchInterval: isConnected ? 90000 : 30000,
     refetchIntervalInBackground: false,
+    retry: (failureCount, error: any) => {
+      // Don't retry if it's a 404 (job not found)
+      if (error?.isNotFound) return false;
+      return failureCount < 3;
+    },
   });
 
   // Mutations for actions
@@ -121,13 +136,53 @@ export function AllJobsTable({ className }: AllJobsTableProps) {
   });
 
   const deleteMutation = useMutation({
+    mutationKey: ['removeQueueItem'],
     mutationFn: ({ queueName, itemId }: { queueName: string; itemId: string }) =>
       removeQueueItem(queueName, itemId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['all-queue-jobs'] });
-      queryClient.invalidateQueries({ queryKey: ['queues'] });
+    onMutate: async ({ itemId }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['all-queue-jobs'] });
+      
+      // Snapshot the previous value
+      const previousJobs = queryClient.getQueryData(['all-queue-jobs', statusFilter, queueFilter]);
+      
+      // Optimistically update to remove the item
+      queryClient.setQueryData(['all-queue-jobs', statusFilter, queueFilter], (old: any) => {
+        if (!old?.jobs) return old;
+        return {
+          ...old,
+          jobs: old.jobs.filter((job: AllJobsItem) => job.id !== itemId),
+          total: Math.max(0, old.total - 1)
+        };
+      });
+
+      // Close the details sheet if it's showing the deleted item
+      if (selectedQueueItem?.id === itemId) {
+        setSelectedQueueItem(null);
+      }
+      
+      return { previousJobs };
+    },
+    onError: (err, variables, context) => {
+      // Rollback on error
+      if (context?.previousJobs) {
+        queryClient.setQueryData(['all-queue-jobs', statusFilter, queueFilter], context.previousJobs);
+      }
+      console.error('Failed to delete queue item:', err);
+    },
+    onSuccess: (data, { itemId }) => {
+      // Don't invalidate immediately - let the optimistic update stand
+      // The WebSocket event will handle the final invalidation after server cache is updated
+      console.log('Delete successful:', data.message);
+      
+      // Just update UI state
       setDeleteDialogOpen(false);
       setItemToDelete(null);
+      
+      // Delay invalidation to allow server-side cache to update
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['queues'] });
+      }, 500);
     },
   });
 
@@ -493,6 +548,9 @@ export function AllJobsTable({ className }: AllJobsTableProps) {
         isJobLoading={jobLoading}
         isMonitoringLoading={monitoringLoading}
         isRunsLoading={runsLoading}
+        jobError={jobError}
+        monitoringError={monitoringError}
+        runsError={runsError}
         onClose={() => setSelectedQueueItem(null)}
       />
 
