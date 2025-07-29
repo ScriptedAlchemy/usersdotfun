@@ -64,14 +64,6 @@ export function JobDetailsSheet({
                 </div>
               </div>
 
-              {/* Real-time Monitoring */}
-              {monitoringData && (
-                <JobMonitoring 
-                  monitoringData={monitoringData} 
-                  isLoading={isMonitoringLoading} 
-                />
-              )}
-
               {/* Job Runs */}
               {jobRuns && (
                 <JobRuns 

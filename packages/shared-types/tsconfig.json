@@ -5,7 +5,6 @@
     "target": "ESNext",
     "module": "Preserve",
     "moduleDetection": "force",
-    "jsx": "react-jsx",
     "allowJs": true,
     "composite": true,
 
@@ -15,6 +14,14 @@
     "resolveJsonModule": true,
     "verbatimModuleSyntax": true,
     "noEmit": true,
+
+    // Path mapping for better imports
+    "baseUrl": "./src",
+    "paths": {
+      "@/schemas/*": ["./schemas/*"],
+      "@/types/*": ["./types/*"],
+      "@/utils/*": ["./utils/*"]
+    },
 
     // Best practices
     "strict": true,
@@ -28,5 +35,11 @@
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false
   },
-  "references": [{ "path": "../core-sdk" }, {"path": "../shared-db"}]
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }
