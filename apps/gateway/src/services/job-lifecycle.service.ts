@@ -1,6 +1,7 @@
 import { JobService, JobNotFoundError } from '@usersdotfun/shared-db';
 import { QueueService, StateService } from '@usersdotfun/shared-queue';
 import { Context, Effect, Layer } from 'effect';
+import { QUEUE_NAMES } from '../constants/queue-names';
 
 export interface JobLifecycleService {
   readonly deleteJobWithCleanup: (jobId: string) => Effect.Effect<void, JobNotFoundError | Error>;
@@ -24,7 +25,7 @@ export const JobLifecycleServiceLive = Layer.effect(
         const job = yield* jobService.getJobById(jobId);
         
         // Remove from BullMQ repeatable jobs
-        const queueResult = yield* queueService.removeRepeatableJob('source-jobs', jobId);
+        const queueResult = yield* queueService.removeRepeatableJob(QUEUE_NAMES.SOURCE_JOBS, jobId);
         
         if (queueResult.removed) {
           yield* Effect.log(`Removed ${queueResult.count} repeatable job(s) for ${jobId} from BullMQ`);
@@ -83,7 +84,7 @@ export const JobLifecycleServiceLive = Layer.effect(
         if (newJob.schedule) {
           // Job has a schedule - add as repeatable job
           const result = yield* queueService.addRepeatableIfNotExists(
-            'source-jobs',
+            QUEUE_NAMES.SOURCE_JOBS,
             'scheduled-source-run',
             { jobId: newJob.id },
             { pattern: newJob.schedule }
@@ -95,7 +96,7 @@ export const JobLifecycleServiceLive = Layer.effect(
         } else {
           // Job has no schedule - trigger immediately
           yield* queueService.add(
-            'source-jobs',
+            QUEUE_NAMES.SOURCE_JOBS,
             'immediate-source-run',
             { jobId: newJob.id },
             { delay: 1000 } // Small delay to ensure database transaction is committed
@@ -118,12 +119,12 @@ export const JobLifecycleServiceLive = Layer.effect(
         // Handle schedule changes
         if (jobData.schedule !== undefined && jobData.schedule !== currentJob.schedule) {
           // Remove old schedule if it exists
-          yield* queueService.removeRepeatableJob('source-jobs', jobId);
+          yield* queueService.removeRepeatableJob(QUEUE_NAMES.SOURCE_JOBS, jobId);
           
           // Add new schedule if job has a schedule and is pending/scheduled
           if (updatedJob.schedule && (updatedJob.status === 'pending' || updatedJob.status === 'scheduled')) {
             const result = yield* queueService.addRepeatableIfNotExists(
-              'source-jobs',
+              QUEUE_NAMES.SOURCE_JOBS,
               'scheduled-source-run',
               { jobId: updatedJob.id },
               { pattern: updatedJob.schedule }
@@ -135,7 +136,7 @@ export const JobLifecycleServiceLive = Layer.effect(
           } else if (!updatedJob.schedule && updatedJob.status === 'pending') {
             // Job has no schedule - trigger immediately
             yield* queueService.add(
-              'source-jobs',
+              QUEUE_NAMES.SOURCE_JOBS,
               'immediate-source-run',
               { jobId: updatedJob.id },
               { delay: 1000 }
@@ -150,7 +151,7 @@ export const JobLifecycleServiceLive = Layer.effect(
             if (updatedJob.schedule) {
               // Job was activated with schedule - add to repeatable queue
               const result = yield* queueService.addRepeatableIfNotExists(
-                'source-jobs',
+                QUEUE_NAMES.SOURCE_JOBS,
                 'scheduled-source-run',
                 { jobId: updatedJob.id },
                 { pattern: updatedJob.schedule }
@@ -162,7 +163,7 @@ export const JobLifecycleServiceLive = Layer.effect(
             } else {
               // Job was activated without schedule - trigger immediately
               yield* queueService.add(
-                'source-jobs',
+                QUEUE_NAMES.SOURCE_JOBS,
                 'immediate-source-run',
                 { jobId: updatedJob.id },
                 { delay: 1000 }
@@ -171,7 +172,7 @@ export const JobLifecycleServiceLive = Layer.effect(
             }
           } else if ((currentJob.status === 'pending' || currentJob.status === 'scheduled') && jobData.status !== 'pending') {
             // Job was deactivated - remove from queue
-            const result = yield* queueService.removeRepeatableJob('source-jobs', jobId);
+            const result = yield* queueService.removeRepeatableJob(QUEUE_NAMES.SOURCE_JOBS, jobId);
             if (result.removed) {
               yield* Effect.log(`Deactivated job ${updatedJob.name} (${updatedJob.id})`);
             }
@@ -187,7 +188,7 @@ export const JobLifecycleServiceLive = Layer.effect(
         const errors: string[] = [];
         
         // Get all repeatable jobs from BullMQ
-        const repeatableJobs = yield* queueService.getRepeatableJobs('source-jobs');
+        const repeatableJobs = yield* queueService.getRepeatableJobs(QUEUE_NAMES.SOURCE_JOBS);
         
         // Check each one against the database
         yield* Effect.forEach(
@@ -214,7 +215,7 @@ export const JobLifecycleServiceLive = Layer.effect(
               
               if (!jobExists) {
                 // Remove orphaned job
-                const result = yield* queueService.removeRepeatableJob('source-jobs', possibleJobId).pipe(
+                const result = yield* queueService.removeRepeatableJob(QUEUE_NAMES.SOURCE_JOBS, possibleJobId).pipe(
                   Effect.catchAll((error) => {
                     errors.push(`Failed to clean up ${possibleJobId}: ${error.message}`);
                     return Effect.succeed({ removed: false, count: 0 });

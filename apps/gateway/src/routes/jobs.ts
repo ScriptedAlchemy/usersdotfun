@@ -1,29 +1,13 @@
 import { Hono } from 'hono'
-import { getJobAdapter, HttpError } from '../services/job.service'
+import { getJobAdapter } from '../services/job.service'
 import { getJobMonitoringAdapter } from '../services/job-monitoring-adapter.service'
 import { getJobLifecycleAdapter } from '../services/job-lifecycle-adapter.service'
-import { requireAuth } from '../middleware/auth'
-import { wsManager } from './websocket'
+import { requireAuth, requireAdmin } from '../middleware/auth'
+import { getWebSocketManager } from '../services/websocket-manager.service'
+import { honoErrorHandler } from '../utils/error-handlers'
+import { QUEUE_NAMES } from '../constants/queue-names'
 
-const handleError = (c: any, error: any) => {
-  console.error('Gateway Error:', {
-    message: error.message,
-    stack: error.stack,
-    cause: error.cause,
-    name: error.constructor.name,
-    error: error
-  })
-  
-  if (error instanceof HttpError) {
-    return c.json({ error: error.message }, error.status)
-  }
-  
-  const isDev = process.env.NODE_ENV !== 'production'
-  return c.json({ 
-    error: isDev ? error.message : 'Internal Server Error',
-    details: isDev ? error.stack : 'An unexpected error occurred'
-  }, 500)
-}
+const wsManager = getWebSocketManager()
 
 export const jobsRouter = new Hono()
   // Health check endpoint (no auth required)
@@ -38,7 +22,7 @@ export const jobsRouter = new Hono()
       // Filter jobs by user if needed in the future
       return c.json(jobs)
     } catch (error) {
-      return handleError(c, error)
+      return honoErrorHandler(c, error)
     }
   })
 
@@ -49,12 +33,12 @@ export const jobsRouter = new Hono()
       const steps = await jobAdapter.getStepsForJob(c.req.param('id'))
       return c.json({ ...job, steps })
     } catch (error) {
-      return handleError(c, error)
+      return honoErrorHandler(c, error)
     }
   })
 
   // Admin-only endpoints
-  .post('/', requireAuth, async (c) => {
+  .post('/', requireAdmin, async (c) => {
     try {
       const lifecycleAdapter = await getJobLifecycleAdapter()
       const body = await c.req.json()
@@ -71,11 +55,11 @@ export const jobsRouter = new Hono()
       
       return c.json(job, 201)
     } catch (error) {
-      return handleError(c, error)
+      return honoErrorHandler(c, error)
     }
   })
 
-  .post('/definition', requireAuth, async (c) => {
+  .post('/definition', requireAdmin, async (c) => {
     try {
       const lifecycleAdapter = await getJobLifecycleAdapter()
       const body = await c.req.json()
@@ -92,22 +76,22 @@ export const jobsRouter = new Hono()
       
       return c.json(job, 201)
     } catch (error) {
-      return handleError(c, error)
+      return honoErrorHandler(c, error)
     }
   })
 
-  .put('/:id', requireAuth, async (c) => {
+  .put('/:id', requireAdmin, async (c) => {
     try {
       const lifecycleAdapter = await getJobLifecycleAdapter()
       const body = await c.req.json()
       const job = await lifecycleAdapter.updateJobWithScheduling(c.req.param('id'), body)
       return c.json(job)
     } catch (error) {
-      return handleError(c, error)
+      return honoErrorHandler(c, error)
     }
   })
 
-  .delete('/:id', requireAuth, async (c) => {
+  .delete('/:id', requireAdmin, async (c) => {
     try {
       const jobId = c.req.param('id')
       const lifecycleAdapter = await getJobLifecycleAdapter()
@@ -127,7 +111,7 @@ export const jobsRouter = new Hono()
       
       return c.body(null, 204)
     } catch (error) {
-      return handleError(c, error)
+      return honoErrorHandler(c, error)
     }
   })
 
@@ -138,7 +122,7 @@ export const jobsRouter = new Hono()
       const status = await monitoringAdapter.getJobStatus(c.req.param('id'))
       return c.json(status)
     } catch (error) {
-      return handleError(c, error)
+      return honoErrorHandler(c, error)
     }
   })
 
@@ -148,7 +132,7 @@ export const jobsRouter = new Hono()
       const data = await monitoringAdapter.getJobMonitoringData(c.req.param('id'))
       return c.json(data)
     } catch (error) {
-      return handleError(c, error)
+      return honoErrorHandler(c, error)
     }
   })
 
@@ -158,7 +142,7 @@ export const jobsRouter = new Hono()
       const runs = await monitoringAdapter.getJobRuns(c.req.param('id'))
       return c.json(runs)
     } catch (error) {
-      return handleError(c, error)
+      return honoErrorHandler(c, error)
     }
   })
 
@@ -171,12 +155,12 @@ export const jobsRouter = new Hono()
       )
       return c.json(runDetails)
     } catch (error) {
-      return handleError(c, error)
+      return honoErrorHandler(c, error)
     }
   })
 
   // Retry endpoints (admin-only)
-  .post('/:id/retry', requireAuth, async (c) => {
+  .post('/:id/retry', requireAdmin, async (c) => {
     try {
       const lifecycleAdapter = await getJobLifecycleAdapter()
       const jobAdapter = await getJobAdapter()
@@ -193,7 +177,7 @@ export const jobsRouter = new Hono()
       wsManager.broadcast({
         type: 'queue:job-retried',
         data: {
-          queueName: 'source', // Default queue name, could be made dynamic
+          queueName: QUEUE_NAMES,
           job: finalJob,
           timestamp: new Date().toISOString(),
         },
@@ -201,22 +185,22 @@ export const jobsRouter = new Hono()
       
       return c.json({ message: 'Job retry initiated' })
     } catch (error) {
-      return handleError(c, error)
+      return honoErrorHandler(c, error)
     }
   })
 
-  .post('/:id/steps/:stepId/retry', requireAuth, async (c) => {
+  .post('/:id/steps/:stepId/retry', requireAdmin, async (c) => {
     try {
       const jobAdapter = await getJobAdapter()
       await jobAdapter.retryPipelineStep(c.req.param('stepId'))
       return c.json({ message: 'Step retry initiated' })
     } catch (error) {
-      return handleError(c, error)
+      return honoErrorHandler(c, error)
     }
   })
 
   // Admin maintenance endpoints
-  .post('/cleanup/orphaned', requireAuth, async (c) => {
+  .post('/cleanup/orphaned', requireAdmin, async (c) => {
     try {
       const lifecycleAdapter = await getJobLifecycleAdapter()
       const result = await lifecycleAdapter.cleanupOrphanedJobs()
@@ -225,6 +209,6 @@ export const jobsRouter = new Hono()
         ...result
       })
     } catch (error) {
-      return handleError(c, error)
+      return honoErrorHandler(c, error)
     }
   })

@@ -1,7 +1,7 @@
 import { Effect } from 'effect';
 import { JobLifecycleService } from './job-lifecycle.service';
-import { HttpError } from './job.service';
 import { AppLayer } from '../runtime';
+import { toHttpError, HttpError } from '../utils/error-handlers';
 
 export interface JobLifecycleAdapter {
   deleteJobWithCleanup(jobId: string): Promise<void>;
@@ -11,14 +11,7 @@ export interface JobLifecycleAdapter {
 }
 
 const handleEffectError = (error: any): never => {
-  console.error('Job Lifecycle Effect Error:', {
-    error,
-    message: error?.message,
-    cause: error?.cause,
-    stack: error?.stack,
-  });
-  
-  throw new HttpError(`Job lifecycle error: ${error?.message || 'An unexpected error occurred'}`, 500);
+  throw toHttpError(error);
 };
 
 export class JobLifecycleAdapterImpl implements JobLifecycleAdapter {

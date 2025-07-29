@@ -1,7 +1,8 @@
 import { Effect } from 'effect';
 import { QueueStatusService, QueueService, type QueueStatus, type JobStatus } from '@usersdotfun/shared-queue';
-import { HttpError } from './job.service';
 import { AppLayer } from '../runtime';
+import { toHttpError, HttpError } from '../utils/error-handlers';
+import { QUEUE_NAMES } from '../constants/queue-names';
 
 export interface QueueOverview {
   name: string;
@@ -85,14 +86,7 @@ export interface QueueAdapter {
 }
 
 const handleEffectError = (error: any): never => {
-  console.error('Queue Effect Error:', {
-    error,
-    message: error?.message,
-    cause: error?.cause,
-    stack: error?.stack,
-  });
-  
-  throw new HttpError(`Queue error: ${error?.message || 'An unexpected error occurred'}`, 500);
+  throw toHttpError(error);
 };
 
 export class QueueAdapterImpl implements QueueAdapter {
@@ -102,8 +96,8 @@ export class QueueAdapterImpl implements QueueAdapter {
         const queueStatusService = yield* QueueStatusService;
         
         const [sourceStatus, pipelineStatus] = yield* Effect.all([
-          queueStatusService.getQueueStatus('source-jobs'),
-          queueStatusService.getQueueStatus('pipeline-jobs')
+          queueStatusService.getQueueStatus(QUEUE_NAMES.SOURCE_JOBS),
+          queueStatusService.getQueueStatus(QUEUE_NAMES.PIPELINE_JOBS)
         ]);
 
         return {
@@ -244,7 +238,7 @@ export class QueueAdapterImpl implements QueueAdapter {
       Effect.gen(function* () {
         const queueStatusService = yield* QueueStatusService;
         const queueService = yield* QueueService;
-        const queueNames = ['source-jobs', 'pipeline-jobs'];
+        const queueNames = [QUEUE_NAMES.SOURCE_JOBS, QUEUE_NAMES.PIPELINE_JOBS];
         
         let allJobs: Array<QueueItem & { queueName: string; status: string; originalJobId?: string }> = [];
         

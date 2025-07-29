@@ -1,28 +1,11 @@
 import { Hono } from 'hono'
-import { requireAuth } from '../middleware/auth'
-import { HttpError } from '../services/job.service'
+import { VALID_QUEUE_NAMES, type QueueName } from '../constants/queue-names'
+import { requireAdmin, requireAuth } from '../middleware/auth'
 import { getQueueAdapter } from '../services/queue-adapter.service'
-import { wsManager } from './websocket'
+import { getWebSocketManager } from '../services/websocket-manager.service'
+import { honoErrorHandler } from '../utils/error-handlers'
 
-const handleError = (c: any, error: any) => {
-  console.error('Queue Gateway Error:', {
-    message: error.message,
-    stack: error.stack,
-    cause: error.cause,
-    name: error.constructor.name,
-    error: error
-  })
-  
-  if (error instanceof HttpError) {
-    return c.json({ error: error.message }, error.status)
-  }
-  
-  const isDev = process.env.NODE_ENV !== 'production'
-  return c.json({ 
-    error: isDev ? error.message : 'Internal Server Error',
-    details: isDev ? error.stack : 'An unexpected error occurred'
-  }, 500)
-}
+const wsManager = getWebSocketManager()
 
 export const queuesRouter = new Hono()
   // Get overall queue status
@@ -32,7 +15,7 @@ export const queuesRouter = new Hono()
       const result = await queueAdapter.getQueuesOverview()
       return c.json(result)
     } catch (error) {
-      return handleError(c, error)
+      return honoErrorHandler(c, error)
     }
   })
 
@@ -41,12 +24,12 @@ export const queuesRouter = new Hono()
     try {
       const status = c.req.query('status')
       const limit = parseInt(c.req.query('limit') || '100')
-      
+
       const queueAdapter = await getQueueAdapter()
       const result = await queueAdapter.getAllJobs(status, limit)
       return c.json(result)
     } catch (error) {
-      return handleError(c, error)
+      return honoErrorHandler(c, error)
     }
   })
 
@@ -54,16 +37,16 @@ export const queuesRouter = new Hono()
   .get('/:queueName', requireAuth, async (c) => {
     try {
       const queueName = c.req.param('queueName')
-      
-      if (!['source-jobs', 'pipeline-jobs'].includes(queueName)) {
+
+      if (!VALID_QUEUE_NAMES.includes(queueName as QueueName)) {
         return c.json({ error: 'Invalid queue name' }, 400)
       }
 
       const queueAdapter = await getQueueAdapter()
-      const result = await queueAdapter.getQueueDetails(queueName)
+      const result = await queueAdapter.getQueueDetails(queueName as any)
       return c.json(result)
     } catch (error) {
-      return handleError(c, error)
+      return honoErrorHandler(c, error)
     }
   })
 
@@ -74,31 +57,31 @@ export const queuesRouter = new Hono()
       const status = c.req.query('status') || 'waiting' // waiting, active, completed, failed
       const page = parseInt(c.req.query('page') || '1')
       const limit = parseInt(c.req.query('limit') || '50')
-      
-      if (!['source-jobs', 'pipeline-jobs'].includes(queueName)) {
+
+      if (!VALID_QUEUE_NAMES.includes(queueName as QueueName)) {
         return c.json({ error: 'Invalid queue name' }, 400)
       }
 
       const queueAdapter = await getQueueAdapter()
-      const result = await queueAdapter.getQueueItems(queueName, status, page, limit)
+      const result = await queueAdapter.getQueueItems(queueName as QueueName, status, page, limit)
       return c.json(result)
     } catch (error) {
-      return handleError(c, error)
+      return honoErrorHandler(c, error)
     }
   })
 
   // Queue management actions (admin only)
-  .post('/:queueName/pause', requireAuth, async (c) => {
+  .post('/:queueName/pause', requireAdmin, async (c) => {
     try {
       const queueName = c.req.param('queueName')
-      
-      if (!['source-jobs', 'pipeline-jobs'].includes(queueName)) {
+
+      if (!VALID_QUEUE_NAMES.includes(queueName as QueueName)) {
         return c.json({ error: 'Invalid queue name' }, 400)
       }
 
       const queueAdapter = await getQueueAdapter()
-      const result = await queueAdapter.pauseQueue(queueName)
-      
+      const result = await queueAdapter.pauseQueue(queueName as QueueName)
+
       if (result.success) {
         // Emit WebSocket event for queue pause
         wsManager.broadcast({
@@ -108,27 +91,27 @@ export const queuesRouter = new Hono()
             timestamp: new Date().toISOString()
           }
         })
-        
+
         return c.json({ message: result.message })
       } else {
         return c.json({ error: result.message }, 500)
       }
     } catch (error) {
-      return handleError(c, error)
+      return honoErrorHandler(c, error)
     }
   })
 
-  .post('/:queueName/resume', requireAuth, async (c) => {
+  .post('/:queueName/resume', requireAdmin, async (c) => {
     try {
       const queueName = c.req.param('queueName')
-      
-      if (!['source-jobs', 'pipeline-jobs'].includes(queueName)) {
+
+      if (!VALID_QUEUE_NAMES.includes(queueName as QueueName)) {
         return c.json({ error: 'Invalid queue name' }, 400)
       }
 
       const queueAdapter = await getQueueAdapter()
-      const result = await queueAdapter.resumeQueue(queueName)
-      
+      const result = await queueAdapter.resumeQueue(queueName as QueueName)
+
       if (result.success) {
         // Emit WebSocket event for queue resume
         wsManager.broadcast({
@@ -138,28 +121,28 @@ export const queuesRouter = new Hono()
             timestamp: new Date().toISOString()
           }
         })
-        
+
         return c.json({ message: result.message })
       } else {
         return c.json({ error: result.message }, 500)
       }
     } catch (error) {
-      return handleError(c, error)
+      return honoErrorHandler(c, error)
     }
   })
 
-  .delete('/:queueName/clear', requireAuth, async (c) => {
+  .delete('/:queueName/clear', requireAdmin, async (c) => {
     try {
       const queueName = c.req.param('queueName')
       const jobType = c.req.query('type') // completed, failed, or all
-      
-      if (!['source-jobs', 'pipeline-jobs'].includes(queueName)) {
+
+      if (!VALID_QUEUE_NAMES.includes(queueName as QueueName)) {
         return c.json({ error: 'Invalid queue name' }, 400)
       }
 
       const queueAdapter = await getQueueAdapter()
-      const result = await queueAdapter.clearQueue(queueName, jobType)
-      
+      const result = await queueAdapter.clearQueue(queueName as QueueName, jobType)
+
       if (result.success) {
         // Emit WebSocket event for queue clear
         wsManager.broadcast({
@@ -170,8 +153,8 @@ export const queuesRouter = new Hono()
             timestamp: new Date().toISOString()
           }
         })
-        
-        return c.json({ 
+
+        return c.json({
           message: result.message,
           itemsRemoved: result.itemsRemoved
         })
@@ -179,24 +162,24 @@ export const queuesRouter = new Hono()
         return c.json({ error: result.message }, 500)
       }
     } catch (error) {
-      return handleError(c, error)
+      return honoErrorHandler(c, error)
     }
   })
 
-  .delete('/:queueName/purge', requireAuth, async (c) => {
+  .delete('/:queueName/purge', requireAdmin, async (c) => {
     try {
       const queueName = c.req.param('queueName')
-      
-      if (!['source-jobs', 'pipeline-jobs'].includes(queueName)) {
+
+      if (!VALID_QUEUE_NAMES.includes(queueName as QueueName)) {
         return c.json({ error: 'Invalid queue name' }, 400)
       }
 
       // Purge removes ALL jobs (equivalent to clear with type 'all')
       const queueAdapter = await getQueueAdapter()
-      const result = await queueAdapter.clearQueue(queueName, 'all')
-      
+      const result = await queueAdapter.clearQueue(queueName as QueueName, 'all')
+
       if (result.success) {
-        return c.json({ 
+        return c.json({
           message: `Purged all jobs from queue ${queueName}`,
           itemsRemoved: result.itemsRemoved
         })
@@ -204,23 +187,23 @@ export const queuesRouter = new Hono()
         return c.json({ error: result.message }, 500)
       }
     } catch (error) {
-      return handleError(c, error)
+      return honoErrorHandler(c, error)
     }
   })
 
   // Individual job actions
-  .delete('/:queueName/jobs/:jobId', requireAuth, async (c) => {
+  .delete('/:queueName/jobs/:jobId', requireAdmin, async (c) => {
     try {
       const queueName = c.req.param('queueName')
       const jobId = c.req.param('jobId')
-      
-      if (!['source-jobs', 'pipeline-jobs'].includes(queueName)) {
+
+      if (!VALID_QUEUE_NAMES.includes(queueName as QueueName)) {
         return c.json({ error: 'Invalid queue name' }, 400)
       }
 
       const queueAdapter = await getQueueAdapter()
-      const result = await queueAdapter.removeQueueJob(queueName, jobId)
-      
+      const result = await queueAdapter.removeQueueJob(queueName as QueueName, jobId)
+
       if (result.success) {
         // Emit WebSocket event for job removal
         wsManager.broadcast({
@@ -231,28 +214,28 @@ export const queuesRouter = new Hono()
             timestamp: new Date().toISOString()
           }
         })
-        
+
         return c.json({ message: result.message })
       } else {
         return c.json({ error: result.message }, 400)
       }
     } catch (error) {
-      return handleError(c, error)
+      return honoErrorHandler(c, error)
     }
   })
 
-  .post('/:queueName/jobs/:jobId/retry', requireAuth, async (c) => {
+  .post('/:queueName/jobs/:jobId/retry', requireAdmin, async (c) => {
     try {
       const queueName = c.req.param('queueName')
       const jobId = c.req.param('jobId')
-      
-      if (!['source-jobs', 'pipeline-jobs'].includes(queueName)) {
+
+      if (!VALID_QUEUE_NAMES.includes(queueName as QueueName)) {
         return c.json({ error: 'Invalid queue name' }, 400)
       }
 
       const queueAdapter = await getQueueAdapter()
-      const result = await queueAdapter.retryQueueJob(queueName, jobId)
-      
+      const result = await queueAdapter.retryQueueJob(queueName as QueueName, jobId)
+
       if (result.success) {
         // Emit WebSocket event for job retry
         wsManager.broadcast({
@@ -263,12 +246,12 @@ export const queuesRouter = new Hono()
             timestamp: new Date().toISOString()
           }
         })
-        
+
         return c.json({ message: result.message })
       } else {
         return c.json({ error: result.message }, 400)
       }
     } catch (error) {
-      return handleError(c, error)
+      return honoErrorHandler(c, error)
     }
   })

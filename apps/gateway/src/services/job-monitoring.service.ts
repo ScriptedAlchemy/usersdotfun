@@ -1,6 +1,7 @@
 import { JobService } from '@usersdotfun/shared-db';
 import { QueueStatusService, StateService, type JobStatus, type QueueStatus } from '@usersdotfun/shared-queue';
 import { Context, Effect, Layer, Option } from 'effect';
+import { QUEUE_NAMES } from '../constants/queue-names';
 
 export interface JobRunInfo {
   readonly runId: string;
@@ -172,10 +173,10 @@ export const JobMonitoringServiceLive = Layer.effect(
           ] = yield* Effect.all([
             jobService.getJobById(jobId),
             stateService.get(jobId),
-            queueStatusService.getQueueStatus('source-jobs'),
-            queueStatusService.getQueueStatus('pipeline-jobs'),
-            queueStatusService.getActiveJobs('source-jobs'),
-            queueStatusService.getActiveJobs('pipeline-jobs'),
+            queueStatusService.getQueueStatus(QUEUE_NAMES.SOURCE_JOBS),
+            queueStatusService.getQueueStatus(QUEUE_NAMES.PIPELINE_JOBS),
+            queueStatusService.getActiveJobs(QUEUE_NAMES.SOURCE_JOBS),
+            queueStatusService.getActiveJobs(QUEUE_NAMES.PIPELINE_JOBS),
             stateService.getJobRuns(jobId),
           ]);
 
@@ -212,8 +213,8 @@ export const JobMonitoringServiceLive = Layer.effect(
         Effect.gen(function* () {
           const [job, activeSourceJobs, waitingSourceJobs] = yield* Effect.all([
             jobService.getJobById(jobId),
-            queueStatusService.getActiveJobs('source-jobs'),
-            queueStatusService.getWaitingJobs('source-jobs'),
+            queueStatusService.getActiveJobs(QUEUE_NAMES.SOURCE_JOBS),
+            queueStatusService.getWaitingJobs(QUEUE_NAMES.SOURCE_JOBS),
           ]);
 
           const jobActiveJobs = activeSourceJobs.filter(j => j.data?.jobId === jobId);

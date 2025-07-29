@@ -1,9 +1,26 @@
-import type { User, Session } from 'better-auth/types'
+import type { User as BetterAuthUser, Session } from 'better-auth/types';
+
+interface User extends BetterAuthUser {
+  id: string;
+  email: string;
+  emailVerified: boolean;
+  name: string;
+  createdAt: Date;
+  updatedAt: Date;
+  role: string;
+  isAnonymous: boolean;
+  banned: boolean;
+}
 
 declare module 'hono' {
   interface ContextVariableMap {
-    user?: User
-    session?: Session
-    isAuthenticated: boolean
+    user?: User;
+    session?: Session;
+    isAuthenticated: boolean;
+    userId?: string;
+    userRole?: string;
+    isAnonymous?: boolean;
   }
 }
+
+export type { User };
