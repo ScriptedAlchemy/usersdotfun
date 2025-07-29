@@ -13,11 +13,29 @@ import * as React from "react";
 import { DefaultCatchBoundary } from "~/components/DefaultCatchBoundary";
 import { NotFound } from "~/components/NotFound";
 import { Toaster } from "~/components/ui/sonner";
-import { WebSocketProvider } from "~/lib/websocket";
+import { WebSocketProvider, useWebSocket } from "~/lib/websocket";
 import appCss from "~/styles/app.css?url";
 import { seo } from "~/utils/seo";
 
 const queryClient = new QueryClient();
+
+function WebSocketStatus() {
+  const { isConnected } = useWebSocket();
+  
+  return (
+    <div className="flex items-center gap-2">
+      <div
+        className={`w-2 h-2 rounded-full ${
+          isConnected ? 'bg-green-500' : 'bg-red-500'
+        }`}
+        title={isConnected ? 'WebSocket Connected' : 'WebSocket Disconnected'}
+      />
+      <span className="text-sm text-muted-foreground">
+        {isConnected ? 'Connected' : 'Disconnected'}
+      </span>
+    </div>
+  );
+}
 
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient;
@@ -94,64 +112,67 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             <HeadContent />
           </head>
           <body>
-            <div className="p-2 flex gap-2 text-lg">
-              <Link
-                to="/"
-                activeProps={{
-                  className: "font-bold",
-                }}
-                activeOptions={{ exact: true }}
-              >
-                Home
-              </Link>{" "}
-              <Link
-                to="/jobs"
-                activeProps={{
-                  className: "font-bold",
-                }}
-              >
-                Jobs
-              </Link>{" "}
-              <Link
-                to="/queues"
-                activeProps={{
-                  className: "font-bold",
-                }}
-              >
-                Queues
-              </Link>{" "}
-              <Link
-                to="/projects"
-                activeProps={{
-                  className: "font-bold",
-                }}
-              >
-                Projects
-              </Link>{" "}
-              <Link
-                to="/users"
-                activeProps={{
-                  className: "font-bold",
-                }}
-              >
-                Users
-              </Link>{" "}
-              <Link
-                to="/route-a"
-                activeProps={{
-                  className: "font-bold",
-                }}
-              >
-                Pathless Layout
-              </Link>{" "}
-              <Link
-                to="/deferred"
-                activeProps={{
-                  className: "font-bold",
-                }}
-              >
-                Deferred
-              </Link>{" "}
+            <div className="p-2 flex justify-between items-center">
+              <div className="flex gap-2 text-lg">
+                <Link
+                  to="/"
+                  activeProps={{
+                    className: "font-bold",
+                  }}
+                  activeOptions={{ exact: true }}
+                >
+                  Home
+                </Link>{" "}
+                <Link
+                  to="/jobs"
+                  activeProps={{
+                    className: "font-bold",
+                  }}
+                >
+                  Jobs
+                </Link>{" "}
+                <Link
+                  to="/queues"
+                  activeProps={{
+                    className: "font-bold",
+                  }}
+                >
+                  Queues
+                </Link>{" "}
+                <Link
+                  to="/projects"
+                  activeProps={{
+                    className: "font-bold",
+                  }}
+                >
+                  Projects
+                </Link>{" "}
+                <Link
+                  to="/users"
+                  activeProps={{
+                    className: "font-bold",
+                  }}
+                >
+                  Users
+                </Link>{" "}
+                <Link
+                  to="/route-a"
+                  activeProps={{
+                    className: "font-bold",
+                  }}
+                >
+                  Pathless Layout
+                </Link>{" "}
+                <Link
+                  to="/deferred"
+                  activeProps={{
+                    className: "font-bold",
+                  }}
+                >
+                  Deferred
+                </Link>{" "}
+              </div>
+              <WebSocketStatus />
             </div>
             <hr />
             {children}

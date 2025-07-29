@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { queueOverviewSchema, WebSocketEvent } from "@usersdotfun/shared-types";
+import { WebSocketEvent } from "@usersdotfun/shared-types";
 import {
   createContext,
   ReactNode,
@@ -8,7 +8,6 @@ import {
   useRef,
   useState,
 } from "react";
-import { z } from "zod";
 import { eventHandlers } from "~/lib/ws-event-handlers";
 
 interface WebSocketContextType {

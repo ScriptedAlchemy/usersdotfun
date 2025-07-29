@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { ModeToggle } from '~/components/mode-toggle'
 import { Button } from '~/components/ui/button'
 import { useSession, signIn, signOut } from '~/lib/auth-client'
+import { useWebSocket } from '~/lib/websocket'
 
 export const Route = createFileRoute('/')({
   component: Home,
@@ -10,6 +11,7 @@ export const Route = createFileRoute('/')({
 
 function Home() {
   const { data: session, isPending } = useSession()
+  const { isConnected } = useWebSocket()
   const [isLoading, setIsLoading] = useState(false)
 
   const handleAnonymousSignIn = async () => {
@@ -47,6 +49,23 @@ function Home() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Welcome!</h1>
         <ModeToggle />
+      </div>
+
+      <div className="mb-6 p-4 border rounded-lg">
+        <h2 className="text-lg font-semibold mb-2">WebSocket Connection</h2>
+        <div className="flex items-center gap-2">
+          <div
+            className={`w-3 h-3 rounded-full ${
+              isConnected ? 'bg-green-500' : 'bg-red-500'
+            }`}
+          />
+          <span className={isConnected ? 'text-green-700' : 'text-red-700'}>
+            {isConnected ? 'Connected to gateway' : 'Disconnected from gateway'}
+          </span>
+        </div>
+        <p className="text-sm text-muted-foreground mt-1">
+          Real-time updates {isConnected ? 'enabled' : 'disabled'}
+        </p>
       </div>
 
       {session?.user ? (

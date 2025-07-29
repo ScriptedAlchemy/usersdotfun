@@ -38,7 +38,7 @@ app.use('*', authMiddleware)
 app.get('/', (c) => c.text('Jobs API'))
 app.route('/api/jobs', jobsRouter)
 app.route('/api/queues', queuesRouter)
-app.route('/api', websocketRoutes)
+app.route('/api/ws', websocketRoutes)
 
 const port = parseInt(process.env.PORT || '3001')
 console.log(`Gateway running on port ${port}`)

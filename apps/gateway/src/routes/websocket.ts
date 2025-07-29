@@ -115,7 +115,7 @@ const wsManager = new WebSocketManager();
 // Export the manager so other services can use it
 export { wsManager };
 
-app.get('/ws', upgradeWebSocket((c) => {
+app.get('/', upgradeWebSocket((c) => {
   const connectionId = crypto.randomUUID();
   let connection: WebSocketConnection | null = null;
 
@@ -193,7 +193,7 @@ app.get('/ws', upgradeWebSocket((c) => {
 }));
 
 // Health check endpoint
-app.get('/ws/health', (c) => {
+app.get('/health', (c) => {
   return c.json({
     status: 'healthy',
     connections: wsManager.getConnectionCount(),
