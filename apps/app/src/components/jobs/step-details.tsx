@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs';
 import { StatusBadge } from './status-badge';
 import { toast } from 'sonner';
 import { PipelineStep } from '@usersdotfun/shared-types';
+import { queryKeys } from '~/lib/query-keys';
 
 interface StepDetailsProps {
   step: PipelineStep | {
@@ -52,8 +53,8 @@ export function StepDetails({ step, jobId }: StepDetailsProps) {
     },
     onSuccess: () => {
       toast.success('Step retry initiated');
-      queryClient.invalidateQueries({ queryKey: ['job-monitoring', jobId] });
-      queryClient.invalidateQueries({ queryKey: ['job', jobId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.monitoring(jobId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.detail(jobId) });
     },
     onError: (error) => {
       toast.error(`Failed to retry step: ${error.message}`);

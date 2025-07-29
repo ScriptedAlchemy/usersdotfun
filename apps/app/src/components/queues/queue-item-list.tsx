@@ -9,7 +9,8 @@ import {
   getFilteredRowModel,
 } from '@tanstack/react-table';
 import { type ColumnDef, type SortingState } from '@tanstack/react-table';
-import { QueueItem } from '@usersdotfun/shared-types';
+import { queueItemSchema } from '@usersdotfun/shared-types';
+import { z } from 'zod';
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card';
 import { Button } from '~/components/ui/button';
 import { Badge } from '~/components/ui/badge';
@@ -37,6 +38,9 @@ import {
   AlertCircle 
 } from 'lucide-react';
 import { retryQueueItem, removeQueueItem } from '~/api/queues';
+import { queryKeys } from '~/lib/query-keys';
+
+type QueueItem = z.infer<typeof queueItemSchema>;
 
 interface QueueItemWithStatus extends QueueItem {
   status: 'waiting' | 'active' | 'failed' | 'delayed';
@@ -78,7 +82,7 @@ export function QueueItemList({ queueName, items, isLoading }: QueueItemListProp
       toast.success('Item retried', {
         description: data.message,
       });
-      queryClient.invalidateQueries({ queryKey: ['queues'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.queues.all() });
       setPendingActions(prev => {
         const next = new Set(prev);
         next.delete(itemId);
@@ -103,7 +107,7 @@ export function QueueItemList({ queueName, items, isLoading }: QueueItemListProp
       toast.success('Item removed', {
         description: data.message,
       });
-      queryClient.invalidateQueries({ queryKey: ['queues'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.queues.all() });
       setPendingActions(prev => {
         const next = new Set(prev);
         next.delete(itemId);

@@ -9,6 +9,7 @@ import { JobDetailsSheet } from '~/components/jobs/job-details-sheet';
 import { Button } from '~/components/ui/button';
 import { useSession, signIn } from '~/lib/auth-client';
 import { useWebSocketSubscription, useWebSocket } from '~/lib/websocket';
+import { queryKeys } from '~/lib/query-keys';
 
 const jobsSearchSchema = z.object({
   jobId: z.string().optional(),
@@ -89,39 +90,42 @@ function JobsComponent() {
   const { isConnected } = useWebSocket();
   
   const { data: jobs, isLoading, error } = useQuery({
-    queryKey: ['jobs'],
+    queryKey: queryKeys.jobs.lists(),
     queryFn: getJobs,
     staleTime: 60000, // Consider data fresh for 1 minute
     gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
-    refetchInterval: isConnected ? 120000 : 30000, // 2 min if WebSocket connected, 30s if not
+    // Removed refetchInterval - WebSocket provides real-time updates
     refetchIntervalInBackground: false,
   });
   
   const { data: selectedJob, isLoading: jobLoading } = useQuery({
-    queryKey: ['job', jobId],
+    queryKey: queryKeys.jobs.detail(jobId!),
     queryFn: () => getJob(jobId!),
     enabled: !!jobId,
     staleTime: 30000, // Consider data fresh for 30 seconds
     gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+    // No polling needed - WebSocket provides real-time updates
   });
 
   const { data: monitoringData, isLoading: monitoringLoading } = useQuery({
-    queryKey: ['job-monitoring', jobId],
+    queryKey: queryKeys.jobs.monitoring(jobId!),
     queryFn: () => getJobMonitoringData(jobId!),
     enabled: !!jobId,
     staleTime: 15000, // Consider data fresh for 15 seconds
     gcTime: 3 * 60 * 1000, // Keep in cache for 3 minutes
-    refetchInterval: isConnected ? 60000 : 15000, // 1 min if WebSocket connected, 15s if not
+    // Minimal polling as fallback only when WebSocket is disconnected
+    refetchInterval: isConnected ? false : 30000,
     refetchIntervalInBackground: false,
   });
 
   const { data: jobRuns, isLoading: runsLoading } = useQuery({
-    queryKey: ['job-runs', jobId],
+    queryKey: queryKeys.jobs.runs(jobId!),
     queryFn: () => getJobRuns(jobId!),
     enabled: !!jobId,
     staleTime: 45000, // Consider data fresh for 45 seconds
     gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
-    refetchInterval: isConnected ? 90000 : 30000, // 1.5 min if WebSocket connected, 30s if not
+    // Minimal polling as fallback only when WebSocket is disconnected
+    refetchInterval: isConnected ? false : 60000,
     refetchIntervalInBackground: false,
   });
 

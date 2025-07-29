@@ -13,6 +13,7 @@ import { Button } from '~/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { useWebSocketSubscription, useWebSocket } from '~/lib/websocket';
 import { signIn } from '~/lib/auth-client';
+import { queryKeys } from '~/lib/query-keys';
 
 const queuesSearchSchema = z.object({
   queue: z.string().optional(),
@@ -94,22 +95,24 @@ function QueuesComponent() {
 
   // Fetch queues overview with WebSocket-aware polling
   const { data: queuesData, isLoading: queuesLoading, error: queuesError } = useQuery({
-    queryKey: ['queues', 'overview'],
+    queryKey: queryKeys.queues.overview(),
     queryFn: getQueuesOverview,
     staleTime: 30000, // Consider data fresh for 30 seconds
     gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
-    refetchInterval: isConnected ? 60000 : 15000, // 1 min if WebSocket connected, 15s if not
+    // Minimal polling as fallback only when WebSocket is disconnected
+    refetchInterval: isConnected ? false : 30000,
     refetchIntervalInBackground: false, // Don't refetch when tab is not active
   });
 
   // Fetch detailed queue data when a queue is selected
   const { data: queueDetails, isLoading: detailsLoading } = useQuery({
-    queryKey: ['queues', 'details', selectedQueueName],
+    queryKey: queryKeys.queues.detail(selectedQueueName!),
     queryFn: () => getQueueDetails(selectedQueueName!),
     enabled: !!selectedQueueName,
     staleTime: 20000, // Consider data fresh for 20 seconds
     gcTime: 3 * 60 * 1000, // Keep in cache for 3 minutes
-    refetchInterval: isConnected ? 45000 : 10000, // 45s if WebSocket connected, 10s if not
+    // Minimal polling as fallback only when WebSocket is disconnected
+    refetchInterval: isConnected ? false : 20000,
     refetchIntervalInBackground: false,
   });
 
@@ -233,7 +236,7 @@ function QueuesComponent() {
                     {queue.waiting + queue.active + queue.delayed}
                   </div>
                   <div className="text-sm text-gray-600 capitalize">
-                    {queueName.replace('-', ' ')} Active
+                    {queueName.replace('-', ' ')} Total
                   </div>
                 </div>
               ))}

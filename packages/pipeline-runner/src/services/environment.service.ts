@@ -74,8 +74,6 @@ export const createEnvironmentService = (
 
         const populatedConfigString = Mustache.render(stringifiedConfig, view);
 
-        console.log("populatedConfigString", populatedConfigString);
-
         return yield* Effect.try({
           try: () => JSON.parse(populatedConfigString) as T,
           catch: (error) =>

@@ -158,38 +158,6 @@ async function proxyHandler({ request, params }: { request: Request; params: { _
   return executeRequest()
 }
 
-// Cache invalidation patterns for WebSocket events
-const CACHE_INVALIDATION_PATTERNS = {
-  'queue:status-changed': ['queues/status', 'queues/'],
-  'queue:item-added': ['queues/status', 'queues/jobs', 'queues/'],
-  'queue:item-completed': ['queues/status', 'queues/jobs', 'queues/'],
-  'queue:item-failed': ['queues/status', 'queues/jobs', 'queues/'],
-  'queue:item-removed': ['queues/status', 'queues/jobs', 'queues/', 'jobs'],
-  'queue:paused': ['queues/status', 'queues/'],
-  'queue:resumed': ['queues/status', 'queues/'],
-  'queue:cleared': ['queues/status', 'queues/jobs', 'queues/'],
-  'queue:job-removed': ['queues/status', 'queues/jobs', 'queues/', 'jobs'],
-  'queue:job-retried': ['queues/status', 'queues/jobs', 'queues/', 'jobs'],
-  'job:status-changed': ['jobs', 'queues/jobs'],
-  'job:run-started': ['jobs', 'queues/jobs'],
-  'job:run-completed': ['jobs', 'queues/jobs'],
-  'job:deleted': ['jobs', 'queues/jobs', 'queues/status', 'queues/'],
-}
-
-// Function to invalidate cache based on patterns
-function invalidateCacheByPatterns(patterns: string[]) {
-  let invalidatedCount = 0
-  for (const [key, entry] of cache.entries()) {
-    const path = key.split(':')[1] // Extract path from cache key
-    if (patterns.some(pattern => path?.includes(pattern))) {
-      cache.delete(key)
-      invalidatedCount++
-    }
-  }
-  if (invalidatedCount > 0) {
-    console.log(`Invalidated ${invalidatedCount} cache entries`)
-  }
-}
 
 // Cache cleanup - remove expired entries every 5 minutes
 setInterval(() => {
@@ -206,44 +174,7 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000)
 
-// WebSocket event handler for cache invalidation
-async function handleWebSocketCacheInvalidation({ request, params }: { request: Request; params: { _splat?: string } }) {
-  if (request.method !== 'POST' || params._splat !== 'cache/invalidate') {
-    return new Response('Not Found', { status: 404 })
-  }
-
-  try {
-    const body = await request.json()
-    const { eventType } = body
-
-    const patterns = CACHE_INVALIDATION_PATTERNS[eventType as keyof typeof CACHE_INVALIDATION_PATTERNS]
-    if (patterns) {
-      invalidateCacheByPatterns(patterns)
-      return new Response(JSON.stringify({ success: true, invalidated: patterns }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      })
-    }
-
-    return new Response(JSON.stringify({ success: false, error: 'Unknown event type' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    })
-  } catch (error) {
-    console.error('Cache invalidation error:', error)
-    return new Response(JSON.stringify({ success: false, error: 'Invalid request' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    })
-  }
-}
-
 async function routeHandler(context: { request: Request; params: { _splat?: string } }) {
-  // Handle cache invalidation endpoint
-  if (context.params._splat === 'cache/invalidate') {
-    return handleWebSocketCacheInvalidation(context)
-  }
-  
   // Handle regular proxy requests
   return proxyHandler(context)
 }

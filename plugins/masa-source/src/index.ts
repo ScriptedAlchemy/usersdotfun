@@ -66,7 +66,6 @@ export class MasaSourcePlugin
   private platformConfigs: Map<string, PlatformConfig<any, any>> = new Map();
 
   async initialize(config: MasaSourceConfig): Promise<void> {
-    console.log("RECEIVED CONFIG", config);
     if (!config?.secrets?.apiKey) {
       throw new Error('Masa API key is required.');
     }

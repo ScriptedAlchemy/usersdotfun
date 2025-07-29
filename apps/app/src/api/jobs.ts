@@ -135,3 +135,17 @@ export const retryPipelineStep = async (jobId: string, stepId: string): Promise<
     throw new Error(error.error || 'Failed to retry step');
   }
 };
+
+export const cleanupOrphanedJobs = async (): Promise<{
+  message: string;
+  cleaned: number;
+}> => {
+  const res = await fetch(`${API_BASE_URL}/jobs/cleanup/orphaned`, {
+    method: 'POST',
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || 'Failed to cleanup orphaned jobs');
+  }
+  return res.json();
+};

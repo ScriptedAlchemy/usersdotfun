@@ -26,6 +26,7 @@ import {
   clearQueue, 
   purgeFailedJobs 
 } from '~/api/queues';
+import { queryKeys } from '~/lib/query-keys';
 
 interface QueueActionsProps {
   queueName: string;
@@ -52,7 +53,7 @@ export function QueueActions({
       toast.success(`Queue ${action}d`, {
         description: data.message,
       });
-      queryClient.invalidateQueries({ queryKey: ['queues'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.queues.all() });
     },
     onError: (error: Error, action) => {
       toast.error(`Failed to ${action} queue`, {
@@ -68,7 +69,7 @@ export function QueueActions({
       toast.success('Queue cleared', {
         description: `${data.affectedItems || 0} items removed`,
       });
-      queryClient.invalidateQueries({ queryKey: ['queues'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.queues.all() });
     },
     onError: (error: Error) => {
       toast.error('Failed to clear queue', {
@@ -84,7 +85,7 @@ export function QueueActions({
       toast.success('Failed jobs purged', {
         description: `${data.affectedItems || 0} failed jobs removed`,
       });
-      queryClient.invalidateQueries({ queryKey: ['queues'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.queues.all() });
     },
     onError: (error: Error) => {
       toast.error('Failed to purge failed jobs', {

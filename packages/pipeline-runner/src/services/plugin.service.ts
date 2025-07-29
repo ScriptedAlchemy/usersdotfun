@@ -1,4 +1,5 @@
 
+import type { Config } from "@usersdotfun/core-sdk";
 import { Cache, Duration, Effect, Schedule } from "effect";
 import {
   PluginError
@@ -7,7 +8,6 @@ import type {
   PipelinePlugin,
   PluginMetadata
 } from "../pipeline/interfaces";
-import type { Config } from "@usersdotfun/core-sdk";
 import { ModuleFederationTag } from "./mf.service";
 
 const retrySchedule = Schedule.exponential(Duration.millis(100)).pipe(
@@ -125,8 +125,6 @@ export const loadPlugin = (
   version?: string
 ): Effect.Effect<PipelinePlugin, PluginError> => {
 
-  console.log("SNEDING CONFIG", config);
-
       // Get metadata or fail
       const getMetadata: Effect.Effect<PluginMetadata, PluginError> = Effect.sync(() => {
         const metadata = getPluginMetadata(pluginName);
@@ -187,7 +185,6 @@ export const loadPlugin = (
           }).pipe(
             // Initialize with retry
             Effect.flatMap((instance) => {
-              console.log("SENDING,", config);
               const initialize: Effect.Effect<void, PluginError> = Effect.tryPromise({
                 try: () => instance.initialize(config),
                 catch: (error): PluginError =>

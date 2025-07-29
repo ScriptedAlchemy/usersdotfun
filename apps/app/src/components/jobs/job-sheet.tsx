@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { toast } from "sonner";
 import { createJob, createJobDefinition, updateJob } from "~/api/jobs";
+import { queryKeys } from "~/lib/query-keys";
 import { Button } from "~/components/ui/button";
 import {
   Sheet,
@@ -113,7 +114,7 @@ export function JobSheet({ job, children, open, onOpenChange }: JobSheetProps) {
     mutationFn: createJob,
     onSuccess: () => {
       toast.success("Job created");
-      queryClient.invalidateQueries({ queryKey: ["jobs"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.lists() });
       onOpenChange?.(false);
     },
     onError: (error) => {
@@ -125,7 +126,7 @@ export function JobSheet({ job, children, open, onOpenChange }: JobSheetProps) {
     mutationFn: createJobDefinition,
     onSuccess: () => {
       toast.success("Job created");
-      queryClient.invalidateQueries({ queryKey: ["jobs"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.lists() });
       onOpenChange?.(false);
     },
     onError: (error) => {
@@ -137,8 +138,8 @@ export function JobSheet({ job, children, open, onOpenChange }: JobSheetProps) {
     mutationFn: (updatedJob: UpdateJob) => updateJob(job!.id, updatedJob),
     onSuccess: () => {
       toast.success("Job updated");
-      queryClient.invalidateQueries({ queryKey: ["jobs"] });
-      queryClient.invalidateQueries({ queryKey: ["job", job!.id] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.lists() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.detail(job!.id) });
       onOpenChange?.(false);
     },
     onError: (error) => {

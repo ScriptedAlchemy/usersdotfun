@@ -31,6 +31,7 @@ export interface QueueStatusService {
   readonly getWaitingJobs: (queueName: string) => Effect.Effect<JobStatus[], Error>;
   readonly getCompletedJobs: (queueName: string, start?: number, end?: number) => Effect.Effect<JobStatus[], Error>;
   readonly getFailedJobs: (queueName: string, start?: number, end?: number) => Effect.Effect<JobStatus[], Error>;
+  readonly getDelayedJobs: (queueName: string, start?: number, end?: number) => Effect.Effect<JobStatus[], Error>;
   readonly getJobById: (queueName: string, jobId: string) => Effect.Effect<JobStatus | null, Error>;
 }
 
@@ -153,6 +154,17 @@ export const QueueStatusServiceLive = Layer.scoped(
               return jobs.map(mapBullJobToJobStatus);
             },
             catch: (error) => new Error(`Failed to get failed jobs for ${queueName}: ${error}`),
+          })
+        ),
+
+      getDelayedJobs: (queueName, start = 0, end = 99) =>
+        Effect.flatMap(getQueue(queueName), (queue) =>
+          Effect.tryPromise({
+            try: async () => {
+              const jobs = await queue.getDelayed(start, end);
+              return jobs.map(mapBullJobToJobStatus);
+            },
+            catch: (error) => new Error(`Failed to get delayed jobs for ${queueName}: ${error}`),
           })
         ),
 

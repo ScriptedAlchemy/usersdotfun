@@ -267,11 +267,12 @@ export class QueueAdapterImpl implements QueueAdapter {
 
           if (!status || status === 'all') {
             // Get jobs from all statuses
-            const [activeJobs, waitingJobs, completedJobs, failedJobs] = yield* Effect.all([
+            const [activeJobs, waitingJobs, completedJobs, failedJobs, delayedJobs] = yield* Effect.all([
               queueStatusService.getActiveJobs(queueName),
               queueStatusService.getWaitingJobs(queueName),
               queueStatusService.getCompletedJobs(queueName, 0, 50),
-              queueStatusService.getFailedJobs(queueName, 0, 50)
+              queueStatusService.getFailedJobs(queueName, 0, 50),
+              queueStatusService.getDelayedJobs(queueName, 0, 50)
             ]);
 
             // Helper function to map job and expose originalJobId
@@ -301,6 +302,9 @@ export class QueueAdapterImpl implements QueueAdapter {
 
             // Add failed jobs
             allJobs.push(...failedJobs.map(job => mapJob(job, 'failed')));
+
+            // Add delayed jobs
+            allJobs.push(...delayedJobs.map(job => mapJob(job, 'delayed')));
           } else if (status === 'scheduled') {
             // Only return repeatable jobs for scheduled status
             continue; // Already added above
@@ -319,6 +323,9 @@ export class QueueAdapterImpl implements QueueAdapter {
                 break;
               case 'failed':
                 jobs = yield* queueStatusService.getFailedJobs(queueName, 0, 50);
+                break;
+              case 'delayed':
+                jobs = yield* queueStatusService.getDelayedJobs(queueName, 0, 50);
                 break;
               default:
                 jobs = [];

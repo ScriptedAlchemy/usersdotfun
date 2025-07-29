@@ -64,8 +64,7 @@ export const jobsRouter = new Hono()
       wsManager.broadcast({
         type: 'job:status-changed',
         data: {
-          jobId: job.id,
-          status: job.status,
+          job: job,
           timestamp: new Date().toISOString(),
         },
       })
@@ -86,8 +85,7 @@ export const jobsRouter = new Hono()
       wsManager.broadcast({
         type: 'job:status-changed',
         data: {
-          jobId: job.id,
-          status: job.status,
+          job: job,
           timestamp: new Date().toISOString(),
         },
       })
@@ -126,15 +124,6 @@ export const jobsRouter = new Hono()
         },
       })
       
-      // Also emit status change for backward compatibility
-      wsManager.broadcast({
-        type: 'job:status-changed',
-        data: {
-          jobId,
-          status: 'deleted',
-          timestamp: new Date().toISOString(),
-        },
-      })
       
       return c.body(null, 204)
     } catch (error) {
@@ -198,6 +187,17 @@ export const jobsRouter = new Hono()
       // Then get the updated job and handle scheduling
       const updatedJob = await jobAdapter.getJobById(c.req.param('id'))
       await lifecycleAdapter.updateJobWithScheduling(c.req.param('id'), { status: 'pending' })
+      
+      // Get the final updated job and broadcast the retry event
+      const finalJob = await jobAdapter.getJobById(c.req.param('id'))
+      wsManager.broadcast({
+        type: 'queue:job-retried',
+        data: {
+          queueName: 'source', // Default queue name, could be made dynamic
+          job: finalJob,
+          timestamp: new Date().toISOString(),
+        },
+      })
       
       return c.json({ message: 'Job retry initiated' })
     } catch (error) {

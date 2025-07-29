@@ -12,7 +12,7 @@ import {
   type SortingState,
 } from '@tanstack/react-table';
 import { getAllQueueJobs, getQueuesOverview, retryQueueItem, removeQueueItem } from '~/api/queues';
-import { getJob, getJobMonitoringData, getJobRuns } from '~/api/jobs';
+import { getJob, getJobMonitoringData, getJobRuns, cleanupOrphanedJobs } from '~/api/jobs';
 import { queueItemSchema } from '@usersdotfun/shared-types';
 import { z } from 'zod';
 
@@ -23,10 +23,12 @@ import { Badge } from '~/components/ui/badge';
 import { Button } from '~/components/ui/button';
 import { Input } from '~/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select';
-import { ArrowUpDown, Search, Filter, Trash2, RotateCcw } from 'lucide-react';
+import { ArrowUpDown, Search, Filter, Trash2, RotateCcw, Eraser } from 'lucide-react';
 import { useWebSocket } from '~/lib/websocket';
+import { toast } from 'sonner';
 import { QueueItemDetailsSheet } from './queue-item-details-sheet';
 import { parseQueueJobId } from '~/lib/queue-utils';
+import { queryKeys } from '~/lib/query-keys';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -55,6 +57,7 @@ export function AllJobsTable({ className }: AllJobsTableProps) {
   const [selectedQueueItem, setSelectedQueueItem] = useState<AllJobsItem | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<AllJobsItem | null>(null);
+  const [cleanupDialogOpen, setCleanupDialogOpen] = useState(false);
   
   const { isConnected } = useWebSocket();
   const navigate = useNavigate();
@@ -62,7 +65,7 @@ export function AllJobsTable({ className }: AllJobsTableProps) {
 
   // Fetch queue jobs with filters
   const { data, isLoading, error } = useQuery({
-    queryKey: ['all-queue-jobs', statusFilter, queueFilter],
+    queryKey: [...queryKeys.queues.allJobs(), statusFilter, queueFilter],
     queryFn: () => getAllQueueJobs({ 
       status: statusFilter === 'all' ? undefined : statusFilter,
       queueName: queueFilter === 'all' ? undefined : queueFilter,
@@ -76,7 +79,7 @@ export function AllJobsTable({ className }: AllJobsTableProps) {
 
   // Fetch available queues for filter dropdown
   const { data: queuesData } = useQuery({
-    queryKey: ['queues', 'overview'],
+    queryKey: queryKeys.queues.overview(),
     queryFn: getQueuesOverview,
     staleTime: 60000,
     gcTime: 5 * 60 * 1000,
@@ -86,7 +89,7 @@ export function AllJobsTable({ className }: AllJobsTableProps) {
   const actualJobId = selectedQueueItem?.originalJobId || (selectedQueueItem ? parseQueueJobId(selectedQueueItem.id).jobId : null);
   
   const { data: selectedJob, isLoading: jobLoading, error: jobError } = useQuery({
-    queryKey: ['job', actualJobId],
+    queryKey: queryKeys.jobs.detail(actualJobId!),
     queryFn: () => getJob(actualJobId!),
     enabled: !!actualJobId && actualJobId !== selectedQueueItem?.id,
     staleTime: 30000,
@@ -99,7 +102,7 @@ export function AllJobsTable({ className }: AllJobsTableProps) {
   });
 
   const { data: monitoringData, isLoading: monitoringLoading, error: monitoringError } = useQuery({
-    queryKey: ['job-monitoring', actualJobId],
+    queryKey: queryKeys.jobs.monitoring(actualJobId!),
     queryFn: () => getJobMonitoringData(actualJobId!),
     enabled: !!actualJobId && actualJobId !== selectedQueueItem?.id && !jobError?.isNotFound,
     staleTime: 15000,
@@ -114,7 +117,7 @@ export function AllJobsTable({ className }: AllJobsTableProps) {
   });
 
   const { data: jobRuns, isLoading: runsLoading, error: runsError } = useQuery({
-    queryKey: ['job-runs', actualJobId],
+    queryKey: queryKeys.jobs.runs(actualJobId!),
     queryFn: () => getJobRuns(actualJobId!),
     enabled: !!actualJobId && actualJobId !== selectedQueueItem?.id && !jobError?.isNotFound,
     staleTime: 45000,
@@ -133,8 +136,8 @@ export function AllJobsTable({ className }: AllJobsTableProps) {
     mutationFn: ({ queueName, itemId }: { queueName: string; itemId: string }) =>
       retryQueueItem(queueName, itemId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['all-queue-jobs'] });
-      queryClient.invalidateQueries({ queryKey: ['queues'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.queues.allJobs() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.queues.all() });
     },
   });
 
@@ -144,13 +147,13 @@ export function AllJobsTable({ className }: AllJobsTableProps) {
       removeQueueItem(queueName, itemId),
     onMutate: async ({ itemId }) => {
       // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ['all-queue-jobs'] });
+      await queryClient.cancelQueries({ queryKey: queryKeys.queues.allJobs() });
       
       // Snapshot the previous value
-      const previousJobs = queryClient.getQueryData(['all-queue-jobs', statusFilter, queueFilter]);
+      const previousJobs = queryClient.getQueryData([...queryKeys.queues.allJobs(), statusFilter, queueFilter]);
       
       // Optimistically update to remove the item
-      queryClient.setQueryData(['all-queue-jobs', statusFilter, queueFilter], (old: any) => {
+      queryClient.setQueryData([...queryKeys.queues.allJobs(), statusFilter, queueFilter], (old: any) => {
         if (!old?.jobs) return old;
         return {
           ...old,
@@ -169,7 +172,7 @@ export function AllJobsTable({ className }: AllJobsTableProps) {
     onError: (err, variables, context) => {
       // Rollback on error
       if (context?.previousJobs) {
-        queryClient.setQueryData(['all-queue-jobs', statusFilter, queueFilter], context.previousJobs);
+        queryClient.setQueryData([...queryKeys.queues.allJobs(), statusFilter, queueFilter], context.previousJobs);
       }
       console.error('Failed to delete queue item:', err);
     },
@@ -184,8 +187,25 @@ export function AllJobsTable({ className }: AllJobsTableProps) {
       
       // Delay invalidation to allow server-side cache to update
       setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['queues'] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.queues.all() });
       }, 500);
+    },
+  });
+
+  const cleanupMutation = useMutation({
+    mutationFn: cleanupOrphanedJobs,
+    onSuccess: (data) => {
+      toast.success('Cleanup completed', {
+        description: `Cleaned up ${data.cleaned} orphaned jobs`,
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.queues.allJobs() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.queues.all() });
+      setCleanupDialogOpen(false);
+    },
+    onError: (error: Error) => {
+      toast.error('Failed to cleanup orphaned jobs', {
+        description: error.message,
+      });
     },
   });
 
@@ -220,6 +240,14 @@ export function AllJobsTable({ className }: AllJobsTableProps) {
         itemId: itemToDelete.id,
       });
     }
+  };
+
+  const handleCleanup = () => {
+    setCleanupDialogOpen(true);
+  };
+
+  const confirmCleanup = () => {
+    cleanupMutation.mutate();
   };
 
   const columnHelper = createColumnHelper<AllJobsItem>();
@@ -435,7 +463,25 @@ export function AllJobsTable({ className }: AllJobsTableProps) {
       <Card className={className}>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>All Queue Jobs</CardTitle>
+            <div className="flex items-center gap-6">
+              <CardTitle>All Queue Jobs</CardTitle>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCleanup}
+                  disabled={cleanupMutation.isPending}
+                  className="text-orange-600 border-orange-200 hover:bg-orange-50 hover:text-orange-700"
+                >
+                  {cleanupMutation.isPending ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-600 mr-2" />
+                  ) : (
+                    <Eraser className="h-4 w-4 mr-2" />
+                  )}
+                  Cleanup Orphaned
+                </Button>
+              </div>
+            </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <Search className="h-4 w-4 text-gray-500" />
@@ -583,6 +629,31 @@ export function AllJobsTable({ className }: AllJobsTableProps) {
               disabled={deleteMutation.isPending}
             >
               {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Cleanup Confirmation Dialog */}
+      <AlertDialog open={cleanupDialogOpen} onOpenChange={setCleanupDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cleanup Orphaned Jobs</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to cleanup orphaned jobs? This will remove jobs that are no longer referenced by their queues.
+              <div className="mt-2 p-2 bg-orange-50 rounded text-sm text-orange-800">
+                <strong>Warning:</strong> This action cannot be undone. Only orphaned jobs will be removed.
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmCleanup}
+              className="bg-orange-600 hover:bg-orange-700"
+              disabled={cleanupMutation.isPending}
+            >
+              {cleanupMutation.isPending ? 'Cleaning up...' : 'Cleanup Orphaned Jobs'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

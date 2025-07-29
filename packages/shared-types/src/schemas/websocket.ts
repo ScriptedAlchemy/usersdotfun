@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { jobMonitoringDataSchema, pipelineStepSchema, jobRunInfoSchema } from './jobs';
+import { jobMonitoringDataSchema, pipelineStepSchema, jobRunInfoSchema, jobSchema } from './jobs';
 import { queueStatusSchema, queueOverviewSchema, queueItemSchema } from './queues';
 
 // ============================================================================
@@ -10,8 +10,7 @@ export const webSocketEventSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('job:status-changed'),
     data: z.object({
-      jobId: z.string(),
-      status: z.string(),
+      job: jobSchema,
       timestamp: z.string().datetime(),
     }),
   }),
@@ -148,8 +147,11 @@ export const webSocketEventSchema = z.discriminatedUnion('type', [
     type: z.literal('queue:job-retried'),
     data: z.object({
       queueName: z.string(),
-      jobId: z.string(),
+      job: jobSchema,
       timestamp: z.string().datetime(),
     }),
   }),
 ]);
+
+// TypeScript types
+export type WebSocketEvent = z.infer<typeof webSocketEventSchema>;

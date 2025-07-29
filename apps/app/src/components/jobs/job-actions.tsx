@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { deleteJob, retryJob } from '~/api/jobs'
+import { queryKeys } from '~/lib/query-keys'
 import { Button } from '~/components/ui/button'
 import { toast } from 'sonner'
 import { JobSheet } from './job-sheet'
@@ -12,7 +13,7 @@ export function JobActions({ job }: { job: Job }) {
     mutationFn: () => deleteJob(job.id),
     onSuccess: () => {
       toast.success('Job deleted')
-      queryClient.invalidateQueries({ queryKey: ['jobs'] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.lists() })
     },
     onError: (error) => {
       toast.error(`Failed to delete job: ${error.message}`);
@@ -23,9 +24,9 @@ export function JobActions({ job }: { job: Job }) {
     mutationFn: () => retryJob(job.id),
     onSuccess: () => {
       toast.success('Job retry initiated')
-      queryClient.invalidateQueries({ queryKey: ['jobs'] })
-      queryClient.invalidateQueries({ queryKey: ['job', job.id] })
-      queryClient.invalidateQueries({ queryKey: ['job-monitoring', job.id] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.lists() })
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.detail(job.id) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.monitoring(job.id) })
     },
     onError: (error) => {
       toast.error(`Failed to retry job: ${error.message}`);
