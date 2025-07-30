@@ -16,12 +16,6 @@ export default defineConfig({
       },
     },
   },
-  resolve: {
-    alias: {
-      '@usersdotfun/shared-db': resolve(__dirname, '../../packages/shared-db/src'),
-      '@usersdotfun/shared-types': resolve(__dirname, '../../packages/shared-types/src')
-    }
-  },
   optimizeDeps: {
     exclude: ['@usersdotfun/shared-db', '@usersdotfun/shared-types']
   },

@@ -1,4 +1,4 @@
-import { betterAuth } from "better-auth";
+import { betterAuth, BetterAuthPlugin } from "better-auth";
 import { jwt, anonymous, admin } from "better-auth/plugins";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "~/db";
@@ -18,7 +18,7 @@ export const auth = betterAuth({
       defaultRole: "user",
       adminRoles: ["admin"],
       adminUserIds: process.env.ADMIN_USER_IDS?.split(',') || []
-    }),
+    }) as unknown as BetterAuthPlugin,
     jwt({
       jwt: {
         definePayload: ({ user }) => ({
