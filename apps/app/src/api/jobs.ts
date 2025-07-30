@@ -1,13 +1,5 @@
 import { z } from "zod";
 import { 
-  createJobDefinitionSchema, 
-  jobSchema,
-  jobMonitoringDataSchema, 
-  jobRunInfoSchema, 
-  jobWithStepsSchema, 
-  updateJobDefinitionSchema,
-  jobStatusSummarySchema,
-  jobRunDetailsSchema,
   ApiSuccessResponseSchema,
   JobsListDataSchema,
   JobWithStepsDataSchema,
@@ -18,17 +10,18 @@ import {
   JobRunDetailsDataSchema,
   SimpleMessageDataSchema,
   CleanupOrphanedJobsDataSchema,
-} from '@usersdotfun/shared-types';
+} from '@usersdotfun/shared-types/schemas';
 
-// Type aliases for easier use
-type CreateJobDefinition = z.infer<typeof createJobDefinitionSchema>;
-type Job = z.infer<typeof jobSchema>;
-type JobMonitoringData = z.infer<typeof jobMonitoringDataSchema>;
-type JobRunInfo = z.infer<typeof jobRunInfoSchema>;
-type JobWithSteps = z.infer<typeof jobWithStepsSchema>;
-type UpdateJobDefinition = z.infer<typeof updateJobDefinitionSchema>;
-type JobStatusSummary = z.infer<typeof jobStatusSummarySchema>;
-type JobRunDetails = z.infer<typeof jobRunDetailsSchema>;
+import type {
+  CreateJobDefinition,
+  Job,
+  JobMonitoringData,
+  JobRunInfo,
+  JobWithSteps,
+  UpdateJobDefinition,
+  JobStatusSummary,
+  JobRunDetails,
+} from '@usersdotfun/shared-types/types';
 
 const API_BASE_URL = '/api';
 

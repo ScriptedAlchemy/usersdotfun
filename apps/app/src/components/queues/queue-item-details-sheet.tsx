@@ -1,4 +1,4 @@
-import { QueueItem, JobWithSteps, JobMonitoringData, JobRunInfo } from '@usersdotfun/shared-types';
+import type { QueueItem, JobWithSteps, JobMonitoringData, JobRunInfo } from '@usersdotfun/shared-types/types';
 import { CommonSheet } from '~/components/common/common-sheet';
 import { JobMonitoring } from '~/components/jobs/job-monitoring';
 import { PipelineViewer } from '~/components/jobs/pipeline-viewer';

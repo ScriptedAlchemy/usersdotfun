@@ -1,25 +1,24 @@
-
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { z } from 'zod';
-import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
-import { getQueuesOverview, getQueueDetails } from '~/api/queues';
-import { QueueOverviewComponent } from '~/components/queues/queue-overview';
-import { QueueActions } from '~/components/queues/queue-actions';
-import { QueueItemList } from '~/components/queues/queue-item-list';
-import { AllJobsTable } from '~/components/queues/all-jobs-table';
-import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card';
-import { Button } from '~/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
-import { useWebSocketSubscription, useWebSocket } from '~/lib/websocket';
-import { signIn } from '~/lib/auth-client';
-import { queryKeys } from '~/lib/query-keys';
+import { useQuery } from "@tanstack/react-query";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { ArrowLeft } from "lucide-react";
+import { useState } from "react";
+import { z } from "zod";
+import { getQueueDetails, getQueuesOverview } from "~/api/queues";
+import { AllJobsTable } from "~/components/queues/all-jobs-table";
+import { QueueActions } from "~/components/queues/queue-actions";
+import { QueueItemList } from "~/components/queues/queue-item-list";
+import { QueueOverviewComponent } from "~/components/queues/queue-overview";
+import { Button } from "~/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import { signIn } from "~/lib/auth-client";
+import { queryKeys } from "~/lib/query-keys";
+import { useWebSocket, useWebSocketSubscription } from "~/lib/websocket";
 
 const queuesSearchSchema = z.object({
   queue: z.string().optional(),
 });
 
-export const Route = createFileRoute('/queues')({
+export const Route = createFileRoute("/queues")({
   validateSearch: queuesSearchSchema,
   component: QueuesComponent,
 });
@@ -33,13 +32,13 @@ function AuthPrompt({ error }: { error: Error }) {
     try {
       await signIn.anonymous();
     } catch (error) {
-      console.error('Anonymous sign in failed:', error);
+      console.error("Anonymous sign in failed:", error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const isAuthError = error.message.includes('Authentication required');
+  const isAuthError = error.message.includes("Authentication required");
 
   if (!isAuthError) {
     return (
@@ -57,32 +56,32 @@ function AuthPrompt({ error }: { error: Error }) {
           To view queues, you need to sign in or continue as a guest.
         </p>
       </div>
-      
+
       <div className="space-y-3">
-        <Button 
-          onClick={handleAnonymousSignIn} 
+        <Button
+          onClick={handleAnonymousSignIn}
           disabled={isLoading}
           className="w-full"
         >
-          {isLoading ? 'Signing in...' : 'Continue as Guest'}
+          {isLoading ? "Signing in..." : "Continue as Guest"}
         </Button>
-        
+
         <div className="text-center">
           <span className="text-sm text-gray-500">or</span>
         </div>
-        
-        <Button 
-          variant="outline" 
-          onClick={() => navigate({ to: '/' })}
+
+        <Button
+          variant="outline"
+          onClick={() => navigate({ to: "/" })}
           className="w-full"
         >
           Go to Sign In
         </Button>
       </div>
-      
+
       <p className="text-xs text-gray-500 text-center max-w-md">
-        As a guest, you can view queues but some features may be limited. 
-        Create an account for full access.
+        As a guest, you can view queues but some features may be limited. Create
+        an account for full access.
       </p>
     </div>
   );
@@ -90,11 +89,17 @@ function AuthPrompt({ error }: { error: Error }) {
 
 function QueuesComponent() {
   const { queue: selectedQueue } = Route.useSearch();
-  const [selectedQueueName, setSelectedQueueName] = useState<string | null>(selectedQueue || null);
+  const [selectedQueueName, setSelectedQueueName] = useState<string | null>(
+    selectedQueue || null
+  );
   const { isConnected } = useWebSocket();
 
   // Fetch queues overview with WebSocket-aware polling
-  const { data: queuesData, isLoading: queuesLoading, error: queuesError } = useQuery({
+  const {
+    data: queuesData,
+    isLoading: queuesLoading,
+    error: queuesError,
+  } = useQuery({
     queryKey: queryKeys.queues.overview(),
     queryFn: getQueuesOverview,
     staleTime: 30000, // Consider data fresh for 30 seconds
@@ -117,21 +122,21 @@ function QueuesComponent() {
   });
 
   // WebSocket subscriptions for real-time updates
-  useWebSocketSubscription('queue:status-changed', (data) => {
-    console.log('Queue status changed:', data);
+  useWebSocketSubscription("queue:status-changed", (data) => {
+    console.log("Queue status changed:", data);
     // Cache invalidation handled in WebSocket provider
   });
 
-  useWebSocketSubscription('queue:item-added', (data) => {
-    console.log('Queue item added:', data);
+  useWebSocketSubscription("queue:item-added", (data) => {
+    console.log("Queue item added:", data);
   });
 
-  useWebSocketSubscription('queue:item-completed', (data) => {
-    console.log('Queue item completed:', data);
+  useWebSocketSubscription("queue:item-completed", (data) => {
+    console.log("Queue item completed:", data);
   });
 
-  useWebSocketSubscription('queue:item-failed', (data) => {
-    console.log('Queue item failed:', data);
+  useWebSocketSubscription("queue:item-failed", (data) => {
+    console.log("Queue item failed:", data);
   });
 
   const handleQueueSelect = (queueName: string) => {
@@ -149,7 +154,7 @@ function QueuesComponent() {
   // Show detailed queue view
   if (selectedQueueName && queueDetails) {
     const selectedQueueOverview = queuesData?.queues[selectedQueueName];
-    
+
     return (
       <div className="p-6 space-y-6">
         {/* Header with back button */}
@@ -165,7 +170,7 @@ function QueuesComponent() {
           </Button>
           <div>
             <h1 className="text-2xl font-bold capitalize">
-              {selectedQueueName.replace('-', ' ')} Queue
+              {selectedQueueName.replace("-", " ")} Queue
             </h1>
             <p className="text-gray-600">
               Detailed queue monitoring and management
@@ -182,11 +187,11 @@ function QueuesComponent() {
             <CardContent>
               <QueueActions
                 queueName={selectedQueueName}
-                isPaused={selectedQueueOverview.status === 'paused'}
+                isPaused={selectedQueueOverview.status === "paused"}
                 failedCount={selectedQueueOverview.failed}
                 totalCount={
-                  selectedQueueOverview.waiting + 
-                  selectedQueueOverview.active + 
+                  selectedQueueOverview.waiting +
+                  selectedQueueOverview.active +
                   selectedQueueOverview.delayed
                 }
               />
@@ -236,13 +241,16 @@ function QueuesComponent() {
                     {queue.waiting + queue.active + queue.delayed}
                   </div>
                   <div className="text-sm text-gray-600 capitalize">
-                    {queueName.replace('-', ' ')} Total
+                    {queueName.replace("-", " ")} Total
                   </div>
                 </div>
               ))}
             </div>
             <div className="mt-4 pt-4 border-t text-xs text-gray-500">
-              Last updated: {queuesData.timestamp ? new Date(queuesData.timestamp).toLocaleString() : 'Unknown'}
+              Last updated:{" "}
+              {queuesData.timestamp
+                ? new Date(queuesData.timestamp).toLocaleString()
+                : "Unknown"}
             </div>
           </CardContent>
         </Card>

@@ -1,6 +1,9 @@
-import { JobWithSteps, JobMonitoringData, PipelineStep } from '@usersdotfun/shared-types';
-import { StatusBadge } from './status-badge';
-import { StepDetails } from './step-details';
+import type {
+  JobMonitoringData,
+  JobWithSteps
+} from "@usersdotfun/shared-types/types";
+import { StatusBadge } from "./status-badge";
+import { StepDetails } from "./step-details";
 
 interface PipelineViewerProps {
   job: JobWithSteps;
@@ -9,8 +12,10 @@ interface PipelineViewerProps {
 
 export function PipelineViewer({ job, monitoringData }: PipelineViewerProps) {
   const hasDbSteps = job.steps && job.steps.length > 0;
-  const hasRealtimeSteps = monitoringData?.pipelineSteps && monitoringData.pipelineSteps.length > 0;
-  const hasDefinitionSteps = job.pipeline?.steps && job.pipeline.steps.length > 0;
+  const hasRealtimeSteps =
+    monitoringData?.pipelineSteps && monitoringData.pipelineSteps.length > 0;
+  const hasDefinitionSteps =
+    job.pipeline?.steps && job.pipeline.steps.length > 0;
 
   if (!hasDbSteps && !hasRealtimeSteps && !hasDefinitionSteps) {
     return (
@@ -23,15 +28,17 @@ export function PipelineViewer({ job, monitoringData }: PipelineViewerProps) {
   return (
     <div className="space-y-6">
       <h5 className="font-semibold mb-4">Pipeline Steps</h5>
-      
+
       {/* Database Steps */}
       {hasDbSteps && (
         <div className="mb-6">
-          <h6 className="font-medium text-sm mb-3 text-gray-700">Database Steps</h6>
+          <h6 className="font-medium text-sm mb-3 text-gray-700">
+            Database Steps
+          </h6>
           <div className="space-y-4">
             {job.steps.map((step) => (
-              <StepDetails 
-                key={step.id} 
+              <StepDetails
+                key={step.id}
                 step={{
                   id: step.id,
                   stepId: step.stepId,
@@ -43,8 +50,8 @@ export function PipelineViewer({ job, monitoringData }: PipelineViewerProps) {
                   error: step.error,
                   startedAt: step.startedAt || undefined,
                   completedAt: step.completedAt || undefined,
-                }} 
-                jobId={job.id} 
+                }}
+                jobId={job.id}
               />
             ))}
           </div>
@@ -59,9 +66,9 @@ export function PipelineViewer({ job, monitoringData }: PipelineViewerProps) {
           </h6>
           <div className="space-y-4 max-h-96 overflow-y-auto">
             {monitoringData!.pipelineSteps.map((pipelineStep: any) => (
-              <PipelineItemCard 
-                key={`${pipelineStep.runId}-${pipelineStep.itemIndex}`} 
-                pipelineStep={pipelineStep} 
+              <PipelineItemCard
+                key={`${pipelineStep.runId}-${pipelineStep.itemIndex}`}
+                pipelineStep={pipelineStep}
               />
             ))}
           </div>
@@ -71,18 +78,20 @@ export function PipelineViewer({ job, monitoringData }: PipelineViewerProps) {
       {/* Pipeline Definition Steps */}
       {hasDefinitionSteps && (
         <div>
-          <h6 className="font-medium text-sm mb-3 text-gray-700">Pipeline Definition</h6>
+          <h6 className="font-medium text-sm mb-3 text-gray-700">
+            Pipeline Definition
+          </h6>
           <div className="space-y-4">
             {job.pipeline.steps.map((step: any, index: number) => (
-              <StepDetails 
-                key={`def-${index}`} 
+              <StepDetails
+                key={`def-${index}`}
                 step={{
                   stepId: step.stepId || `step-${index}`,
-                  pluginName: step.pluginName || 'Unknown',
+                  pluginName: step.pluginName || "Unknown",
                   config: step.config,
-                  status: 'defined'
-                }} 
-                jobId={job.id} 
+                  status: "defined",
+                }}
+                jobId={job.id}
               />
             ))}
           </div>
@@ -102,20 +111,25 @@ function PipelineItemCard({ pipelineStep }: PipelineItemCardProps) {
       <div className="flex items-center justify-between mb-2">
         <div className="space-y-1">
           <h4 className="font-medium text-sm">
-            Item {pipelineStep.itemIndex} - Run: {pipelineStep.runId.split(':').pop()}
+            Item {pipelineStep.itemIndex} - Run:{" "}
+            {pipelineStep.runId.split(":").pop()}
           </h4>
-          <p className="text-xs text-gray-600">Source Job: {pipelineStep.sourceJobId}</p>
+          <p className="text-xs text-gray-600">
+            Source Job: {pipelineStep.sourceJobId}
+          </p>
         </div>
         <StatusBadge status={pipelineStep.status} />
       </div>
-      
+
       {(pipelineStep.startedAt || pipelineStep.completedAt) && (
         <div className="text-xs text-gray-500 space-y-1 mb-3">
           {pipelineStep.startedAt && (
             <p>Started: {new Date(pipelineStep.startedAt).toLocaleString()}</p>
           )}
           {pipelineStep.completedAt && (
-            <p>Completed: {new Date(pipelineStep.completedAt).toLocaleString()}</p>
+            <p>
+              Completed: {new Date(pipelineStep.completedAt).toLocaleString()}
+            </p>
           )}
         </div>
       )}
@@ -124,13 +138,17 @@ function PipelineItemCard({ pipelineStep }: PipelineItemCardProps) {
         <div className="bg-red-100 border border-red-300 rounded p-2 mb-3">
           <h5 className="text-xs font-medium text-red-800 mb-1">Error</h5>
           <pre className="text-xs text-red-700 whitespace-pre-wrap overflow-auto">
-            {typeof pipelineStep.error === 'string' ? pipelineStep.error : JSON.stringify(pipelineStep.error, null, 2)}
+            {typeof pipelineStep.error === "string"
+              ? pipelineStep.error
+              : JSON.stringify(pipelineStep.error, null, 2)}
           </pre>
         </div>
       )}
 
       <details className="mt-2">
-        <summary className="text-xs cursor-pointer font-medium">View Item Data</summary>
+        <summary className="text-xs cursor-pointer font-medium">
+          View Item Data
+        </summary>
         <div className="mt-2 space-y-2">
           <div>
             <h6 className="text-xs font-medium mb-1">Input Item:</h6>

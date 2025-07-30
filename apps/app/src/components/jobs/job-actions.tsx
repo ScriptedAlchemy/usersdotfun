@@ -1,10 +1,10 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { deleteJob, retryJob } from '~/api/jobs'
-import { queryKeys } from '~/lib/query-keys'
-import { Button } from '~/components/ui/button'
-import { toast } from 'sonner'
-import { JobSheet } from './job-sheet'
-import { Job } from '@usersdotfun/shared-types'
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { Job } from "@usersdotfun/shared-types/types";
+import { toast } from "sonner";
+import { deleteJob, retryJob } from "~/api/jobs";
+import { Button } from "~/components/ui/button";
+import { queryKeys } from "~/lib/query-keys";
+import { JobSheet } from "./job-sheet";
 
 export function JobActions({ job }: { job: Job }) {
   const queryClient = useQueryClient();
@@ -12,8 +12,8 @@ export function JobActions({ job }: { job: Job }) {
   const deleteMutation = useMutation({
     mutationFn: () => deleteJob(job.id),
     onSuccess: () => {
-      toast.success('Job deleted')
-      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.lists() })
+      toast.success("Job deleted");
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.lists() });
     },
     onError: (error) => {
       toast.error(`Failed to delete job: ${error.message}`);
@@ -23,10 +23,14 @@ export function JobActions({ job }: { job: Job }) {
   const retryMutation = useMutation({
     mutationFn: () => retryJob(job.id),
     onSuccess: () => {
-      toast.success('Job retry initiated')
-      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.lists() })
-      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.detail(job.id) })
-      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.monitoring(job.id) })
+      toast.success("Job retry initiated");
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.lists() });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.jobs.detail(job.id),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.jobs.monitoring(job.id),
+      });
     },
     onError: (error) => {
       toast.error(`Failed to retry job: ${error.message}`);
@@ -40,14 +44,14 @@ export function JobActions({ job }: { job: Job }) {
           Edit
         </Button>
       </JobSheet>
-      {(job.status === 'failed' || job.status === 'completed') && (
+      {(job.status === "failed" || job.status === "completed") && (
         <Button
           variant="outline"
           size="sm"
           onClick={() => retryMutation.mutate()}
           disabled={retryMutation.isPending}
         >
-          {retryMutation.isPending ? 'Retrying...' : 'Retry'}
+          {retryMutation.isPending ? "Retrying..." : "Retry"}
         </Button>
       )}
       <Button
@@ -56,7 +60,7 @@ export function JobActions({ job }: { job: Job }) {
         onClick={() => deleteMutation.mutate()}
         disabled={deleteMutation.isPending}
       >
-        {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+        {deleteMutation.isPending ? "Deleting..." : "Delete"}
       </Button>
     </div>
   );

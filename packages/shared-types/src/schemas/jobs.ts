@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { CronExpressionParser } from "cron-parser";
+import { queueStatusSchema } from './queues';
 
 // ============================================================================
 // PIPELINE & JOB SCHEMAS
@@ -16,8 +17,14 @@ export const pipelineStepSchema = z.object({
   output: z.any().nullable(),
   error: z.any().nullable(),
   status: z.string(),
-  startedAt: z.string().datetime().nullable(),
-  completedAt: z.string().datetime().nullable(),
+  startedAt: z.preprocess(
+    (arg) => (arg instanceof Date ? arg.toISOString() : arg),
+    z.iso.datetime({ message: "Invalid datetime format" }).nullable()
+  ),
+  completedAt: z.preprocess(
+    (arg) => (arg instanceof Date ? arg.toISOString() : arg),
+    z.iso.datetime({ message: "Invalid datetime format" }).nullable()
+  ),
 });
 
 // Pipeline schema for JobDefinition
@@ -72,15 +79,27 @@ export const jobSchema = z.object({
   sourceConfig: z.any().nullable(),
   sourceSearch: z.any().nullable(),
   pipeline: z.any().nullable(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
+  createdAt: z.preprocess(
+    (arg) => (arg instanceof Date ? arg.toISOString() : arg),
+    z.iso.datetime({ message: "Invalid datetime format" })
+  ),
+  updatedAt: z.preprocess(
+    (arg) => (arg instanceof Date ? arg.toISOString() : arg),
+    z.iso.datetime({ message: "Invalid datetime format" })
+  ),
 });
 
 export const jobRunInfoSchema = z.object({
   runId: z.string(),
   status: z.string(),
-  startedAt: z.string().datetime(),
-  completedAt: z.string().datetime().optional(),
+  startedAt: z.preprocess(
+    (arg) => (arg instanceof Date ? arg.toISOString() : arg),
+    z.iso.datetime({ message: "Invalid datetime format" })
+  ),
+  completedAt: z.preprocess(
+    (arg) => (arg instanceof Date ? arg.toISOString() : arg),
+    z.iso.datetime({ message: "Invalid datetime format" }).optional()
+  ),
   itemsProcessed: z.number(),
   itemsTotal: z.number(),
   state: z.any().optional(),
@@ -129,6 +148,3 @@ export const jobMonitoringDataSchema = z.object({
 export const jobWithStepsSchema = jobSchema.extend({
   steps: z.array(pipelineStepSchema),
 });
-
-// Import queueStatusSchema for the lazy reference
-import { queueStatusSchema } from './queues';

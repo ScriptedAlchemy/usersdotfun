@@ -11,7 +11,7 @@ export const webSocketEventSchema = z.discriminatedUnion('type', [
     type: z.literal('job:status-changed'),
     data: z.object({
       job: jobSchema,
-      timestamp: z.string().datetime(),
+      timestamp: z.iso.datetime(),
     }),
   }),
   z.object({
@@ -49,7 +49,7 @@ export const webSocketEventSchema = z.discriminatedUnion('type', [
       runId: z.string(),
       stepId: z.string(),
       error: z.string(),
-      timestamp: z.string().datetime(),
+      timestamp: z.iso.datetime(),
     }),
   }),
   z.object({
@@ -100,14 +100,14 @@ export const webSocketEventSchema = z.discriminatedUnion('type', [
     type: z.literal('queue:paused'),
     data: z.object({
       queueName: z.string(),
-      timestamp: z.string().datetime(),
+      timestamp: z.iso.datetime(),
     }),
   }),
   z.object({
     type: z.literal('queue:resumed'),
     data: z.object({
       queueName: z.string(),
-      timestamp: z.string().datetime(),
+      timestamp: z.iso.datetime(),
     }),
   }),
   z.object({
@@ -115,7 +115,7 @@ export const webSocketEventSchema = z.discriminatedUnion('type', [
     data: z.object({
       queueName: z.string(),
       itemsRemoved: z.number(),
-      timestamp: z.string().datetime(),
+      timestamp: z.iso.datetime(),
     }),
   }),
   z.object({
@@ -123,7 +123,7 @@ export const webSocketEventSchema = z.discriminatedUnion('type', [
     data: z.object({
       jobId: z.string(),
       queueName: z.string().optional(),
-      timestamp: z.string().datetime(),
+      timestamp: z.iso.datetime(),
     }),
   }),
   z.object({
@@ -132,7 +132,7 @@ export const webSocketEventSchema = z.discriminatedUnion('type', [
       queueName: z.string(),
       itemId: z.string(),
       jobId: z.string().optional(),
-      timestamp: z.string().datetime(),
+      timestamp: z.iso.datetime(),
     }),
   }),
   z.object({
@@ -140,7 +140,7 @@ export const webSocketEventSchema = z.discriminatedUnion('type', [
     data: z.object({
       queueName: z.string(),
       jobId: z.string(),
-      timestamp: z.string().datetime(),
+      timestamp: z.iso.datetime(),
     }),
   }),
   z.object({
@@ -148,10 +148,7 @@ export const webSocketEventSchema = z.discriminatedUnion('type', [
     data: z.object({
       queueName: z.string(),
       job: jobSchema,
-      timestamp: z.string().datetime(),
+      timestamp: z.iso.datetime(),
     }),
   }),
 ]);
-
-// TypeScript types
-export type WebSocketEvent = z.infer<typeof webSocketEventSchema>;

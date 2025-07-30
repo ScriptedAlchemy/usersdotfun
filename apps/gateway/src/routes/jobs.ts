@@ -1,43 +1,42 @@
-import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
-import { getJobAdapter } from '../services/job.service'
-import { getJobMonitoringAdapter } from '../services/job-monitoring-adapter.service'
-import { getJobLifecycleAdapter } from '../services/job-lifecycle-adapter.service'
-import { requireAuth, requireAdmin } from '../middleware/auth'
-import { getWebSocketManager } from '../services/websocket-manager.service'
-import { honoErrorHandler } from '../utils/error-handlers'
 import { QUEUE_NAMES } from '@usersdotfun/shared-queue'
-import type { User } from '../types/hono'
 import {
-  JobIdParamSchema,
-  JobStepParamsSchema,
-  JobRunParamsSchema,
-  JobsListQuerySchema,
-  CreateJobRequestBodySchema,
-  UpdateJobRequestBodySchema,
   ApiSuccessResponseSchema,
-  ApiErrorResponseSchema,
-  SimpleMessageDataSchema,
-  JobsListDataSchema,
-  JobWithStepsDataSchema,
-  JobDataSchema,
-  JobStatusSummaryDataSchema,
-  JobMonitoringDataSchema,
-  JobRunsListDataSchema,
-  JobRunDetailsDataSchema,
   CleanupOrphanedJobsDataSchema,
-} from '@usersdotfun/shared-types'
+  CreateJobRequestBodySchema,
+  JobDataSchema,
+  JobIdParamSchema,
+  JobMonitoringDataSchema,
+  JobRunDetailsDataSchema,
+  JobRunParamsSchema,
+  JobRunsListDataSchema,
+  JobsListDataSchema,
+  JobsListQuerySchema,
+  JobStatusSummaryDataSchema,
+  JobStepParamsSchema,
+  JobWithStepsDataSchema,
+  SimpleMessageDataSchema,
+  UpdateJobRequestBodySchema
+} from '@usersdotfun/shared-types/schemas'
+import { Hono } from 'hono'
+import { requireAdmin, requireAuth } from '../middleware/auth'
+import { getJobLifecycleAdapter } from '../services/job-lifecycle-adapter.service'
+import { getJobMonitoringAdapter } from '../services/job-monitoring-adapter.service'
+import { getJobAdapter } from '../services/job.service'
+import { getWebSocketManager } from '../services/websocket-manager.service'
+import type { User } from '../types/hono'
+import { honoErrorHandler } from '../utils/error-handlers'
 
 const wsManager = getWebSocketManager()
 
 export const jobsRouter = new Hono()
   // Health check endpoint (no auth required)
   .get('/health', (c) => c.json({ status: 'ok' }))
-  
+
   // User endpoints (authentication required)
-  .get('/', 
+  .get('/',
     zValidator('query', JobsListQuerySchema),
-    requireAuth, 
+    requireAuth,
     async (c) => {
       try {
         const user = c.get('user') as User;
@@ -56,9 +55,9 @@ export const jobsRouter = new Hono()
       }
     })
 
-  .get('/:id', 
+  .get('/:id',
     zValidator('param', JobIdParamSchema),
-    requireAuth, 
+    requireAuth,
     async (c) => {
       try {
         const jobAdapter = await getJobAdapter()
@@ -78,15 +77,15 @@ export const jobsRouter = new Hono()
     })
 
   // Admin-only endpoints
-  .post('/', 
+  .post('/',
     zValidator('json', CreateJobRequestBodySchema),
-    requireAdmin, 
+    requireAdmin,
     async (c) => {
       try {
         const validatedBody = c.req.valid('json')
         const lifecycleAdapter = await getJobLifecycleAdapter()
         const job = await lifecycleAdapter.createJobWithScheduling(validatedBody)
-        
+
         // Emit WebSocket events for proper cache invalidation
         wsManager.broadcast({
           type: 'job:status-changed',
@@ -95,7 +94,7 @@ export const jobsRouter = new Hono()
             timestamp: new Date().toISOString(),
           },
         })
-        
+
         const validatedJob = JobDataSchema.parse(job)
         return c.json(ApiSuccessResponseSchema(JobDataSchema).parse({
           statusCode: 201,
@@ -108,15 +107,15 @@ export const jobsRouter = new Hono()
       }
     })
 
-  .post('/definition', 
+  .post('/definition',
     zValidator('json', CreateJobRequestBodySchema),
-    requireAdmin, 
+    requireAdmin,
     async (c) => {
       try {
         const validatedBody = c.req.valid('json')
         const lifecycleAdapter = await getJobLifecycleAdapter()
         const job = await lifecycleAdapter.createJobWithScheduling(validatedBody)
-        
+
         // Emit WebSocket events for proper cache invalidation
         wsManager.broadcast({
           type: 'job:status-changed',
@@ -125,7 +124,7 @@ export const jobsRouter = new Hono()
             timestamp: new Date().toISOString(),
           },
         })
-        
+
         const validatedJob = JobDataSchema.parse(job)
         return c.json(ApiSuccessResponseSchema(JobDataSchema).parse({
           statusCode: 201,
@@ -138,17 +137,17 @@ export const jobsRouter = new Hono()
       }
     })
 
-  .put('/:id', 
+  .put('/:id',
     zValidator('param', JobIdParamSchema),
     zValidator('json', UpdateJobRequestBodySchema),
-    requireAdmin, 
+    requireAdmin,
     async (c) => {
       try {
         const validatedParams = c.req.valid('param')
         const validatedBody = c.req.valid('json')
         const lifecycleAdapter = await getJobLifecycleAdapter()
         const job = await lifecycleAdapter.updateJobWithScheduling(validatedParams.id, validatedBody)
-        
+
         const validatedJob = JobDataSchema.parse(job)
         return c.json(ApiSuccessResponseSchema(JobDataSchema).parse({
           statusCode: 200,
@@ -161,17 +160,17 @@ export const jobsRouter = new Hono()
       }
     })
 
-  .delete('/:id', 
+  .delete('/:id',
     zValidator('param', JobIdParamSchema),
-    requireAdmin, 
+    requireAdmin,
     async (c) => {
       try {
         const validatedParams = c.req.valid('param')
         const lifecycleAdapter = await getJobLifecycleAdapter()
-        
+
         // Delete the job
         await lifecycleAdapter.deleteJobWithCleanup(validatedParams.id)
-        
+
         // Emit WebSocket events for proper cache invalidation
         wsManager.broadcast({
           type: 'job:deleted',
@@ -180,7 +179,7 @@ export const jobsRouter = new Hono()
             timestamp: new Date().toISOString(),
           },
         })
-        
+
         return c.body(null, 204)
       } catch (error) {
         return honoErrorHandler(c, error)
@@ -188,9 +187,9 @@ export const jobsRouter = new Hono()
     })
 
   // Monitoring endpoints (authenticated users)
-  .get('/:id/status', 
+  .get('/:id/status',
     zValidator('param', JobIdParamSchema),
-    requireAuth, 
+    requireAuth,
     async (c) => {
       try {
         const validatedParams = c.req.valid('param')
@@ -208,9 +207,9 @@ export const jobsRouter = new Hono()
       }
     })
 
-  .get('/:id/monitoring', 
+  .get('/:id/monitoring',
     zValidator('param', JobIdParamSchema),
-    requireAuth, 
+    requireAuth,
     async (c) => {
       try {
         const validatedParams = c.req.valid('param')
@@ -228,9 +227,9 @@ export const jobsRouter = new Hono()
       }
     })
 
-  .get('/:id/runs', 
+  .get('/:id/runs',
     zValidator('param', JobIdParamSchema),
-    requireAuth, 
+    requireAuth,
     async (c) => {
       try {
         const validatedParams = c.req.valid('param')
@@ -248,9 +247,9 @@ export const jobsRouter = new Hono()
       }
     })
 
-  .get('/:id/runs/:runId', 
+  .get('/:id/runs/:runId',
     zValidator('param', JobRunParamsSchema),
-    requireAuth, 
+    requireAuth,
     async (c) => {
       try {
         const validatedParams = c.req.valid('param')
@@ -272,22 +271,22 @@ export const jobsRouter = new Hono()
     })
 
   // Retry endpoints (admin-only)
-  .post('/:id/retry', 
+  .post('/:id/retry',
     zValidator('param', JobIdParamSchema),
-    requireAdmin, 
+    requireAdmin,
     async (c) => {
       try {
         const validatedParams = c.req.valid('param')
         const lifecycleAdapter = await getJobLifecycleAdapter()
         const jobAdapter = await getJobAdapter()
-        
+
         // First retry the job in the database (sets status to 'pending')
         await jobAdapter.retryJob(validatedParams.id)
-        
+
         // Then get the updated job and handle scheduling
         const updatedJob = await jobAdapter.getJobById(validatedParams.id)
         await lifecycleAdapter.updateJobWithScheduling(validatedParams.id, { status: 'pending' })
-        
+
         // Get the final updated job and broadcast the retry event
         const finalJob = await jobAdapter.getJobById(validatedParams.id)
         wsManager.broadcast({
@@ -298,7 +297,7 @@ export const jobsRouter = new Hono()
             timestamp: new Date().toISOString(),
           },
         })
-        
+
         const message = { message: 'Job retry initiated' }
         const validatedMessage = SimpleMessageDataSchema.parse(message)
         return c.json(ApiSuccessResponseSchema(SimpleMessageDataSchema).parse({
@@ -312,15 +311,15 @@ export const jobsRouter = new Hono()
       }
     })
 
-  .post('/:id/steps/:stepId/retry', 
+  .post('/:id/steps/:stepId/retry',
     zValidator('param', JobStepParamsSchema),
-    requireAdmin, 
+    requireAdmin,
     async (c) => {
       try {
         const validatedParams = c.req.valid('param')
         const jobAdapter = await getJobAdapter()
         await jobAdapter.retryPipelineStep(validatedParams.stepId)
-        
+
         const message = { message: 'Step retry initiated' }
         const validatedMessage = SimpleMessageDataSchema.parse(message)
         return c.json(ApiSuccessResponseSchema(SimpleMessageDataSchema).parse({
@@ -335,8 +334,8 @@ export const jobsRouter = new Hono()
     })
 
   // Admin maintenance endpoints
-  .post('/cleanup/orphaned', 
-    requireAdmin, 
+  .post('/cleanup/orphaned',
+    requireAdmin,
     async (c) => {
       try {
         const lifecycleAdapter = await getJobLifecycleAdapter()

@@ -36,8 +36,8 @@
     "noPropertyAccessFromIndexSignature": false
   },
   "include": [
-    "src/**/*"
-, "../shared-queue/src/redis", "../shared-queue/src/queue-constants.ts"  ],
+    "src"
+  ],
   "exclude": [
     "node_modules",
     "dist"

@@ -63,7 +63,7 @@ export const CleanupOrphanedJobsDataSchema = z.object({
   cleaned: z.number(),
   details: z.object({
     orphanedJobs: z.array(z.string()),
-    cleanupTime: z.string().datetime(),
+    cleanupTime: z.iso.datetime(),
   }).optional(),
 });
 
@@ -156,43 +156,3 @@ export const CleanupOrphanedJobsResponseSchema = ApiSuccessResponseSchema(Cleanu
 // ============================================================================
 
 export const JobsApiErrorResponseSchema = ApiErrorResponseSchema;
-
-// ============================================================================
-// TYPE EXPORTS
-// ============================================================================
-
-export type JobIdParam = z.infer<typeof JobIdParamSchema>;
-export type JobStepParams = z.infer<typeof JobStepParamsSchema>;
-export type JobRunParams = z.infer<typeof JobRunParamsSchema>;
-export type JobsListQuery = z.infer<typeof JobsListQuerySchema>;
-
-export type CreateJobRequest = z.infer<typeof CreateJobRequestSchema>;
-export type CreateJobDefinitionRequest = z.infer<typeof CreateJobDefinitionRequestSchema>;
-export type UpdateJobRequest = z.infer<typeof UpdateJobRequestSchema>;
-
-export type JobData = z.infer<typeof JobDataSchema>;
-export type JobDefinitionData = z.infer<typeof JobDefinitionDataSchema>;
-export type JobWithStepsData = z.infer<typeof JobWithStepsDataSchema>;
-export type JobRunInfoData = z.infer<typeof JobRunInfoDataSchema>;
-export type JobStatusSummaryData = z.infer<typeof JobStatusSummaryDataSchema>;
-export type JobRunDetailsData = z.infer<typeof JobRunDetailsDataSchema>;
-export type JobMonitoringData = z.infer<typeof JobMonitoringDataSchema>;
-export type JobsListData = z.infer<typeof JobsListDataSchema>;
-export type JobRunsListData = z.infer<typeof JobRunsListDataSchema>;
-export type CleanupOrphanedJobsData = z.infer<typeof CleanupOrphanedJobsDataSchema>;
-
-// Response Types
-export type GetJobsResponse = z.infer<typeof GetJobsResponseSchema>;
-export type GetJobResponse = z.infer<typeof GetJobResponseSchema>;
-export type CreateJobResponse = z.infer<typeof CreateJobResponseSchema>;
-export type CreateJobDefinitionResponse = z.infer<typeof CreateJobDefinitionResponseSchema>;
-export type UpdateJobResponse = z.infer<typeof UpdateJobResponseSchema>;
-export type DeleteJobResponse = z.infer<typeof DeleteJobResponseSchema>;
-export type GetJobStatusResponse = z.infer<typeof GetJobStatusResponseSchema>;
-export type GetJobMonitoringResponse = z.infer<typeof GetJobMonitoringResponseSchema>;
-export type GetJobRunsResponse = z.infer<typeof GetJobRunsResponseSchema>;
-export type GetJobRunDetailsResponse = z.infer<typeof GetJobRunDetailsResponseSchema>;
-export type RetryJobResponse = z.infer<typeof RetryJobResponseSchema>;
-export type RetryJobStepResponse = z.infer<typeof RetryJobStepResponseSchema>;
-export type CleanupOrphanedJobsResponse = z.infer<typeof CleanupOrphanedJobsResponseSchema>;
-export type JobsApiErrorResponse = z.infer<typeof JobsApiErrorResponseSchema>;

@@ -1,18 +1,14 @@
-import { useState } from 'react';
-import { useNavigate } from '@tanstack/react-router';
 import {
   flexRender,
   getCoreRowModel,
-  useReactTable,
-  getSortedRowModel,
   getFilteredRowModel,
-} from '@tanstack/react-table';
-import { type ColumnDef, type SortingState } from '@tanstack/react-table';
-import { Job } from '@usersdotfun/shared-types';
-import { StatusBadge } from './status-badge';
-import { JobActions } from './job-actions';
-import { JobSheet } from './job-sheet';
-import { Button } from '~/components/ui/button';
+  getSortedRowModel,
+  useReactTable,
+  type ColumnDef, type SortingState,
+} from "@tanstack/react-table";
+import type { Job } from "@usersdotfun/shared-types/types";
+import { useState } from "react";
+import { Button } from "~/components/ui/button";
 import {
   Table,
   TableBody,
@@ -20,7 +16,10 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '~/components/ui/table';
+} from "~/components/ui/table";
+import { JobActions } from "./job-actions";
+import { JobSheet } from "./job-sheet";
+import { StatusBadge } from "./status-badge";
 
 interface JobListProps {
   jobs: Job[];
@@ -43,7 +42,7 @@ function SkeletonRow({ columnCount }: { columnCount: number }) {
 
 export function JobList({ jobs, isLoading, error, onJobSelect }: JobListProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [globalFilter, setGlobalFilter] = useState('');
+  const [globalFilter, setGlobalFilter] = useState("");
 
   const handleRowClick = (job: Job) => {
     onJobSelect(job);
@@ -51,8 +50,8 @@ export function JobList({ jobs, isLoading, error, onJobSelect }: JobListProps) {
 
   const columns: ColumnDef<Job>[] = [
     {
-      accessorKey: 'name',
-      header: 'Name',
+      accessorKey: "name",
+      header: "Name",
       cell: ({ row }) => (
         <button
           onClick={(e) => {
@@ -66,30 +65,30 @@ export function JobList({ jobs, isLoading, error, onJobSelect }: JobListProps) {
       ),
     },
     {
-      accessorKey: 'status',
-      header: 'Status',
+      accessorKey: "status",
+      header: "Status",
       cell: ({ getValue }) => <StatusBadge status={getValue() as string} />,
     },
     {
-      accessorKey: 'schedule',
-      header: 'Schedule',
+      accessorKey: "schedule",
+      header: "Schedule",
     },
     {
-      accessorKey: 'sourcePlugin',
-      header: 'Source Plugin',
+      accessorKey: "sourcePlugin",
+      header: "Source Plugin",
     },
     {
-      accessorKey: 'createdAt',
-      header: 'Created At',
+      accessorKey: "createdAt",
+      header: "Created At",
       cell: ({ getValue }) => new Date(getValue() as string).toLocaleString(),
     },
     {
-      accessorKey: 'updatedAt',
-      header: 'Updated At',
+      accessorKey: "updatedAt",
+      header: "Updated At",
       cell: ({ getValue }) => new Date(getValue() as string).toLocaleString(),
     },
     {
-      id: 'actions',
+      id: "actions",
       cell: ({ row }) => (
         <div onClick={(e) => e.stopPropagation()}>
           <JobActions job={row.original} />
@@ -124,7 +123,7 @@ export function JobList({ jobs, isLoading, error, onJobSelect }: JobListProps) {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <input
-          value={globalFilter ?? ''}
+          value={globalFilter ?? ""}
           onChange={(e) => setGlobalFilter(e.target.value)}
           className="p-2 border rounded"
           placeholder="Search all columns..."
@@ -149,8 +148,8 @@ export function JobList({ jobs, isLoading, error, onJobSelect }: JobListProps) {
                     header.getContext()
                   )}
                   {{
-                    asc: ' 🔼',
-                    desc: ' 🔽',
+                    asc: " 🔼",
+                    desc: " 🔽",
                   }[header.column.getIsSorted() as string] ?? null}
                 </TableHead>
               ))}
@@ -158,25 +157,26 @@ export function JobList({ jobs, isLoading, error, onJobSelect }: JobListProps) {
           ))}
         </TableHeader>
         <TableBody>
-          {isLoading ? (
-            Array.from({ length: 5 }).map((_, i) => (
-              <SkeletonRow key={i} columnCount={columns.length} />
-            ))
-          ) : (
-            table.getRowModel().rows.map((row) => (
-              <TableRow 
-                key={row.id}
-                className="cursor-pointer hover:bg-gray-50"
-                onClick={() => handleRowClick(row.original)}
-              >
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))
-          )}
+          {isLoading
+            ? Array.from({ length: 5 }).map((_, i) => (
+                <SkeletonRow key={i} columnCount={columns.length} />
+              ))
+            : table.getRowModel().rows.map((row) => (
+                <TableRow
+                  key={row.id}
+                  className="cursor-pointer hover:bg-gray-50"
+                  onClick={() => handleRowClick(row.original)}
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id}>
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
         </TableBody>
       </Table>
     </div>

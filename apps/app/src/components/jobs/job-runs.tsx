@@ -1,4 +1,4 @@
-import { JobRunInfo } from '@usersdotfun/shared-types';
+import type { JobRunInfo } from '@usersdotfun/shared-types/types';
 import { StatusBadge } from './status-badge';
 
 interface JobRunsProps {

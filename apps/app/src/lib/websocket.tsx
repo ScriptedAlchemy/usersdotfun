@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { WebSocketEvent } from "@usersdotfun/shared-types";
+import type { WebSocketEvent } from "@usersdotfun/shared-types/types";
 import {
   createContext,
   ReactNode,

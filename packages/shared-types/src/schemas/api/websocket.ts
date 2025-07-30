@@ -70,24 +70,3 @@ export const webSocketHealthResponseSchema = z.object({
   connections: z.number(),
   subscriptions: z.record(z.string(), z.number()),
 });
-
-// ============================================================================
-// TYPE EXPORTS
-// ============================================================================
-
-export type WebSocketCommand = z.infer<typeof webSocketCommandSchema>;
-export type WebSocketServerEvent = z.infer<typeof webSocketServerEventSchema>;
-export type WebSocketConnectionEvent = z.infer<typeof webSocketConnectionEventSchema>;
-export type WebSocketServerMessage = z.infer<typeof webSocketServerMessageSchema>;
-export type WebSocketHealthResponse = z.infer<typeof webSocketHealthResponseSchema>;
-
-// Specific command types
-export type SubscribeCommand = Extract<WebSocketCommand, { type: 'subscribe' }>;
-export type UnsubscribeCommand = Extract<WebSocketCommand, { type: 'unsubscribe' }>;
-export type PingCommand = Extract<WebSocketCommand, { type: 'ping' }>;
-
-// Specific connection event types
-export type ConnectionEstablishedEvent = Extract<WebSocketConnectionEvent, { type: 'connection:established' }>;
-export type SubscriptionConfirmedEvent = Extract<WebSocketConnectionEvent, { type: 'subscription:confirmed' }>;
-export type SubscriptionRemovedEvent = Extract<WebSocketConnectionEvent, { type: 'subscription:removed' }>;
-export type PongEvent = Extract<WebSocketConnectionEvent, { type: 'pong' }>;

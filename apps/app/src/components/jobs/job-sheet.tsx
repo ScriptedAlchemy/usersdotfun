@@ -1,20 +1,16 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type {
+  CreateJobDefinition,
+  Job,
+  UpdateJobDefinition,
+} from "@usersdotfun/shared-types/types";
 import { useEffect, useState } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { z } from "zod";
 import { createJob, createJobDefinition, updateJob } from "~/api/jobs";
-import { queryKeys } from "~/lib/query-keys";
 import { Button } from "~/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "~/components/ui/sheet";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import {
@@ -24,10 +20,32 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
-import { Textarea } from "~/components/ui/textarea";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "~/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import { CreateJob, createJobSchema, Job, UpdateJob, CreateJobDefinition, createJobDefinitionSchema } from "@usersdotfun/shared-types";
+import { Textarea } from "~/components/ui/textarea";
+import { queryKeys } from "~/lib/query-keys";
 import { JsonEditor } from "./json-editor";
+
+// Form schema that matches the current form structure
+// TODO: grab from shared-types
+const jobFormSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  schedule: z.string().optional(),
+  sourcePlugin: z.string().min(1, "Source plugin is required"),
+  sourceConfig: z.string().min(1, "Source config is required"),
+  sourceSearch: z.string().min(1, "Source search is required"),
+  pipeline: z.string().min(1, "Pipeline is required"),
+});
+
+type JobFormData = z.infer<typeof jobFormSchema>;
 
 interface JobSheetProps {
   job?: Job;
@@ -50,7 +68,8 @@ export function JobSheet({ job, children, open, onOpenChange }: JobSheetProps) {
   const [scheduleType, setScheduleType] = useState("preset");
   const [namePreview, setNamePreview] = useState("");
   const [activeTab, setActiveTab] = useState("form");
-  const [jsonJobDefinition, setJsonJobDefinition] = useState<CreateJobDefinition | null>(null);
+  const [jsonJobDefinition, setJsonJobDefinition] =
+    useState<CreateJobDefinition | null>(null);
 
   const {
     register,
@@ -59,8 +78,8 @@ export function JobSheet({ job, children, open, onOpenChange }: JobSheetProps) {
     control,
     watch,
     formState: { errors },
-  } = useForm<CreateJob>({
-    resolver: zodResolver(createJobSchema),
+  } = useForm<JobFormData>({
+    resolver: zodResolver(jobFormSchema),
     defaultValues: job
       ? {
           name: job.name,
@@ -135,11 +154,14 @@ export function JobSheet({ job, children, open, onOpenChange }: JobSheetProps) {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (updatedJob: UpdateJob) => updateJob(job!.id, updatedJob),
+    mutationFn: (updatedJob: UpdateJobDefinition) =>
+      updateJob(job!.id, updatedJob),
     onSuccess: () => {
       toast.success("Job updated");
       queryClient.invalidateQueries({ queryKey: queryKeys.jobs.lists() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.detail(job!.id) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.jobs.detail(job!.id),
+      });
       onOpenChange?.(false);
     },
     onError: (error) => {
@@ -147,18 +169,35 @@ export function JobSheet({ job, children, open, onOpenChange }: JobSheetProps) {
     },
   });
 
-  const onSubmit = (data: CreateJob) => {
-    const transformedData = {
-      ...data,
-      sourceConfig: typeof data.sourceConfig === 'string' ? data.sourceConfig : JSON.stringify(data.sourceConfig),
-      sourceSearch: typeof data.sourceSearch === 'string' ? data.sourceSearch : JSON.stringify(data.sourceSearch),
-      pipeline: typeof data.pipeline === 'string' ? data.pipeline : JSON.stringify(data.pipeline),
-    };
+  const transformFormDataToJobDefinition = (
+    formData: JobFormData
+  ): CreateJobDefinition => {
+    try {
+      return {
+        name: formData.name,
+        schedule: formData.schedule || undefined,
+        source: {
+          plugin: formData.sourcePlugin,
+          config: JSON.parse(formData.sourceConfig),
+          search: JSON.parse(formData.sourceSearch),
+        },
+        pipeline: JSON.parse(formData.pipeline),
+      };
+    } catch (error) {
+      throw new Error("Invalid JSON in form fields");
+    }
+  };
 
-    if (job) {
-      updateMutation.mutate(transformedData);
-    } else {
-      createMutation.mutate(transformedData);
+  const onSubmit = (data: JobFormData) => {
+    try {
+      const jobDefinition = transformFormDataToJobDefinition(data);
+      if (job) {
+        updateMutation.mutate(jobDefinition);
+      } else {
+        createJobDefinitionMutation.mutate(jobDefinition);
+      }
+    } catch (error) {
+      toast.error("Invalid JSON in form fields. Please check your input.");
     }
   };
 
@@ -174,12 +213,16 @@ export function JobSheet({ job, children, open, onOpenChange }: JobSheetProps) {
             {job ? "Edit the job details." : "Create a new job."}
           </SheetDescription>
         </SheetHeader>
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="space-y-4"
+        >
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="form">Form</TabsTrigger>
             <TabsTrigger value="json">JSON</TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="form">
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="grid gap-4 py-4">
@@ -187,15 +230,23 @@ export function JobSheet({ job, children, open, onOpenChange }: JobSheetProps) {
                   <Label htmlFor="name" className="text-right">
                     Name
                   </Label>
-                  <Input id="name" {...register("name")} className="col-span-3" />
+                  <Input
+                    id="name"
+                    {...register("name")}
+                    className="col-span-3"
+                  />
                   {errors.name && (
-                    <p className="col-span-4 text-red-500">{errors.name.message}</p>
+                    <p className="col-span-4 text-red-500">
+                      {errors.name.message}
+                    </p>
                   )}
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="schedule" className="text-right">
                     Schedule
-                    <span className="text-xs text-gray-500 block">Optional</span>
+                    <span className="text-xs text-gray-500 block">
+                      Optional
+                    </span>
                   </Label>
                   <Controller
                     name="schedule"
@@ -221,9 +272,14 @@ export function JobSheet({ job, children, open, onOpenChange }: JobSheetProps) {
                             <SelectValue placeholder="Select a schedule or run immediately" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="none">Run immediately (no schedule)</SelectItem>
+                            <SelectItem value="none">
+                              Run immediately (no schedule)
+                            </SelectItem>
                             {schedulePresets.map((preset) => (
-                              <SelectItem key={preset.value} value={preset.value}>
+                              <SelectItem
+                                key={preset.value}
+                                value={preset.value}
+                              >
                                 {preset.label}
                               </SelectItem>
                             ))}
@@ -332,7 +388,9 @@ export function JobSheet({ job, children, open, onOpenChange }: JobSheetProps) {
               <SheetFooter>
                 <Button
                   type="submit"
-                  disabled={createMutation.isPending || updateMutation.isPending}
+                  disabled={
+                    createMutation.isPending || updateMutation.isPending
+                  }
                 >
                   {createMutation.isPending || updateMutation.isPending
                     ? "Saving..."
@@ -341,7 +399,7 @@ export function JobSheet({ job, children, open, onOpenChange }: JobSheetProps) {
               </SheetFooter>
             </form>
           </TabsContent>
-          
+
           <TabsContent value="json">
             <div className="space-y-4">
               <JsonEditor
@@ -355,24 +413,27 @@ export function JobSheet({ job, children, open, onOpenChange }: JobSheetProps) {
                     if (jsonJobDefinition) {
                       if (job) {
                         // For updates, convert to CreateJob format since we don't have updateJobDefinition yet
-                        const createJobData: CreateJob = {
+                        const jobDefinition: UpdateJobDefinition = {
                           name: jsonJobDefinition.name,
                           schedule: jsonJobDefinition.schedule,
-                          sourcePlugin: jsonJobDefinition.source.plugin,
-                          sourceConfig: JSON.stringify(jsonJobDefinition.source.config),
-                          sourceSearch: JSON.stringify(jsonJobDefinition.source.search),
-                          pipeline: JSON.stringify(jsonJobDefinition.pipeline),
+                          source: jsonJobDefinition.source,
+                          pipeline: jsonJobDefinition.pipeline,
                         };
-                        updateMutation.mutate(createJobData);
+                        updateMutation.mutate(jobDefinition);
                       } else {
                         // For new jobs, use the JobDefinition format directly
                         createJobDefinitionMutation.mutate(jsonJobDefinition);
                       }
                     }
                   }}
-                  disabled={!jsonJobDefinition || createJobDefinitionMutation.isPending || updateMutation.isPending}
+                  disabled={
+                    !jsonJobDefinition ||
+                    createJobDefinitionMutation.isPending ||
+                    updateMutation.isPending
+                  }
                 >
-                  {createJobDefinitionMutation.isPending || updateMutation.isPending
+                  {createJobDefinitionMutation.isPending ||
+                  updateMutation.isPending
                     ? "Saving..."
                     : "Save"}
                 </Button>

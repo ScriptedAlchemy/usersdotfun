@@ -1,7 +1,10 @@
-import { QueueOverview } from '@usersdotfun/shared-types';
-import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card';
-import { Badge } from '~/components/ui/badge';
-import { Clock, AlertCircle, CheckCircle, XCircle, Pause, Play } from 'lucide-react';
+import type { QueueOverview } from "@usersdotfun/shared-types/types";
+import {
+  Pause,
+  Play
+} from "lucide-react";
+import { Badge } from "~/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 
 interface QueueOverviewProps {
   queues: Record<string, QueueOverview>;
@@ -9,7 +12,11 @@ interface QueueOverviewProps {
   onQueueSelect?: (queueName: string) => void;
 }
 
-export function QueueOverviewComponent({ queues, isLoading, onQueueSelect }: QueueOverviewProps) {
+export function QueueOverviewComponent({
+  queues,
+  isLoading,
+  onQueueSelect,
+}: QueueOverviewProps) {
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -64,27 +71,27 @@ interface QueueCardProps {
 
 function QueueCard({ queueName, queue, onClick }: QueueCardProps) {
   const getStatusIcon = () => {
-    if (queue.status === 'paused') return <Pause className="h-4 w-4" />;
+    if (queue.status === "paused") return <Pause className="h-4 w-4" />;
     return <Play className="h-4 w-4" />;
   };
 
   const getStatusColor = () => {
-    if (queue.status === 'paused') return 'bg-yellow-100 text-yellow-800';
-    return 'bg-green-100 text-green-800';
+    if (queue.status === "paused") return "bg-yellow-100 text-yellow-800";
+    return "bg-green-100 text-green-800";
   };
 
   const totalJobs = queue.waiting + queue.active + queue.delayed;
   const hasActivity = totalJobs > 0 || queue.failed > 0;
 
   return (
-    <Card 
-      className={`transition-all duration-200 ${onClick ? 'cursor-pointer hover:shadow-md hover:border-blue-300' : ''}`}
+    <Card
+      className={`transition-all duration-200 ${onClick ? "cursor-pointer hover:shadow-md hover:border-blue-300" : ""}`}
       onClick={onClick}
     >
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg font-semibold capitalize">
-            {queueName.replace('-', ' ')}
+            {queueName.replace("-", " ")}
           </CardTitle>
           <Badge className={`${getStatusColor()} flex items-center gap-1`}>
             {getStatusIcon()}
@@ -92,7 +99,7 @@ function QueueCard({ queueName, queue, onClick }: QueueCardProps) {
           </Badge>
         </div>
       </CardHeader>
-      
+
       <CardContent className="space-y-4">
         {/* Queue Metrics */}
         <div className="grid grid-cols-2 gap-4">
@@ -107,14 +114,18 @@ function QueueCard({ queueName, queue, onClick }: QueueCardProps) {
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-600">Delayed</span>
-              <span className="font-medium text-yellow-600">{queue.delayed}</span>
+              <span className="font-medium text-yellow-600">
+                {queue.delayed}
+              </span>
             </div>
           </div>
-          
+
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-600">Completed</span>
-              <span className="font-medium text-green-600">{queue.completed}</span>
+              <span className="font-medium text-green-600">
+                {queue.completed}
+              </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-600">Failed</span>

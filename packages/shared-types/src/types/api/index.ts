@@ -1,9 +1,9 @@
 // ============================================================================
-// MAIN EXPORTS
+// API TYPES INDEX
+// Re-export all API-related types
 // ============================================================================
 
-// Re-export all schemas (includes both schemas and types)
-export * from './schemas';
-
-// Re-export utilities
-export * from './utils';
+export * from './common';
+export * from './jobs';
+export * from './queues';
+export * from './websocket';

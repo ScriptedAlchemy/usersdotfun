@@ -1,12 +1,12 @@
-import { Hono } from 'hono';
-import { createBunWebSocket } from 'hono/bun';
-import type { ServerWebSocket } from 'bun';
-import { getWebSocketManager, type WebSocketConnection } from '../services/websocket-manager.service';
 import {
   webSocketCommandSchema,
-  webSocketServerMessageSchema,
   webSocketHealthResponseSchema,
-} from '@usersdotfun/shared-types';
+  webSocketServerMessageSchema,
+} from '@usersdotfun/shared-types/schemas';
+import type { ServerWebSocket } from 'bun';
+import { Hono } from 'hono';
+import { createBunWebSocket } from 'hono/bun';
+import { getWebSocketManager, type WebSocketConnection } from '../services/websocket-manager.service';
 
 const { upgradeWebSocket, websocket } = createBunWebSocket<ServerWebSocket>();
 
@@ -20,7 +20,7 @@ app.get('/', upgradeWebSocket((c) => {
   return {
     onOpen: async (evt: any, ws: any) => {
       console.log(`WebSocket opened: ${connectionId}`);
-      
+
       connection = {
         id: connectionId,
         subscriptions: new Set(),
@@ -41,14 +41,14 @@ app.get('/', upgradeWebSocket((c) => {
     onMessage: async (evt: any, ws: any) => {
       try {
         const rawMessage = JSON.parse(evt.data.toString());
-        
+
         // Validate the incoming command
         const validationResult = webSocketCommandSchema.safeParse(rawMessage);
         if (!validationResult.success) {
           console.error('Invalid WebSocket command:', validationResult.error);
           connection?.send(webSocketServerMessageSchema.parse({
             type: 'error',
-            data: { 
+            data: {
               message: 'Invalid command format',
               details: validationResult.error.issues
             }
@@ -57,7 +57,7 @@ app.get('/', upgradeWebSocket((c) => {
         }
 
         const message = validationResult.data;
-        
+
         switch (message.type) {
           case 'subscribe':
             if (message.eventType && connection) {
@@ -93,7 +93,7 @@ app.get('/', upgradeWebSocket((c) => {
         console.error('Error processing WebSocket message:', error);
         connection?.send(webSocketServerMessageSchema.parse({
           type: 'error',
-          data: { 
+          data: {
             message: 'Failed to process message',
             details: error instanceof Error ? error.message : 'Unknown error'
           }
@@ -124,7 +124,7 @@ app.get('/health', (c) => {
       'queue:status-update': wsManager.getSubscriptionCount('queue:status-update'),
     }
   };
-  
+
   const validatedHealth = webSocketHealthResponseSchema.parse(healthData);
   return c.json(validatedHealth);
 });

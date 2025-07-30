@@ -4,7 +4,7 @@ import { Button } from '~/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs';
 import { StatusBadge } from './status-badge';
 import { toast } from 'sonner';
-import { PipelineStep } from '@usersdotfun/shared-types';
+import type { PipelineStep } from '@usersdotfun/shared-types/types';
 import { queryKeys } from '~/lib/query-keys';
 
 interface StepDetailsProps {

@@ -1,8 +1,14 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type {
+  CreateJobDefinition,
+  Job,
+  UpdateJobDefinition,
+} from "@usersdotfun/shared-types/types";
 import { useEffect, useState } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { z } from "zod";
 import { createJob, updateJob } from "~/api/jobs";
 import { Button } from "~/components/ui/button";
 import {
@@ -24,7 +30,18 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import { Textarea } from "~/components/ui/textarea";
-import { CreateJob, createJobSchema, Job, UpdateJob } from "@usersdotfun/shared-types";
+
+// Form schema that matches the current form structure
+const jobFormSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  schedule: z.string().optional(),
+  sourcePlugin: z.string().min(1, "Source plugin is required"),
+  sourceConfig: z.string().min(1, "Source config is required"),
+  sourceSearch: z.string().min(1, "Source search is required"),
+  pipeline: z.string().min(1, "Pipeline is required"),
+});
+
+type JobFormData = z.infer<typeof jobFormSchema>;
 
 interface JobDialogProps {
   job?: Job;
@@ -52,17 +69,24 @@ export function JobDialog({ job, children }: JobDialogProps) {
     control,
     watch,
     formState: { errors },
-  } = useForm<CreateJob>({
-    resolver: zodResolver(createJobSchema),
+  } = useForm<JobFormData>({
+    resolver: zodResolver(jobFormSchema),
     defaultValues: job
       ? {
-          ...job,
+          name: job.name,
+          schedule: job.schedule || "",
+          sourcePlugin: job.sourcePlugin,
           sourceConfig: JSON.stringify(job.sourceConfig, null, 2),
           sourceSearch: JSON.stringify(job.sourceSearch, null, 2),
           pipeline: JSON.stringify(job.pipeline, null, 2),
         }
       : {
+          name: "",
+          schedule: "",
           sourcePlugin: "@curatedotfun/masa-source",
+          sourceConfig: "{}",
+          sourceSearch: "{}",
+          pipeline: "{}",
         },
   });
 
@@ -79,7 +103,9 @@ export function JobDialog({ job, children }: JobDialogProps) {
   useEffect(() => {
     if (job) {
       reset({
-        ...job,
+        name: job.name,
+        schedule: job.schedule || "",
+        sourcePlugin: job.sourcePlugin,
         sourceConfig: JSON.stringify(job.sourceConfig, null, 2),
         sourceSearch: JSON.stringify(job.sourceSearch, null, 2),
         pipeline: JSON.stringify(job.pipeline, null, 2),
@@ -99,7 +125,8 @@ export function JobDialog({ job, children }: JobDialogProps) {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (updatedJob: UpdateJob) => updateJob(job!.id, updatedJob),
+    mutationFn: (updatedJob: UpdateJobDefinition) =>
+      updateJob(job!.id, updatedJob),
     onSuccess: () => {
       toast.success("Job updated");
       queryClient.invalidateQueries({ queryKey: ["jobs"] });
@@ -110,11 +137,35 @@ export function JobDialog({ job, children }: JobDialogProps) {
     },
   });
 
-  const onSubmit = (data: CreateJob) => {
-    if (job) {
-      updateMutation.mutate(data);
-    } else {
-      createMutation.mutate(data);
+  const transformFormDataToJobDefinition = (
+    formData: JobFormData
+  ): CreateJobDefinition => {
+    try {
+      return {
+        name: formData.name,
+        schedule: formData.schedule || undefined,
+        source: {
+          plugin: formData.sourcePlugin,
+          config: JSON.parse(formData.sourceConfig),
+          search: JSON.parse(formData.sourceSearch),
+        },
+        pipeline: JSON.parse(formData.pipeline),
+      };
+    } catch (error) {
+      throw new Error("Invalid JSON in form fields");
+    }
+  };
+
+  const onSubmit = (data: JobFormData) => {
+    try {
+      const jobDefinition = transformFormDataToJobDefinition(data);
+      if (job) {
+        updateMutation.mutate(jobDefinition);
+      } else {
+        createMutation.mutate(jobDefinition);
+      }
+    } catch (error) {
+      toast.error("Invalid JSON in form fields. Please check your input.");
     }
   };
 

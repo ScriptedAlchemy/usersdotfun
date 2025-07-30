@@ -1,4 +1,4 @@
-import { JobWithSteps, JobMonitoringData, JobRunInfo } from '@usersdotfun/shared-types';
+import type { JobWithSteps, JobMonitoringData, JobRunInfo } from '@usersdotfun/shared-types/types';
 import { JobMonitoring } from './job-monitoring';
 import { PipelineViewer } from './pipeline-viewer';
 import { JobRuns } from './job-runs';

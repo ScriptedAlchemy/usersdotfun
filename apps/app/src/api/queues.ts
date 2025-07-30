@@ -1,9 +1,5 @@
 import { z } from 'zod';
 import {
-  queueOverviewSchema,
-  queueDetailsSchema,
-  queueActionResultSchema,
-  queueItemSchema,
   ApiSuccessResponseSchema,
   QueuesOverviewDataSchema,
   QueueDetailsDataSchema,
@@ -11,13 +7,14 @@ import {
   QueueClearResultDataSchema,
   AllQueueJobsDataSchema,
   SimpleMessageDataSchema,
-} from '@usersdotfun/shared-types';
+} from '@usersdotfun/shared-types/schemas';
 
-// Type aliases for easier use
-type QueueOverview = z.infer<typeof queueOverviewSchema>;
-type QueueDetails = z.infer<typeof queueDetailsSchema>;
-type QueueActionResult = z.infer<typeof queueActionResultSchema>;
-type QueueItem = z.infer<typeof queueItemSchema>;
+import type {
+  QueueOverview,
+  QueueDetails,
+  QueueActionResult,
+  QueueItem,
+} from '@usersdotfun/shared-types/types';
 
 const API_BASE_URL = '/api';
 

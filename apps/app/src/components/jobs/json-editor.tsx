@@ -4,7 +4,8 @@ import { Textarea } from "~/components/ui/textarea";
 import { Label } from "~/components/ui/label";
 import { Alert, AlertDescription } from "~/components/ui/alert";
 import { CheckCircle, XCircle, Copy, Eye, Edit } from "lucide-react";
-import { CreateJobDefinition, createJobDefinitionSchema } from "@usersdotfun/shared-types";
+import type { CreateJobDefinition } from "@usersdotfun/shared-types/types";
+import { createJobDefinitionSchema } from "@usersdotfun/shared-types/schemas";
 
 interface JsonEditorProps {
   value: CreateJobDefinition | null;

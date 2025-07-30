@@ -13,7 +13,7 @@ import {
 } from '@tanstack/react-table';
 import { getAllQueueJobs, getQueuesOverview, retryQueueItem, removeQueueItem } from '~/api/queues';
 import { getJob, getJobMonitoringData, getJobRuns, cleanupOrphanedJobs } from '~/api/jobs';
-import { queueItemSchema } from '@usersdotfun/shared-types';
+import { queueItemSchema } from '@usersdotfun/shared-types/schemas';
 import { z } from 'zod';
 
 type QueueItem = z.infer<typeof queueItemSchema>;

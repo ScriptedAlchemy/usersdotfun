@@ -9,7 +9,7 @@ import {
   getFilteredRowModel,
 } from '@tanstack/react-table';
 import { type ColumnDef, type SortingState } from '@tanstack/react-table';
-import { queueItemSchema } from '@usersdotfun/shared-types';
+import { queueItemSchema } from '@usersdotfun/shared-types/schemas';
 import { z } from 'zod';
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card';
 import { Button } from '~/components/ui/button';

@@ -6,7 +6,7 @@ import { z } from "zod";
 
 export const jobStatusEnum = z.enum([
   'active',
-  'waiting', 
+  'waiting',
   'completed',
   'failed',
   'delayed',
@@ -17,7 +17,7 @@ export const queueStatusEnum = z.enum(['active', 'paused']);
 
 export const jobTypeEnum = z.enum([
   'completed',
-  'failed', 
+  'failed',
   'all'
 ]);
 
@@ -77,5 +77,5 @@ export const queueDetailsSchema = queueOverviewSchema.extend({
 export const queueActionResultSchema = z.object({
   success: z.boolean(),
   message: z.string(),
-  affectedItems: z.number().optional(),
+  itemsRemoved: z.number().optional(),
 });

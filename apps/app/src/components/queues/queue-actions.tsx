@@ -67,7 +67,7 @@ export function QueueActions({
     mutationFn: () => clearQueue(queueName),
     onSuccess: (data) => {
       toast.success('Queue cleared', {
-        description: `${data.affectedItems || 0} items removed`,
+        description: `${data.itemsRemoved || 0} items removed`,
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.queues.all() });
     },
@@ -83,7 +83,7 @@ export function QueueActions({
     mutationFn: () => purgeFailedJobs(queueName),
     onSuccess: (data) => {
       toast.success('Failed jobs purged', {
-        description: `${data.affectedItems || 0} failed jobs removed`,
+        description: `${data.itemsRemoved || 0} failed jobs removed`,
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.queues.all() });
     },

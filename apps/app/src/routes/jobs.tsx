@@ -1,21 +1,21 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { z } from 'zod';
-import { useQuery } from '@tanstack/react-query';
-import { getJobs, getJob, getJobMonitoringData, getJobRuns } from '~/api/jobs';
-import { Job } from '@usersdotfun/shared-types';
-import { useState } from 'react';
-import { JobList } from '~/components/jobs/job-list';
-import { JobDetailsSheet } from '~/components/jobs/job-details-sheet';
-import { Button } from '~/components/ui/button';
-import { useSession, signIn } from '~/lib/auth-client';
-import { useWebSocketSubscription, useWebSocket } from '~/lib/websocket';
-import { queryKeys } from '~/lib/query-keys';
+import { useQuery } from "@tanstack/react-query";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import type { Job } from "@usersdotfun/shared-types/types";
+import { useState } from "react";
+import { z } from "zod";
+import { getJob, getJobMonitoringData, getJobRuns, getJobs } from "~/api/jobs";
+import { JobDetailsSheet } from "~/components/jobs/job-details-sheet";
+import { JobList } from "~/components/jobs/job-list";
+import { Button } from "~/components/ui/button";
+import { signIn } from "~/lib/auth-client";
+import { queryKeys } from "~/lib/query-keys";
+import { useWebSocket, useWebSocketSubscription } from "~/lib/websocket";
 
 const jobsSearchSchema = z.object({
   jobId: z.string().optional(),
 });
 
-export const Route = createFileRoute('/jobs')({
+export const Route = createFileRoute("/jobs")({
   validateSearch: jobsSearchSchema,
   component: JobsComponent,
 });
@@ -29,13 +29,13 @@ function AuthPrompt({ error }: { error: Error }) {
     try {
       await signIn.anonymous();
     } catch (error) {
-      console.error('Anonymous sign in failed:', error);
+      console.error("Anonymous sign in failed:", error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const isAuthError = error.message.includes('Authentication required');
+  const isAuthError = error.message.includes("Authentication required");
 
   if (!isAuthError) {
     return (
@@ -53,43 +53,47 @@ function AuthPrompt({ error }: { error: Error }) {
           To view jobs, you need to sign in or continue as a guest.
         </p>
       </div>
-      
+
       <div className="space-y-3">
-        <Button 
-          onClick={handleAnonymousSignIn} 
+        <Button
+          onClick={handleAnonymousSignIn}
           disabled={isLoading}
           className="w-full"
         >
-          {isLoading ? 'Signing in...' : 'Continue as Guest'}
+          {isLoading ? "Signing in..." : "Continue as Guest"}
         </Button>
-        
+
         <div className="text-center">
           <span className="text-sm text-gray-500">or</span>
         </div>
-        
-        <Button 
-          variant="outline" 
-          onClick={() => navigate({ to: '/' })}
+
+        <Button
+          variant="outline"
+          onClick={() => navigate({ to: "/" })}
           className="w-full"
         >
           Go to Sign In
         </Button>
       </div>
-      
+
       <p className="text-xs text-gray-500 text-center max-w-md">
-        As a guest, you can view jobs but some features may be limited. 
-        Create an account for full access.
+        As a guest, you can view jobs but some features may be limited. Create
+        an account for full access.
       </p>
     </div>
   );
 }
 
 function JobsComponent() {
-  const navigate = useNavigate({ from: '/jobs' });
+  const navigate = useNavigate({ from: "/jobs" });
   const { jobId } = Route.useSearch();
   const { isConnected } = useWebSocket();
-  
-  const { data: jobs, isLoading, error } = useQuery({
+
+  const {
+    data: jobs,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: queryKeys.jobs.lists(),
     queryFn: getJobs,
     staleTime: 60000, // Consider data fresh for 1 minute
@@ -97,7 +101,7 @@ function JobsComponent() {
     // Removed refetchInterval - WebSocket provides real-time updates
     refetchIntervalInBackground: false,
   });
-  
+
   const { data: selectedJob, isLoading: jobLoading } = useQuery({
     queryKey: queryKeys.jobs.detail(jobId!),
     queryFn: () => getJob(jobId!),
@@ -130,13 +134,13 @@ function JobsComponent() {
   });
 
   // WebSocket subscriptions for real-time updates
-  useWebSocketSubscription('job:status-changed', (data) => {
-    console.log('Job status changed:', data);
+  useWebSocketSubscription("job:status-changed", (data) => {
+    console.log("Job status changed:", data);
     // Cache invalidation handled in WebSocket provider
   });
 
-  useWebSocketSubscription('job:monitoring-update', (data) => {
-    console.log('Job monitoring update:', data);
+  useWebSocketSubscription("job:monitoring-update", (data) => {
+    console.log("Job monitoring update:", data);
     // Cache invalidation handled in WebSocket provider
   });
 
@@ -158,7 +162,7 @@ function JobsComponent() {
 
   return (
     <div className="p-2">
-      <JobList 
+      <JobList
         jobs={jobs || []}
         isLoading={isLoading}
         error={error}

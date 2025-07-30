@@ -1,34 +1,33 @@
-import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { VALID_QUEUE_NAMES, type QueueName } from '@usersdotfun/shared-queue'
+import {
+  AllQueueJobsDataSchema,
+  ApiSuccessResponseSchema,
+  ClearQueueQuerySchema,
+  QueueClearResultDataSchema,
+  QueueDetailsDataSchema,
+  QueueItemsDataSchema,
+  QueueItemsQuerySchema,
+  QueueJobParamsSchema,
+  QueueJobsQuerySchema,
+  QueueNameParamSchema,
+  QueuesOverviewDataSchema,
+  QueuesStatusQuerySchema,
+  SimpleMessageDataSchema
+} from '@usersdotfun/shared-types/schemas'
+import { Hono } from 'hono'
 import { requireAdmin, requireAuth } from '../middleware/auth'
 import { getQueueAdapter } from '../services/queue-adapter.service'
 import { getWebSocketManager } from '../services/websocket-manager.service'
 import { honoErrorHandler } from '../utils/error-handlers'
-import {
-  QueueNameParamSchema,
-  QueueJobParamsSchema,
-  QueuesStatusQuerySchema,
-  QueueJobsQuerySchema,
-  QueueItemsQuerySchema,
-  ClearQueueQuerySchema,
-  ApiSuccessResponseSchema,
-  ApiErrorResponseSchema,
-  SimpleMessageDataSchema,
-  QueuesOverviewDataSchema,
-  QueueDetailsDataSchema,
-  AllQueueJobsDataSchema,
-  QueueItemsDataSchema,
-  QueueClearResultDataSchema,
-} from '@usersdotfun/shared-types'
 
 const wsManager = getWebSocketManager()
 
 export const queuesRouter = new Hono()
   // Get overall queue status
-  .get('/status', 
+  .get('/status',
     zValidator('query', QueuesStatusQuerySchema),
-    requireAuth, 
+    requireAuth,
     async (c) => {
       try {
         const queueAdapter = await getQueueAdapter()
@@ -46,9 +45,9 @@ export const queuesRouter = new Hono()
     })
 
   // Get all jobs across queues
-  .get('/jobs', 
+  .get('/jobs',
     zValidator('query', QueueJobsQuerySchema),
-    requireAuth, 
+    requireAuth,
     async (c) => {
       try {
         const validatedQuery = c.req.valid('query')
@@ -67,9 +66,9 @@ export const queuesRouter = new Hono()
     })
 
   // Get detailed queue information
-  .get('/:queueName', 
+  .get('/:queueName',
     zValidator('param', QueueNameParamSchema),
-    requireAuth, 
+    requireAuth,
     async (c) => {
       try {
         const validatedParams = c.req.valid('param')
@@ -94,10 +93,10 @@ export const queuesRouter = new Hono()
     })
 
   // Get queue items with pagination
-  .get('/:queueName/items', 
+  .get('/:queueName/items',
     zValidator('param', QueueNameParamSchema),
     zValidator('query', QueueItemsQuerySchema),
-    requireAuth, 
+    requireAuth,
     async (c) => {
       try {
         const validatedParams = c.req.valid('param')
@@ -110,9 +109,9 @@ export const queuesRouter = new Hono()
 
         const queueAdapter = await getQueueAdapter()
         const result = await queueAdapter.getQueueItems(
-          queueName, 
-          validatedQuery.status, 
-          validatedQuery.page || 1, 
+          queueName,
+          validatedQuery.status,
+          validatedQuery.page || 1,
           validatedQuery.limit || 50
         )
         const validatedResult = QueueItemsDataSchema.parse(result)
@@ -128,9 +127,9 @@ export const queuesRouter = new Hono()
     })
 
   // Queue management actions (admin only)
-  .post('/:queueName/pause', 
+  .post('/:queueName/pause',
     zValidator('param', QueueNameParamSchema),
-    requireAdmin, 
+    requireAdmin,
     async (c) => {
       try {
         const validatedParams = c.req.valid('param')
@@ -169,9 +168,9 @@ export const queuesRouter = new Hono()
       }
     })
 
-  .post('/:queueName/resume', 
+  .post('/:queueName/resume',
     zValidator('param', QueueNameParamSchema),
-    requireAdmin, 
+    requireAdmin,
     async (c) => {
       try {
         const validatedParams = c.req.valid('param')
@@ -210,10 +209,10 @@ export const queuesRouter = new Hono()
       }
     })
 
-  .delete('/:queueName/clear', 
+  .delete('/:queueName/clear',
     zValidator('param', QueueNameParamSchema),
     zValidator('query', ClearQueueQuerySchema),
-    requireAdmin, 
+    requireAdmin,
     async (c) => {
       try {
         const validatedParams = c.req.valid('param')
@@ -257,9 +256,9 @@ export const queuesRouter = new Hono()
       }
     })
 
-  .delete('/:queueName/purge', 
+  .delete('/:queueName/purge',
     zValidator('param', QueueNameParamSchema),
-    requireAdmin, 
+    requireAdmin,
     async (c) => {
       try {
         const validatedParams = c.req.valid('param')
@@ -294,9 +293,9 @@ export const queuesRouter = new Hono()
     })
 
   // Individual job actions
-  .delete('/:queueName/jobs/:jobId', 
+  .delete('/:queueName/jobs/:jobId',
     zValidator('param', QueueJobParamsSchema),
-    requireAdmin, 
+    requireAdmin,
     async (c) => {
       try {
         const validatedParams = c.req.valid('param')
@@ -336,9 +335,9 @@ export const queuesRouter = new Hono()
       }
     })
 
-  .post('/:queueName/jobs/:jobId/retry', 
+  .post('/:queueName/jobs/:jobId/retry',
     zValidator('param', QueueJobParamsSchema),
-    requireAdmin, 
+    requireAdmin,
     async (c) => {
       try {
         const validatedParams = c.req.valid('param')
