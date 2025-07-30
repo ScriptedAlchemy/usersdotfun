@@ -22,9 +22,9 @@
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
     "docker:clear": "docker-compose down -v",
-    "docker:build:app": "docker build -f apps/app/Dockerfile --build-arg TARGET_APP_PACKAGE_NAME=@usersdotfun/app --build-arg TARGET_APP_ROOT_PATH=apps/app -t usersdotfun-app .",
-    "docker:build:gateway": "docker build -f apps/gateway/Dockerfile --build-arg TARGET_APP_PACKAGE_NAME=@usersdotfun/gateway --build-arg TARGET_APP_ROOT_PATH=apps/gateway -t usersdotfun-gateway .",
-    "docker:build:job-scheduler": "docker build -f apps/job-scheduler/Dockerfile --build-arg TARGET_APP_PACKAGE_NAME=@usersdotfun/job-scheduler --build-arg TARGET_APP_ROOT_PATH=apps/job-scheduler -t usersdotfun-job-scheduler .",
+    "docker:build:app": "docker build -f apps/app/Dockerfile -t usersdotfun-app .",
+    "docker:build:gateway": "docker build -f apps/gateway/Dockerfile -t usersdotfun-gateway .",
+    "docker:build:job-scheduler": "docker build -f apps/job-scheduler/Dockerfile -t usersdotfun-job-scheduler .",
     "docker:build:shared-db": "docker build -f packages/shared-db/Dockerfile -t usersdotfun-shared-db .",
     "docker:build:shared-db:dev": "docker build -f packages/shared-db/Dockerfile.dev -t usersdotfun-shared-db:dev ."
   },
