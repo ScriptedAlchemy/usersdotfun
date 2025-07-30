@@ -10,24 +10,20 @@ COPY packages/ /app/packages/
 FROM base AS builder
 WORKDIR /app
 COPY --from=pruner /app .
+ARG TARGET_APP_PACKAGE_NAME
+ARG TARGET_APP_ROOT_PATH
 RUN bun install --frozen-lockfile
-ENV NODE_ENV="development"
-RUN bun run build --filter "@usersdotfun/shared-db"
+ENV NODE_ENV="production"
+RUN bun run build --filter "$TARGET_APP_PACKAGE_NAME"
 
 FROM oven/bun:1.2-alpine AS production
+ARG TARGET_APP_ROOT_PATH
 RUN addgroup -S app && adduser -S app -G app
 WORKDIR /app
-
+COPY --from=builder --chown=app:app /app/$TARGET_APP_ROOT_PATH/dist ./$TARGET_APP_ROOT_PATH/dist
 COPY --from=builder --chown=app:app /app/node_modules ./node_modules
 COPY --from=builder --chown=app:app /app/package.json ./package.json
 COPY --from=builder --chown=app:app /app/bun.lock ./bun.lock
-COPY --from=builder --chown=app:app /app/packages/shared-db ./packages/shared-db
-
 USER app
-WORKDIR /app/packages/shared-db
-
-# The entrypoint is just 'bun run', commands will be appended
-ENTRYPOINT ["bun", "run"]
-
-# The default command to run when nothing is specified
-CMD ["db:migrate"]
+WORKDIR /app/$TARGET_APP_ROOT_PATH
+CMD ["bun", "run", "start"]

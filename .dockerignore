@@ -1,0 +1,40 @@
+# Git and Docker files
+.git
+.gitignore
+Dockerfile*
+.dockerignore
+docker-compose.yml
+
+# Node dependencies
+node_modules
+**/node_modules
+
+# Build artifacts
+dist
+.output
+build
+**/dist
+**/.output
+**/build
+
+# Logs and environment files
+*.log
+.env
+.env.*
+!.env.example
+
+# IDE and OS files
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+
+# Test coverage
+coverage
+**/coverage
+
+# Temporary files
+*.tmp
+*.temp
+.cache
+**/cache

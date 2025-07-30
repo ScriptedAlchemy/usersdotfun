@@ -1,34 +1,30 @@
-FROM node:18-alpine AS base
+FROM oven/bun:1.2-alpine AS base
 
-RUN npm install -g pnpm turbo
-
-# Pruner stage
 FROM base AS pruner
 WORKDIR /app
-COPY . .
-# Prune for the shared-db package and its dependencies
-RUN turbo prune --scope=@curatedotfun/shared-db --docker
+COPY package.json bun.lock ./
+COPY tsconfig.json ./
+COPY apps/ /app/apps/
+COPY packages/ /app/packages/
 
-# Builder stage
 FROM base AS builder
 WORKDIR /app
-COPY --from=pruner /app/out/full/ .
-COPY --from=pruner /app/out/json/ .
-COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
-COPY --from=pruner /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=pruner /app .
+RUN bun install --frozen-lockfile
+ENV NODE_ENV="production"
+RUN bun run build --filter "@usersdotfun/shared-db"
 
-RUN pnpm install --frozen-lockfile
-
-# Production stage: Minimal image to run migrations
-FROM node:18-alpine AS production
+FROM oven/bun:1.2-alpine AS production
+RUN addgroup -S app && adduser -S app -G app
 WORKDIR /app
 
-RUN npm install -g pnpm
+COPY --from=builder --chown=app:app /app/node_modules ./node_modules
+COPY --from=builder --chown=app:app /app/package.json ./package.json
+COPY --from=builder --chown=app:app /app/bun.lock ./bun.lock
+COPY --from=builder --chown=app:app /app/packages/shared-db ./packages/shared-db
 
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
-COPY --from=builder /app/packages/shared-db ./packages/shared-db
+USER app
+WORKDIR /app/packages/shared-db
 
-# run the migration and then go to sleep
-ENTRYPOINT ["/bin/sh", "-c", "cd packages/shared-db && pnpm db:migrate && sleep infinity"]
+# Run the migration and then go to sleep
+ENTRYPOINT ["/bin/sh", "-c", "bun run db:migrate && sleep infinity"]
