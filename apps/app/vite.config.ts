@@ -3,6 +3,7 @@ import { defineConfig } from 'vite'
 import tsConfigPaths from 'vite-tsconfig-paths'
 import viteReact from '@vitejs/plugin-react'
 import tailwindcss from "@tailwindcss/vite";
+import { resolve } from 'path';
 
 export default defineConfig({
   server: {
@@ -14,6 +15,15 @@ export default defineConfig({
         changeOrigin: true,
       },
     },
+  },
+  resolve: {
+    alias: {
+      '@usersdotfun/shared-db': resolve(__dirname, '../../packages/shared-db/src'),
+      '@usersdotfun/shared-types': resolve(__dirname, '../../packages/shared-types/src')
+    }
+  },
+  optimizeDeps: {
+    exclude: ['@usersdotfun/shared-db', '@usersdotfun/shared-types']
   },
   plugins: [
     tsConfigPaths({

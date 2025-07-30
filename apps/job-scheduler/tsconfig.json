@@ -27,5 +27,10 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false
-  }
+  },
+  "references": [
+    { "path": "../../packages/shared-db" },
+    { "path": "../../packages/shared-queue" },
+    { "path": "../../packages/shared-types" }
+  ]
 }

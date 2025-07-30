@@ -12,7 +12,7 @@ WORKDIR /app
 COPY --from=pruner /app .
 ARG TARGET_APP_PACKAGE_NAME
 ARG TARGET_APP_ROOT_PATH
-RUN bun install --frozen-lockfile
+RUN bun install
 ENV NODE_ENV="production"
 RUN bun run build --filter "$TARGET_APP_PACKAGE_NAME"
 

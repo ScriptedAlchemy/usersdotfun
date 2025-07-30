@@ -1,4 +1,4 @@
-import type { SourceJobData, PipelineJobData } from '@usersdotfun/shared-types/types/jobs';
+import type { SourceJobData, PipelineJobData } from '@usersdotfun/shared-types/types';
 
 export const QUEUE_NAMES = {
   SOURCE_JOBS: 'source-jobs',

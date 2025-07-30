@@ -10,13 +10,13 @@
 
     // Bundler mode
     "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "verbatimModuleSyntax": true,
-    "noEmit": true,
 
     // Path mapping for better imports
-    "baseUrl": "./src",
+    "rootDir": "src",
+    "outDir": "dist",
+    "baseUrl": "src",
     "paths": {
       "@/schemas/*": ["./schemas/*"],
       "@/types/*": ["./types/*"],
@@ -35,11 +35,6 @@
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false
   },
-  "include": [
-    "src"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist"
-  ]
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
 }

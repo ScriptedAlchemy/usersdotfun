@@ -13,18 +13,12 @@ export const ApiResponseBaseSchema = z.object({
     .datetime()
     .default(() => new Date().toISOString()),
 });
-export type ApiResponseBase = z.infer<typeof ApiResponseBaseSchema>;
 
 export const ApiSuccessResponseSchema = <T extends z.ZodTypeAny>(dataType: T) =>
   ApiResponseBaseSchema.extend({
     success: z.literal(true),
     data: dataType.optional(),
   });
-
-export type ApiSuccessResponse<T> = Omit<ApiResponseBase, "message"> & {
-  success: true;
-  data?: T;
-};
 
 export const ApiErrorResponseSchema = ApiResponseBaseSchema.extend({
   success: z.literal(false),
@@ -34,12 +28,10 @@ export const ApiErrorResponseSchema = ApiResponseBaseSchema.extend({
     details: z.any().optional(),
   }),
 });
-export type ApiErrorResponse = z.infer<typeof ApiErrorResponseSchema>;
 
 export const SimpleMessageDataSchema = z.object({
   message: z.string().describe("A success or informational message"),
 });
-export type SimpleMessageData = z.infer<typeof SimpleMessageDataSchema>;
 
 export const NoContentDataSchema = z
   .undefined()
@@ -63,7 +55,6 @@ export const QueryOptionsSchema = z.object({
   sortBy: z.string().optional(),
   sortOrder: z.enum(["asc", "desc"]).optional(),
 });
-export type BaseStringQueryOptions = z.infer<typeof QueryOptionsSchema>;
 
 export const PaginatedDataSchema = <T extends z.ZodTypeAny>(itemSchema: T) =>
   z.object({
@@ -75,9 +66,6 @@ export const PaginatedDataSchema = <T extends z.ZodTypeAny>(itemSchema: T) =>
     hasNextPage: z.boolean().optional(),
     hasPrevPage: z.boolean().optional(),
   });
-export type PaginatedData<T> = z.infer<
-  ReturnType<typeof PaginatedDataSchema<z.ZodType<T>>>
->;
 
 // ============================================================================
 // COMMON PARAMETER SCHEMAS
@@ -86,12 +74,10 @@ export type PaginatedData<T> = z.infer<
 export const IdParamSchema = z.object({
   id: z.string().min(1),
 });
-export type IdParam = z.infer<typeof IdParamSchema>;
 
 export const StatusQuerySchema = z.object({
   status: z.string().optional(),
 });
-export type StatusQuery = z.infer<typeof StatusQuerySchema>;
 
 export const LimitQuerySchema = z.object({
   limit: z
@@ -100,4 +86,3 @@ export const LimitQuerySchema = z.object({
     .transform((val) => (val ? parseInt(val, 10) : undefined))
     .pipe(z.number().int().min(1).max(1000).optional()),
 });
-export type LimitQuery = z.infer<typeof LimitQuerySchema>;

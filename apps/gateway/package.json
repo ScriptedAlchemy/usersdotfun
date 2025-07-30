@@ -1,5 +1,5 @@
 {
-  "name": "gateway",
+  "name": "@usersdotfun/gateway",
   "scripts": {
     "dev": "bun run --hot src/index.ts",
     "build": "bun build src/index.ts --outdir ./dist --target bun",
@@ -9,6 +9,7 @@
     "@hono/zod-validator": "^0.7.2",
     "@usersdotfun/shared-db": "workspace:*",
     "@usersdotfun/shared-queue": "workspace:*",
+    "@usersdotfun/shared-types": "workspace:*",
     "better-auth": "^1.3.4",
     "bullmq": "^5.34.0",
     "effect": "^3.17.2",

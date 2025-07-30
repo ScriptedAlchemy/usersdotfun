@@ -1,7 +1,11 @@
 {
-  "include": ["**/*.ts", "**/*.tsx", "../../packages/shared-db/src/schema/auth-schema.ts"],
+  "include": [
+    "**/*.ts",
+    "**/*.tsx"
+  ],
   "compilerOptions": {
     "strict": true,
+    "composite": true,
     "esModuleInterop": true,
     "jsx": "react-jsx",
     "module": "ESNext",
@@ -13,10 +17,13 @@
     "target": "ES2022",
     "allowJs": true,
     "forceConsistentCasingInFileNames": true,
-    "baseUrl": ".",
     "paths": {
       "~/*": ["./src/*"]
     },
     "noEmit": true
-  }
+  },
+  "references": [
+    { "path": "../../packages/shared-db" },
+    { "path": "../../packages/shared-types" }
+  ]
 }

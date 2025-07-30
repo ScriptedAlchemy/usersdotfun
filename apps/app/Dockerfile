@@ -1,29 +1,37 @@
 FROM oven/bun:1.2-alpine AS base
 
-FROM base AS pruner
+FROM base AS installer
 WORKDIR /app
-COPY package.json bun.lock ./
-COPY tsconfig.json ./
-COPY apps/ /app/apps/
-COPY packages/ /app/packages/
 
-FROM base AS builder
+COPY package.json bun.lock ./
+COPY packages ./packages
+COPY apps ./apps
+
+RUN bun install
+
+FROM installer AS builder
 WORKDIR /app
-COPY --from=pruner /app .
-ARG TARGET_APP_PACKAGE_NAME
-ARG TARGET_APP_ROOT_PATH
-RUN bun install --frozen-lockfile
-ENV NODE_ENV="production"
-RUN bun run build --filter "$TARGET_APP_PACKAGE_NAME"
+
+# Build packages in correct dependency order
+RUN cd packages/shared-types && bun run build
+
+RUN cd packages/shared-db && bun run build  
+
+# Build the app
+RUN cd apps/app && bun run build
 
 FROM oven/bun:1.2-alpine AS production
-ARG TARGET_APP_ROOT_PATH
+
 RUN addgroup -S app && adduser -S app -G app
+
 WORKDIR /app
-COPY --from=builder --chown=app:app /app/$TARGET_APP_ROOT_PATH/.output ./$TARGET_APP_ROOT_PATH/.output
+
+COPY --from=builder --chown=app:app /app/apps/app/.output ./
+COPY --from=builder --chown=app:app /app/apps/app/package.json ./package.json
 COPY --from=builder --chown=app:app /app/node_modules ./node_modules
-COPY --from=builder --chown=app:app /app/package.json ./package.json
-COPY --from=builder --chown=app:app /app/bun.lock ./bun.lock
+
 USER app
-WORKDIR /app/$TARGET_APP_ROOT_PATH
+
+EXPOSE 3000
+
 CMD ["bun", "run", "start"]
