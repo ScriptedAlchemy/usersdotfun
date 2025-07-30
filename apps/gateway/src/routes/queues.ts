@@ -1,257 +1,379 @@
 import { Hono } from 'hono'
+import { zValidator } from '@hono/zod-validator'
 import { VALID_QUEUE_NAMES, type QueueName } from '@usersdotfun/shared-queue'
 import { requireAdmin, requireAuth } from '../middleware/auth'
 import { getQueueAdapter } from '../services/queue-adapter.service'
 import { getWebSocketManager } from '../services/websocket-manager.service'
 import { honoErrorHandler } from '../utils/error-handlers'
+import {
+  QueueNameParamSchema,
+  QueueJobParamsSchema,
+  QueuesStatusQuerySchema,
+  QueueJobsQuerySchema,
+  QueueItemsQuerySchema,
+  ClearQueueQuerySchema,
+  ApiSuccessResponseSchema,
+  ApiErrorResponseSchema,
+  SimpleMessageDataSchema,
+  QueuesOverviewDataSchema,
+  QueueDetailsDataSchema,
+  AllQueueJobsDataSchema,
+  QueueItemsDataSchema,
+  QueueClearResultDataSchema,
+} from '@usersdotfun/shared-types'
 
 const wsManager = getWebSocketManager()
 
 export const queuesRouter = new Hono()
   // Get overall queue status
-  .get('/status', requireAuth, async (c) => {
-    try {
-      const queueAdapter = await getQueueAdapter()
-      const result = await queueAdapter.getQueuesOverview()
-      return c.json(result)
-    } catch (error) {
-      return honoErrorHandler(c, error)
-    }
-  })
+  .get('/status', 
+    zValidator('query', QueuesStatusQuerySchema),
+    requireAuth, 
+    async (c) => {
+      try {
+        const queueAdapter = await getQueueAdapter()
+        const result = await queueAdapter.getQueuesOverview()
+        const validatedResult = QueuesOverviewDataSchema.parse(result)
+        return c.json(ApiSuccessResponseSchema(QueuesOverviewDataSchema).parse({
+          statusCode: 200,
+          success: true,
+          data: validatedResult,
+          timestamp: new Date().toISOString(),
+        }))
+      } catch (error) {
+        return honoErrorHandler(c, error)
+      }
+    })
 
   // Get all jobs across queues
-  .get('/jobs', requireAuth, async (c) => {
-    try {
-      const status = c.req.query('status')
-      const limit = parseInt(c.req.query('limit') || '100')
-
-      const queueAdapter = await getQueueAdapter()
-      const result = await queueAdapter.getAllJobs(status, limit)
-      return c.json(result)
-    } catch (error) {
-      return honoErrorHandler(c, error)
-    }
-  })
+  .get('/jobs', 
+    zValidator('query', QueueJobsQuerySchema),
+    requireAuth, 
+    async (c) => {
+      try {
+        const validatedQuery = c.req.valid('query')
+        const queueAdapter = await getQueueAdapter()
+        const result = await queueAdapter.getAllJobs(validatedQuery.status, validatedQuery.limit)
+        const validatedResult = AllQueueJobsDataSchema.parse(result)
+        return c.json(ApiSuccessResponseSchema(AllQueueJobsDataSchema).parse({
+          statusCode: 200,
+          success: true,
+          data: validatedResult,
+          timestamp: new Date().toISOString(),
+        }))
+      } catch (error) {
+        return honoErrorHandler(c, error)
+      }
+    })
 
   // Get detailed queue information
-  .get('/:queueName', requireAuth, async (c) => {
-    try {
-      const queueName = c.req.param('queueName') as QueueName;
+  .get('/:queueName', 
+    zValidator('param', QueueNameParamSchema),
+    requireAuth, 
+    async (c) => {
+      try {
+        const validatedParams = c.req.valid('param')
+        const queueName = validatedParams.queueName as QueueName;
 
-      if (!VALID_QUEUE_NAMES.includes(queueName)) {
-        return c.json({ error: 'Invalid queue name' }, 400)
+        if (!VALID_QUEUE_NAMES.includes(queueName)) {
+          return c.json({ error: 'Invalid queue name' }, 400)
+        }
+
+        const queueAdapter = await getQueueAdapter()
+        const result = await queueAdapter.getQueueDetails(queueName)
+        const validatedResult = QueueDetailsDataSchema.parse(result)
+        return c.json(ApiSuccessResponseSchema(QueueDetailsDataSchema).parse({
+          statusCode: 200,
+          success: true,
+          data: validatedResult,
+          timestamp: new Date().toISOString(),
+        }))
+      } catch (error) {
+        return honoErrorHandler(c, error)
       }
-
-      const queueAdapter = await getQueueAdapter()
-      const result = await queueAdapter.getQueueDetails(queueName)
-      return c.json(result)
-    } catch (error) {
-      return honoErrorHandler(c, error)
-    }
-  })
+    })
 
   // Get queue items with pagination
-  .get('/:queueName/items', requireAuth, async (c) => {
-    try {
-      const queueName = c.req.param('queueName') as QueueName;
-      const status = c.req.query('status') || 'waiting' // waiting, active, completed, failed
-      const page = parseInt(c.req.query('page') || '1')
-      const limit = parseInt(c.req.query('limit') || '50')
+  .get('/:queueName/items', 
+    zValidator('param', QueueNameParamSchema),
+    zValidator('query', QueueItemsQuerySchema),
+    requireAuth, 
+    async (c) => {
+      try {
+        const validatedParams = c.req.valid('param')
+        const validatedQuery = c.req.valid('query')
+        const queueName = validatedParams.queueName as QueueName;
 
-      if (!VALID_QUEUE_NAMES.includes(queueName)) {
-        return c.json({ error: 'Invalid queue name' }, 400)
+        if (!VALID_QUEUE_NAMES.includes(queueName)) {
+          return c.json({ error: 'Invalid queue name' }, 400)
+        }
+
+        const queueAdapter = await getQueueAdapter()
+        const result = await queueAdapter.getQueueItems(
+          queueName, 
+          validatedQuery.status, 
+          validatedQuery.page || 1, 
+          validatedQuery.limit || 50
+        )
+        const validatedResult = QueueItemsDataSchema.parse(result)
+        return c.json(ApiSuccessResponseSchema(QueueItemsDataSchema).parse({
+          statusCode: 200,
+          success: true,
+          data: validatedResult,
+          timestamp: new Date().toISOString(),
+        }))
+      } catch (error) {
+        return honoErrorHandler(c, error)
       }
-
-      const queueAdapter = await getQueueAdapter()
-      const result = await queueAdapter.getQueueItems(queueName, status, page, limit)
-      return c.json(result)
-    } catch (error) {
-      return honoErrorHandler(c, error)
-    }
-  })
+    })
 
   // Queue management actions (admin only)
-  .post('/:queueName/pause', requireAdmin, async (c) => {
-    try {
-      const queueName = c.req.param('queueName') as QueueName;
+  .post('/:queueName/pause', 
+    zValidator('param', QueueNameParamSchema),
+    requireAdmin, 
+    async (c) => {
+      try {
+        const validatedParams = c.req.valid('param')
+        const queueName = validatedParams.queueName as QueueName;
 
-      if (!VALID_QUEUE_NAMES.includes(queueName)) {
-        return c.json({ error: 'Invalid queue name' }, 400)
+        if (!VALID_QUEUE_NAMES.includes(queueName)) {
+          return c.json({ error: 'Invalid queue name' }, 400)
+        }
+
+        const queueAdapter = await getQueueAdapter()
+        const result = await queueAdapter.pauseQueue(queueName)
+
+        if (result.success) {
+          // Emit WebSocket event for queue pause
+          wsManager.broadcast({
+            type: 'queue:paused',
+            data: {
+              queueName,
+              timestamp: new Date().toISOString()
+            }
+          })
+
+          const message = { message: result.message }
+          const validatedMessage = SimpleMessageDataSchema.parse(message)
+          return c.json(ApiSuccessResponseSchema(SimpleMessageDataSchema).parse({
+            statusCode: 200,
+            success: true,
+            data: validatedMessage,
+            timestamp: new Date().toISOString(),
+          }))
+        } else {
+          return c.json({ error: result.message }, 500)
+        }
+      } catch (error) {
+        return honoErrorHandler(c, error)
       }
+    })
 
-      const queueAdapter = await getQueueAdapter()
-      const result = await queueAdapter.pauseQueue(queueName)
+  .post('/:queueName/resume', 
+    zValidator('param', QueueNameParamSchema),
+    requireAdmin, 
+    async (c) => {
+      try {
+        const validatedParams = c.req.valid('param')
+        const queueName = validatedParams.queueName as QueueName;
 
-      if (result.success) {
-        // Emit WebSocket event for queue pause
-        wsManager.broadcast({
-          type: 'queue:paused',
-          data: {
-            queueName,
-            timestamp: new Date().toISOString()
+        if (!VALID_QUEUE_NAMES.includes(queueName)) {
+          return c.json({ error: 'Invalid queue name' }, 400)
+        }
+
+        const queueAdapter = await getQueueAdapter()
+        const result = await queueAdapter.resumeQueue(queueName)
+
+        if (result.success) {
+          // Emit WebSocket event for queue resume
+          wsManager.broadcast({
+            type: 'queue:resumed',
+            data: {
+              queueName,
+              timestamp: new Date().toISOString()
+            }
+          })
+
+          const message = { message: result.message }
+          const validatedMessage = SimpleMessageDataSchema.parse(message)
+          return c.json(ApiSuccessResponseSchema(SimpleMessageDataSchema).parse({
+            statusCode: 200,
+            success: true,
+            data: validatedMessage,
+            timestamp: new Date().toISOString(),
+          }))
+        } else {
+          return c.json({ error: result.message }, 500)
+        }
+      } catch (error) {
+        return honoErrorHandler(c, error)
+      }
+    })
+
+  .delete('/:queueName/clear', 
+    zValidator('param', QueueNameParamSchema),
+    zValidator('query', ClearQueueQuerySchema),
+    requireAdmin, 
+    async (c) => {
+      try {
+        const validatedParams = c.req.valid('param')
+        const validatedQuery = c.req.valid('query')
+        const queueName = validatedParams.queueName as QueueName;
+
+        if (!VALID_QUEUE_NAMES.includes(queueName)) {
+          return c.json({ error: 'Invalid queue name' }, 400)
+        }
+
+        const queueAdapter = await getQueueAdapter()
+        const result = await queueAdapter.clearQueue(queueName, validatedQuery.type)
+
+        if (result.success) {
+          // Emit WebSocket event for queue clear
+          wsManager.broadcast({
+            type: 'queue:cleared',
+            data: {
+              queueName,
+              itemsRemoved: result.itemsRemoved,
+              timestamp: new Date().toISOString()
+            }
+          })
+
+          const clearResult = {
+            message: result.message,
+            itemsRemoved: result.itemsRemoved || 0
           }
-        })
-
-        return c.json({ message: result.message })
-      } else {
-        return c.json({ error: result.message }, 500)
+          const validatedResult = QueueClearResultDataSchema.parse(clearResult)
+          return c.json(ApiSuccessResponseSchema(QueueClearResultDataSchema).parse({
+            statusCode: 200,
+            success: true,
+            data: validatedResult,
+            timestamp: new Date().toISOString(),
+          }))
+        } else {
+          return c.json({ error: result.message }, 500)
+        }
+      } catch (error) {
+        return honoErrorHandler(c, error)
       }
-    } catch (error) {
-      return honoErrorHandler(c, error)
-    }
-  })
+    })
 
-  .post('/:queueName/resume', requireAdmin, async (c) => {
-    try {
-      const queueName = c.req.param('queueName') as QueueName;
+  .delete('/:queueName/purge', 
+    zValidator('param', QueueNameParamSchema),
+    requireAdmin, 
+    async (c) => {
+      try {
+        const validatedParams = c.req.valid('param')
+        const queueName = validatedParams.queueName as QueueName;
 
-      if (!VALID_QUEUE_NAMES.includes(queueName)) {
-        return c.json({ error: 'Invalid queue name' }, 400)
-      }
+        if (!VALID_QUEUE_NAMES.includes(queueName)) {
+          return c.json({ error: 'Invalid queue name' }, 400)
+        }
 
-      const queueAdapter = await getQueueAdapter()
-      const result = await queueAdapter.resumeQueue(queueName)
+        // Purge removes ALL jobs (equivalent to clear with type 'all')
+        const queueAdapter = await getQueueAdapter()
+        const result = await queueAdapter.clearQueue(queueName, 'all')
 
-      if (result.success) {
-        // Emit WebSocket event for queue resume
-        wsManager.broadcast({
-          type: 'queue:resumed',
-          data: {
-            queueName,
-            timestamp: new Date().toISOString()
+        if (result.success) {
+          const purgeResult = {
+            message: `Purged all jobs from queue ${queueName}`,
+            itemsRemoved: result.itemsRemoved || 0
           }
-        })
-
-        return c.json({ message: result.message })
-      } else {
-        return c.json({ error: result.message }, 500)
+          const validatedResult = QueueClearResultDataSchema.parse(purgeResult)
+          return c.json(ApiSuccessResponseSchema(QueueClearResultDataSchema).parse({
+            statusCode: 200,
+            success: true,
+            data: validatedResult,
+            timestamp: new Date().toISOString(),
+          }))
+        } else {
+          return c.json({ error: result.message }, 500)
+        }
+      } catch (error) {
+        return honoErrorHandler(c, error)
       }
-    } catch (error) {
-      return honoErrorHandler(c, error)
-    }
-  })
-
-  .delete('/:queueName/clear', requireAdmin, async (c) => {
-    try {
-      const queueName = c.req.param('queueName') as QueueName;
-      const jobType = c.req.query('type') // completed, failed, or all
-
-      if (!VALID_QUEUE_NAMES.includes(queueName)) {
-        return c.json({ error: 'Invalid queue name' }, 400)
-      }
-
-      const queueAdapter = await getQueueAdapter()
-      const result = await queueAdapter.clearQueue(queueName, jobType)
-
-      if (result.success) {
-        // Emit WebSocket event for queue clear
-        wsManager.broadcast({
-          type: 'queue:cleared',
-          data: {
-            queueName,
-            itemsRemoved: result.itemsRemoved,
-            timestamp: new Date().toISOString()
-          }
-        })
-
-        return c.json({
-          message: result.message,
-          itemsRemoved: result.itemsRemoved
-        })
-      } else {
-        return c.json({ error: result.message }, 500)
-      }
-    } catch (error) {
-      return honoErrorHandler(c, error)
-    }
-  })
-
-  .delete('/:queueName/purge', requireAdmin, async (c) => {
-    try {
-      const queueName = c.req.param('queueName') as QueueName;
-
-      if (!VALID_QUEUE_NAMES.includes(queueName)) {
-        return c.json({ error: 'Invalid queue name' }, 400)
-      }
-
-      // Purge removes ALL jobs (equivalent to clear with type 'all')
-      const queueAdapter = await getQueueAdapter()
-      const result = await queueAdapter.clearQueue(queueName, 'all')
-
-      if (result.success) {
-        return c.json({
-          message: `Purged all jobs from queue ${queueName}`,
-          itemsRemoved: result.itemsRemoved
-        })
-      } else {
-        return c.json({ error: result.message }, 500)
-      }
-    } catch (error) {
-      return honoErrorHandler(c, error)
-    }
-  })
+    })
 
   // Individual job actions
-  .delete('/:queueName/jobs/:jobId', requireAdmin, async (c) => {
-    try {
-      const queueName = c.req.param('queueName') as QueueName;
-      const jobId = c.req.param('jobId')
+  .delete('/:queueName/jobs/:jobId', 
+    zValidator('param', QueueJobParamsSchema),
+    requireAdmin, 
+    async (c) => {
+      try {
+        const validatedParams = c.req.valid('param')
+        const queueName = validatedParams.queueName as QueueName;
 
-      if (!VALID_QUEUE_NAMES.includes(queueName)) {
-        return c.json({ error: 'Invalid queue name' }, 400)
+        if (!VALID_QUEUE_NAMES.includes(queueName)) {
+          return c.json({ error: 'Invalid queue name' }, 400)
+        }
+
+        const queueAdapter = await getQueueAdapter()
+        const result = await queueAdapter.removeQueueJob(queueName, validatedParams.jobId)
+
+        if (result.success) {
+          // Emit WebSocket event for job removal
+          wsManager.broadcast({
+            type: 'queue:job-removed',
+            data: {
+              queueName,
+              jobId: validatedParams.jobId,
+              timestamp: new Date().toISOString()
+            }
+          })
+
+          const message = { message: result.message }
+          const validatedMessage = SimpleMessageDataSchema.parse(message)
+          return c.json(ApiSuccessResponseSchema(SimpleMessageDataSchema).parse({
+            statusCode: 200,
+            success: true,
+            data: validatedMessage,
+            timestamp: new Date().toISOString(),
+          }))
+        } else {
+          return c.json({ error: result.message }, 400)
+        }
+      } catch (error) {
+        return honoErrorHandler(c, error)
       }
+    })
 
-      const queueAdapter = await getQueueAdapter()
-      const result = await queueAdapter.removeQueueJob(queueName, jobId)
+  .post('/:queueName/jobs/:jobId/retry', 
+    zValidator('param', QueueJobParamsSchema),
+    requireAdmin, 
+    async (c) => {
+      try {
+        const validatedParams = c.req.valid('param')
+        const queueName = validatedParams.queueName as QueueName;
 
-      if (result.success) {
-        // Emit WebSocket event for job removal
-        wsManager.broadcast({
-          type: 'queue:job-removed',
-          data: {
-            queueName,
-            jobId,
-            timestamp: new Date().toISOString()
-          }
-        })
+        if (!VALID_QUEUE_NAMES.includes(queueName)) {
+          return c.json({ error: 'Invalid queue name' }, 400)
+        }
 
-        return c.json({ message: result.message })
-      } else {
-        return c.json({ error: result.message }, 400)
+        const queueAdapter = await getQueueAdapter()
+        const result = await queueAdapter.retryQueueJob(queueName, validatedParams.jobId)
+
+        if (result.success) {
+          // Emit WebSocket event for job retry
+          wsManager.broadcast({
+            type: 'queue:job-retried',
+            data: {
+              queueName,
+              jobId: validatedParams.jobId,
+              timestamp: new Date().toISOString()
+            }
+          })
+
+          const message = { message: result.message }
+          const validatedMessage = SimpleMessageDataSchema.parse(message)
+          return c.json(ApiSuccessResponseSchema(SimpleMessageDataSchema).parse({
+            statusCode: 200,
+            success: true,
+            data: validatedMessage,
+            timestamp: new Date().toISOString(),
+          }))
+        } else {
+          return c.json({ error: result.message }, 400)
+        }
+      } catch (error) {
+        return honoErrorHandler(c, error)
       }
-    } catch (error) {
-      return honoErrorHandler(c, error)
-    }
-  })
-
-  .post('/:queueName/jobs/:jobId/retry', requireAdmin, async (c) => {
-    try {
-      const queueName = c.req.param('queueName') as QueueName;
-      const jobId = c.req.param('jobId')
-
-      if (!VALID_QUEUE_NAMES.includes(queueName)) {
-        return c.json({ error: 'Invalid queue name' }, 400)
-      }
-
-      const queueAdapter = await getQueueAdapter()
-      const result = await queueAdapter.retryQueueJob(queueName, jobId)
-
-      if (result.success) {
-        // Emit WebSocket event for job retry
-        wsManager.broadcast({
-          type: 'queue:job-retried',
-          data: {
-            queueName,
-            jobId,
-            timestamp: new Date().toISOString()
-          }
-        })
-
-        return c.json({ message: result.message })
-      } else {
-        return c.json({ error: result.message }, 400)
-      }
-    } catch (error) {
-      return honoErrorHandler(c, error)
-    }
-  })
+    })

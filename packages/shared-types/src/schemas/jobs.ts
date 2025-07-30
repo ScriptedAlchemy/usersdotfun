@@ -62,8 +62,8 @@ export const createJobDefinitionSchema = jobDefinitionSchema.omit({ id: true });
 // Update JobDefinition schema (partial)
 export const updateJobDefinitionSchema = createJobDefinitionSchema.partial();
 
-// Database job schema - flattened for storage (renamed from jobSchema)
-export const dbJobSchema = z.object({
+// Job schema for API operations (non-database specific)
+export const jobSchema = z.object({
   id: z.string(),
   name: z.string(),
   schedule: z.string().nullable(),
@@ -75,9 +75,6 @@ export const dbJobSchema = z.object({
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
-
-// Keep jobSchema as alias for backward compatibility
-export const jobSchema = dbJobSchema;
 
 export const jobRunInfoSchema = z.object({
   runId: z.string(),

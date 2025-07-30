@@ -35,7 +35,7 @@ export const JobMonitoringServiceLive = Layer.effect(
                   completedAt: data.completedAt ? data.completedAt : undefined,
                   itemsProcessed: data.itemsProcessed || 0,
                   itemsTotal: data.itemsTotal || 0,
-                  state: data.nextState,
+                  state: data.state,
                 };
               }
               // Fallback parsing for old format
@@ -90,15 +90,15 @@ export const JobMonitoringServiceLive = Layer.effect(
               if (Option.isSome(itemData)) {
                 const data = itemData.value;
                 // Only include items for this job
-                if (data.sourceJobId === jobId) {
+                if (data.jobId === jobId) {
                   return Option.some({
                     id: `${runId}-${itemIndex}`,
-                    jobId: data.sourceJobId,
+                    jobId: data.jobId,
                     stepId: data.stepId || `step-${itemIndex}`,
                     pluginName: data.pluginName || 'unknown',
                     config: data.config || {},
-                    input: data.item,
-                    output: data.result,
+                    input: data.input,
+                    output: data.output,
                     error: data.error,
                     status: data.status || 'unknown',
                     startedAt: data.startedAt ? data.startedAt : null,

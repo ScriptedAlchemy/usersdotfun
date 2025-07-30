@@ -1,19 +1,34 @@
 import { z } from "zod";
 import { 
-  CreateJob, 
-  CreateJobDefinition,
-  Job, 
-  JobMonitoringData, 
+  createJobDefinitionSchema, 
+  jobSchema,
   jobMonitoringDataSchema, 
-  JobRunInfo, 
   jobRunInfoSchema, 
-  jobSchema, 
-  JobWithSteps, 
   jobWithStepsSchema, 
-  UpdateJob,
-  JobStatusResponse,
-  JobRunDetailsResponse
+  updateJobDefinitionSchema,
+  jobStatusSummarySchema,
+  jobRunDetailsSchema,
+  ApiSuccessResponseSchema,
+  JobsListDataSchema,
+  JobWithStepsDataSchema,
+  JobDataSchema,
+  JobStatusSummaryDataSchema,
+  JobMonitoringDataSchema,
+  JobRunsListDataSchema,
+  JobRunDetailsDataSchema,
+  SimpleMessageDataSchema,
+  CleanupOrphanedJobsDataSchema,
 } from '@usersdotfun/shared-types';
+
+// Type aliases for easier use
+type CreateJobDefinition = z.infer<typeof createJobDefinitionSchema>;
+type Job = z.infer<typeof jobSchema>;
+type JobMonitoringData = z.infer<typeof jobMonitoringDataSchema>;
+type JobRunInfo = z.infer<typeof jobRunInfoSchema>;
+type JobWithSteps = z.infer<typeof jobWithStepsSchema>;
+type UpdateJobDefinition = z.infer<typeof updateJobDefinitionSchema>;
+type JobStatusSummary = z.infer<typeof jobStatusSummarySchema>;
+type JobRunDetails = z.infer<typeof jobRunDetailsSchema>;
 
 const API_BASE_URL = '/api';
 
@@ -33,23 +48,34 @@ async function handleResponse<T>(response: Response, schema: z.Schema<T>): Promi
   return schema.parse(data);
 }
 
+// Helper function to extract data from API success response
+function extractData<T>(apiResponse: { data?: T }): T {
+  if (!apiResponse.data) {
+    throw new Error('API response missing data field');
+  }
+  return apiResponse.data;
+}
+
 export const getJobs = async (): Promise<Job[]> => {
   const res = await fetch(`${API_BASE_URL}/jobs`);
-  return handleResponse(res, z.array(jobSchema));
+  const apiResponse = await handleResponse(res, ApiSuccessResponseSchema(JobsListDataSchema));
+  return extractData(apiResponse);
 };
 
 export const getJob = async (id: string): Promise<JobWithSteps> => {
   const res = await fetch(`${API_BASE_URL}/jobs/${id}`);
-  return handleResponse(res, jobWithStepsSchema);
+  const apiResponse = await handleResponse(res, ApiSuccessResponseSchema(JobWithStepsDataSchema));
+  return extractData(apiResponse);
 };
 
-export const createJob = async (job: CreateJob): Promise<Job> => {
+export const createJob = async (job: CreateJobDefinition): Promise<Job> => {
   const res = await fetch(`${API_BASE_URL}/jobs`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(job),
   });
-  return handleResponse(res, jobSchema);
+  const apiResponse = await handleResponse(res, ApiSuccessResponseSchema(JobDataSchema));
+  return extractData(apiResponse);
 };
 
 export const createJobDefinition = async (jobDefinition: CreateJobDefinition): Promise<Job> => {
@@ -58,16 +84,18 @@ export const createJobDefinition = async (jobDefinition: CreateJobDefinition): P
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(jobDefinition),
   });
-  return handleResponse(res, jobSchema);
+  const apiResponse = await handleResponse(res, ApiSuccessResponseSchema(JobDataSchema));
+  return extractData(apiResponse);
 };
 
-export const updateJob = async (id: string, job: UpdateJob): Promise<Job> => {
+export const updateJob = async (id: string, job: UpdateJobDefinition): Promise<Job> => {
   const res = await fetch(`${API_BASE_URL}/jobs/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(job),
   });
-  return handleResponse(res, jobSchema);
+  const apiResponse = await handleResponse(res, ApiSuccessResponseSchema(JobDataSchema));
+  return extractData(apiResponse);
 };
 
 export const deleteJob = async (id: string): Promise<void> => {
@@ -82,70 +110,55 @@ export const deleteJob = async (id: string): Promise<void> => {
 
 export const getJobMonitoringData = async (id: string): Promise<JobMonitoringData> => {
   const res = await fetch(`${API_BASE_URL}/jobs/${id}/monitoring`);
-  return handleResponse(res, jobMonitoringDataSchema);
+  const apiResponse = await handleResponse(res, ApiSuccessResponseSchema(JobMonitoringDataSchema));
+  return extractData(apiResponse);
 };
 
-export const getJobStatus = async (id: string): Promise<{
-  status: string;
-  queuePosition?: number;
-  estimatedStartTime?: Date;
-  currentRun?: JobRunInfo;
-}> => {
+export const getJobStatus = async (id: string): Promise<JobStatusSummary> => {
   const res = await fetch(`${API_BASE_URL}/jobs/${id}/status`);
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.error || 'Failed to get job status');
-  }
-  return res.json();
+  const apiResponse = await handleResponse(res, ApiSuccessResponseSchema(JobStatusSummaryDataSchema));
+  return extractData(apiResponse);
 };
 
 export const getJobRuns = async (id: string): Promise<JobRunInfo[]> => {
   const res = await fetch(`${API_BASE_URL}/jobs/${id}/runs`);
-  return handleResponse(res, z.array(jobRunInfoSchema));
+  const apiResponse = await handleResponse(res, ApiSuccessResponseSchema(JobRunsListDataSchema));
+  return extractData(apiResponse);
 };
 
-export const getJobRunDetails = async (id: string, runId: string): Promise<{
-  run: JobRunInfo;
-  pipelineItems: any[];
-}> => {
+export const getJobRunDetails = async (id: string, runId: string): Promise<JobRunDetails> => {
   const res = await fetch(`${API_BASE_URL}/jobs/${id}/runs/${runId}`);
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.error || 'Failed to get job run details');
-  }
-  return res.json();
+  const apiResponse = await handleResponse(res, ApiSuccessResponseSchema(JobRunDetailsDataSchema));
+  return extractData(apiResponse);
 };
 
-export const retryJob = async (id: string): Promise<void> => {
+export const retryJob = async (id: string): Promise<{ message: string }> => {
   const res = await fetch(`${API_BASE_URL}/jobs/${id}/retry`, {
     method: 'POST',
   });
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.error || 'Failed to retry job');
-  }
+  const apiResponse = await handleResponse(res, ApiSuccessResponseSchema(SimpleMessageDataSchema));
+  return extractData(apiResponse);
 };
 
-export const retryPipelineStep = async (jobId: string, stepId: string): Promise<void> => {
+export const retryPipelineStep = async (jobId: string, stepId: string): Promise<{ message: string }> => {
   const res = await fetch(`${API_BASE_URL}/jobs/${jobId}/steps/${stepId}/retry`, {
     method: 'POST',
   });
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.error || 'Failed to retry step');
-  }
+  const apiResponse = await handleResponse(res, ApiSuccessResponseSchema(SimpleMessageDataSchema));
+  return extractData(apiResponse);
 };
 
 export const cleanupOrphanedJobs = async (): Promise<{
   message: string;
   cleaned: number;
+  details?: {
+    orphanedJobs: string[];
+    cleanupTime: string;
+  };
 }> => {
   const res = await fetch(`${API_BASE_URL}/jobs/cleanup/orphaned`, {
     method: 'POST',
   });
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.error || 'Failed to cleanup orphaned jobs');
-  }
-  return res.json();
+  const apiResponse = await handleResponse(res, ApiSuccessResponseSchema(CleanupOrphanedJobsDataSchema));
+  return extractData(apiResponse);
 };
