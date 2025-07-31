@@ -1,13 +1,13 @@
-import type { PipelineExecutionContext } from './interfaces';
 import { JobService } from "@usersdotfun/shared-db";
-import { Effect } from "effect";
-import { PluginError, type StepError } from "./errors";
-import { getPlugin, PluginLoaderTag } from "./services";
-import { SchemaValidator } from "./validation";
-import { StateServiceTag, type StateService } from "../services/state.service";
-import { EnvironmentServiceTag, type EnvironmentService } from "../services/environment.service";
 import { RedisKeys } from "@usersdotfun/shared-queue";
 import type { PipelineStep } from "@usersdotfun/shared-types/types";
+import { Effect } from "effect";
+import { EnvironmentServiceTag, type EnvironmentService } from "../services/environment.service";
+import { StateServiceTag, type StateService } from "../services/state.service";
+import { PluginError, type StepError } from "./errors";
+import type { PipelineExecutionContext } from './interfaces';
+import { getPlugin, PluginLoaderTag } from "./services";
+import { SchemaValidator } from "./validation";
 
 export const executeStep = (
   step: PipelineStep,
@@ -19,10 +19,10 @@ export const executeStep = (
     const stateService = yield* StateServiceTag;
     const environmentService = yield* EnvironmentServiceTag;
     const startTime = new Date();
-    
+
     // Create deterministic step ID using context
     const stepId = `${context.runId}:${step.stepId}:${context.itemIndex}`;
-    
+
     // Store step data in Redis for real-time monitoring
     yield* stateService.set(RedisKeys.pipelineItem(context.runId, context.itemIndex), {
       id: stepId,
@@ -44,7 +44,7 @@ export const executeStep = (
         cause: error,
       }))
     );
-    
+
     yield* jobService.createPipelineStep({
       id: stepId,
       jobId: context.jobId,
@@ -151,7 +151,7 @@ export const executeStep = (
     }
 
     const completedAt = new Date();
-    
+
     yield* jobService.updatePipelineStep(stepId, {
       status: "completed",
       output: validatedOutput,

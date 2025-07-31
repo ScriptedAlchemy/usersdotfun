@@ -3,7 +3,7 @@ import type {
   PlatformState,
   SourceItem
 } from '@usersdotfun/core-sdk';
-import { createSourceOutputSchema, pluginSourceItemSchema } from "@usersdotfun/core-sdk";
+import { createSourceOutputSchema } from "@usersdotfun/core-sdk";
 import { EnvironmentServiceTag, getPlugin, PluginError, PluginLoaderTag, SchemaValidator } from '@usersdotfun/pipeline-runner';
 import { JobNotFoundError, JobService } from '@usersdotfun/shared-db';
 import { QUEUE_NAMES, QueueService, RedisKeys, StateService } from '@usersdotfun/shared-queue';
@@ -11,9 +11,9 @@ import type { JobDefinition, SourceJobData } from '@usersdotfun/shared-types/typ
 import { type Job } from 'bullmq';
 import { randomUUID } from 'crypto';
 import { Effect, Option } from 'effect';
+import { z } from 'zod';
 
-// Use the core SDK's schema and createSourceOutputSchema
-const GenericPluginSourceOutputSchema = createSourceOutputSchema(pluginSourceItemSchema);
+const GenericPluginSourceOutputSchema = createSourceOutputSchema(z.unknown());
 
 // Type for the source configuration part of a job
 interface SourceConfig {

@@ -102,37 +102,18 @@
         "variables": {
           "type": "object",
           "properties": {
-            "transformations": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "path": {
-                    "type": "string"
-                  },
-                  "operation": {
-                    "type": "string",
-                    "enum": [
-                      "set",
-                      "delete",
-                      "rename"
-                    ]
-                  },
-                  "value": {},
-                  "newPath": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "path",
-                  "operation"
-                ],
-                "additionalProperties": false
+            "mappings": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "$ref": "#/$defs/__schema0"
               }
             }
           },
           "required": [
-            "transformations"
+            "mappings"
           ],
           "additionalProperties": false
         },
@@ -144,24 +125,39 @@
           "additionalProperties": {}
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "$defs": {
+        "__schema0": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "$ref": "#/$defs/__schema0"
+              }
+            }
+          ]
+        }
+      }
     },
     "inputSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
-      "properties": {
-        "data": {
-          "type": "object",
-          "propertyNames": {
-            "type": "string"
-          },
-          "additionalProperties": {}
-        }
+      "propertyNames": {
+        "type": "string"
       },
-      "required": [
-        "data"
-      ],
-      "additionalProperties": false
+      "additionalProperties": {}
     },
     "outputSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -172,19 +168,10 @@
         },
         "data": {
           "type": "object",
-          "properties": {
-            "data": {
-              "type": "object",
-              "propertyNames": {
-                "type": "string"
-              },
-              "additionalProperties": {}
-            }
+          "propertyNames": {
+            "type": "string"
           },
-          "required": [
-            "data"
-          ],
-          "additionalProperties": false
+          "additionalProperties": {}
         },
         "errors": {
           "type": "array",

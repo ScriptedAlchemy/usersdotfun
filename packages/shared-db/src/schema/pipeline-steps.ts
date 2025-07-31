@@ -30,7 +30,7 @@ export type PipelineStep = typeof pipelineSteps.$inferSelect;
 export type NewPipelineStep = typeof pipelineSteps.$inferInsert;
 
 export const selectPipelineStepSchema = z.object({
-  id: z.uuid(),
+  id: z.string().min(1),
   jobId: z.uuid(),
   stepId: z.string().min(1),
   pluginName: z.string().min(1),
@@ -44,7 +44,7 @@ export const selectPipelineStepSchema = z.object({
 });
 
 export const insertPipelineStepSchema = z.object({
-  id: z.uuid("Invalid UUID format for step ID"),
+  id: z.string().min(1),
   jobId: z.uuid(),
   stepId: z.string().min(1),
   pluginName: z.string().min(1),

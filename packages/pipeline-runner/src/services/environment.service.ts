@@ -1,10 +1,8 @@
+import type { JSONSchemaType } from "ajv/dist/2020";
 import { Context, Effect, Layer, Redacted } from "effect";
 import Mustache from "mustache";
-import type { JSONSchemaType } from "ajv/dist/2020";
 import { PluginError } from "../pipeline/errors";
 import { SecretsConfigTag } from "./secrets.config";
-
-type JsonPath = string;
 
 export interface EnvironmentService {
   readonly hydrateSecrets: <T>(
@@ -37,20 +35,27 @@ export const createEnvironmentService = (
     ): Effect.Effect<T, PluginError> =>
       Effect.gen(function* () {
         console.log("HYDRATING");
-        const stringifiedConfig = yield* Effect.try({
-          try: () => JSON.stringify(config),
+
+        // Check if config has a secrets property
+        const configObj = config as any;
+        if (!configObj || typeof configObj !== 'object' || !configObj.secrets) {
+          // No secrets to hydrate, return config as-is
+          return config;
+        }
+
+        const stringifiedSecrets = yield* Effect.try({
+          try: () => JSON.stringify(configObj.secrets),
           catch: (error) =>
             new PluginError({
-              message: `Failed to hydrate secrets: ${
-                error instanceof Error ? error.message : String(error)
-              }`,
+              message: `Failed to hydrate secrets: ${error instanceof Error ? error.message : String(error)
+                }`,
               operation: "hydrate-secrets",
               pluginName: "environment-service",
               cause: error instanceof Error ? error : new Error(String(error)),
             }),
         });
 
-        const tokens = Mustache.parse(stringifiedConfig);
+        const tokens = Mustache.parse(stringifiedSecrets);
         const templateVars = new Set(
           tokens
             .filter((token) => token[0] === "name")
@@ -59,7 +64,6 @@ export const createEnvironmentService = (
 
         yield* validateRequiredSecrets(
           templateVars,
-          schema,
           availableSecretNames
         );
 
@@ -72,86 +76,40 @@ export const createEnvironmentService = (
           }
         }
 
-        const populatedConfigString = Mustache.render(stringifiedConfig, view);
+        const populatedSecretsString = Mustache.render(stringifiedSecrets, view);
 
-        return yield* Effect.try({
-          try: () => JSON.parse(populatedConfigString) as T,
+        const hydratedSecrets = yield* Effect.try({
+          try: () => JSON.parse(populatedSecretsString),
           catch: (error) =>
             new PluginError({
-              message: `Failed to hydrate secrets: ${
-                error instanceof Error ? error.message : String(error)
-              }`,
+              message: `Failed to hydrate secrets: ${error instanceof Error ? error.message : String(error)
+                }`,
               operation: "hydrate-secrets",
               pluginName: "environment-service",
               cause: error instanceof Error ? error : new Error(String(error)),
             }),
         });
+
+        // Return the config with only the secrets hydrated
+        return {
+          ...configObj,
+          secrets: hydratedSecrets
+        } as T;
       }),
   };
-};
-
-// Helper function to traverse the schema and find all paths to required fields.
-const getRequiredPaths = (
-  schema: JSONSchemaType<any>,
-  currentPath: string = "",
-  paths: Set<JsonPath> = new Set()
-): Set<JsonPath> => {
-  if (schema.required && Array.isArray(schema.required)) {
-    for (const prop of schema.required) {
-      // Append the property to the current path
-      const newPath = currentPath ? `${currentPath}.${prop}` : prop;
-      paths.add(newPath);
-    }
-  }
-
-  // Recursively check properties if they are objects
-  if (schema.properties && typeof schema.properties === "object") {
-    for (const key in schema.properties) {
-      const propSchema = schema.properties[key] as JSONSchemaType<any>;
-      if (
-        propSchema &&
-        (propSchema.type === "object" || propSchema.type === undefined)
-      ) {
-        const nextPath = currentPath ? `${currentPath}.${key}` : key;
-        getRequiredPaths(propSchema, nextPath, paths);
-      }
-    }
-  }
-
-  // Also handle array items if they contain objects with required fields
-  if (
-    schema.items &&
-    typeof schema.items === "object" &&
-    !Array.isArray(schema.items)
-  ) {
-    const itemSchema = schema.items as JSONSchemaType<any>;
-    if (
-      itemSchema.type === "object" ||
-      itemSchema.type === undefined ||
-      (itemSchema.oneOf || itemSchema.anyOf || itemSchema.allOf)
-    ) {
-      getRequiredPaths(itemSchema, `${currentPath}`, paths);
-    }
-  }
-
-  return paths;
 };
 
 // Validate that required secrets are available
 const validateRequiredSecrets = (
   templateVars: Set<string>,
-  schema: JSONSchemaType<any>,
-  secrets: string[]
+  availableSecrets: string[]
 ): Effect.Effect<void, PluginError> =>
   Effect.gen(function* () {
-    const requiredSchemaPaths = getRequiredPaths(schema);
     const missingRequiredSecrets: string[] = [];
 
-    // For simplicity, we'll check if any template variable is missing from secrets
-    // A more sophisticated approach would map template variables to specific schema paths
+    // Check if any template variable is missing from available secrets
     for (const templateVar of templateVars) {
-      // If we have required paths and this template var might be used in a required field
-      if (requiredSchemaPaths.size > 0 && !secrets.includes(templateVar)) {
+      if (!availableSecrets.includes(templateVar)) {
         missingRequiredSecrets.push(templateVar);
       }
     }
@@ -163,9 +121,8 @@ const validateRequiredSecrets = (
         pluginName: "environment-service",
         context: {
           missingSecrets: missingRequiredSecrets,
-          availableSecrets: secrets,
-          templateVars: Array.from(templateVars),
-          requiredPaths: Array.from(requiredSchemaPaths)
+          availableSecrets: availableSecrets,
+          templateVars: Array.from(templateVars)
         }
       }));
     }
