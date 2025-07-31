@@ -1,27 +1,52 @@
 import { EnvironmentServiceTag, getPlugin, PluginError, PluginLoaderTag, SchemaValidator } from '@usersdotfun/pipeline-runner';
-import { JobService } from '@usersdotfun/shared-db';
+import { JobService, JobNotFoundError } from '@usersdotfun/shared-db';
 import { QUEUE_NAMES, QueueService, RedisKeys, StateService } from '@usersdotfun/shared-queue';
 import type { JobDefinition, SourceJobData } from '@usersdotfun/shared-types/types';
+import type { 
+  PluginSourceItem, 
+  SourceItem, 
+  PlatformState, 
+  PluginSourceOutput,
+} from '@usersdotfun/core-sdk';
+import { createSourceOutputSchema, pluginSourceItemSchema } from "@usersdotfun/core-sdk";
 import { type Job } from 'bullmq';
 import { Effect, Option } from 'effect';
-interface SourceOutput {
-  items: any[];
-  nextLastProcessedState?: unknown | null;
+import { randomUUID } from 'crypto';
+
+// Use the core SDK's schema and createSourceOutputSchema
+const GenericPluginSourceOutputSchema = createSourceOutputSchema(pluginSourceItemSchema);
+
+// Type for the source configuration part of a job
+interface SourceConfig {
+  plugin: string;
+  config: Record<string, unknown>;
+  search: Record<string, unknown>;
 }
 
-const runSourcePlugin = (jobDefinition: JobDefinition, lastProcessedState: any) =>
+// Type for the run context
+interface RunContext {
+  jobId: string;
+  runId: string;
+  jobName: string;
+}
+
+const runSourcePlugin = (
+  source: SourceConfig,
+  lastProcessedState: PlatformState | null,
+  context: RunContext
+) =>
   Effect.gen(function* () {
     const loadPlugin = yield* PluginLoaderTag;
     const environmentService = yield* EnvironmentServiceTag;
 
     // Get plugin metadata first for validation
-    const pluginMetadata = yield* getPlugin(jobDefinition.source.plugin);
+    const pluginMetadata = yield* getPlugin(source.plugin);
 
     // 1. Validate raw config against configSchema
     const validatedRawConfig = yield* SchemaValidator.validate(
       pluginMetadata.configSchema,
-      jobDefinition.source.config,
-      `${jobDefinition.name}:config`
+      source.config,
+      `${context.jobName}:config`
     );
 
     // 2. Hydrate secrets
@@ -30,9 +55,9 @@ const runSourcePlugin = (jobDefinition: JobDefinition, lastProcessedState: any) 
       pluginMetadata.configSchema
     ).pipe(
       Effect.mapError((error) => new PluginError({
-        pluginName: jobDefinition.source.plugin,
+        pluginName: source.plugin,
         operation: "hydrate-secrets",
-        message: `Failed to hydrate secrets for plugin ${jobDefinition.source.plugin} config: ${error.message}`,
+        message: `Failed to hydrate secrets for plugin ${source.plugin} config: ${error.message}`,
         cause: error,
       }))
     );
@@ -41,63 +66,85 @@ const runSourcePlugin = (jobDefinition: JobDefinition, lastProcessedState: any) 
     const finalValidatedConfig = yield* SchemaValidator.validate(
       pluginMetadata.configSchema,
       hydratedConfig,
-      `${jobDefinition.name}:hydrated-config`
+      `${context.jobName}:hydrated-config`
     );
 
     // 4. Load plugin with validated config
-    const plugin = yield* loadPlugin(jobDefinition.source.plugin, finalValidatedConfig, pluginMetadata.version);
+    const plugin = yield* loadPlugin(source.plugin, finalValidatedConfig, pluginMetadata.version);
 
     if (plugin.type !== 'source') {
       return yield* Effect.fail(
         new PluginError({
-          pluginName: jobDefinition.source.plugin,
+          pluginName: source.plugin,
           message: `Expected source plugin, got ${plugin.type}`,
           operation: 'load',
         })
       );
     }
+
+    // 5. Prepare and validate input
     const input = {
-      searchOptions: jobDefinition.source.search,
+      searchOptions: source.search,
       lastProcessedState: lastProcessedState,
     };
 
-    yield* SchemaValidator.validate(
+    const validatedInput = yield* SchemaValidator.validate(
       pluginMetadata.inputSchema,
       input,
-      `${jobDefinition.name}:input`
+      `${context.jobName}:input`
     );
 
-    const sourceResult = yield* Effect.tryPromise({
-      try: () => plugin.execute(input),
-      catch: (error) =>
-        new PluginError({
-          pluginName: jobDefinition.source.plugin,
-          cause: error,
-          operation: 'execute',
-          message: 'Source plugin execution failed',
-        }),
-    });
+    // 6. Execute plugin
+    const sourceResult = yield* Effect.promise(() => plugin.execute(validatedInput));
 
+    // 7. Validate plugin output against its JSON schema
     const validatedOutput = yield* SchemaValidator.validate(
       pluginMetadata.outputSchema,
       sourceResult as Record<string, unknown>,
-      `${jobDefinition.name}:output`
+      `${context.jobName}:output`
     );
 
     if (!validatedOutput.success) {
       return yield* Effect.fail(
         new PluginError({
-          pluginName: jobDefinition.source.plugin,
+          pluginName: source.plugin,
           message: `Source plugin failed: ${JSON.stringify(validatedOutput.errors)}`,
           operation: 'execute',
         })
       );
     }
 
-    const sourceData = validatedOutput.data as SourceOutput;
+    // 8. Parse with our generic schema for type safety
+    const parsedOutput = GenericPluginSourceOutputSchema.safeParse(validatedOutput.data);
+
+    if (!parsedOutput.success) {
+      return yield* Effect.fail(
+        new PluginError({
+          pluginName: source.plugin,
+          message: `Source plugin output failed structural validation: ${parsedOutput.error.message}`,
+          operation: 'execute',
+        })
+      );
+    }
+
+    const pluginOutput = parsedOutput.data;
+
+    // 9. System enrichment: Transform PluginSourceItem[] to SourceItem[]
+    const enrichedItems: SourceItem[] = (pluginOutput.data?.items ?? []).map((item) => ({
+      ...item,
+      id: randomUUID(), // Generate unique internal ID
+      createdAt: item.createdAt ?? new Date().toISOString(), // Ensure createdAt exists
+      raw: item.raw as Record<string, any>, // Cast raw to expected type
+      metadata: {
+        sourcePlugin: source.plugin,
+        jobId: context.jobId,
+        runId: context.runId,
+      },
+    }));
+
     return {
-      items: sourceData?.items ?? [],
-      nextLastProcessedState: sourceData?.nextLastProcessedState,
+      items: enrichedItems,
+      nextLastProcessedState: pluginOutput.data?.nextLastProcessedState,
     };
   });
 
@@ -163,7 +210,15 @@ const processSourceJob = (job: Job<SourceJobData>) =>
     const lastProcessedState = yield* stateService.get(RedisKeys.jobState(jobId));
     const stateValue = Option.isSome(lastProcessedState) ? lastProcessedState.value : null;
 
-    const sourceResult = yield* runSourcePlugin(jobDefinition, stateValue);
+    const sourceResult = yield* runSourcePlugin(
+      jobDefinition.source,
+      stateValue as PlatformState | null,
+      {
+        jobId: dbJob.id,
+        runId,
+        jobName: dbJob.name,
+      }
+    );
 
     if (sourceResult.items.length > 0) {
       yield* Effect.log(`Enqueuing ${sourceResult.items.length} items for pipeline (run: ${runId}).`);
@@ -197,7 +252,7 @@ const processSourceJob = (job: Job<SourceJobData>) =>
 
     if (sourceResult.nextLastProcessedState) {
       yield* Effect.log(`New state found. Re-enqueuing poll job for ${jobId}.`);
-      yield* stateService.set(RedisKeys.jobState(jobId), sourceResult.nextLastProcessedState);
+      yield* stateService.set(RedisKeys.jobState(jobId), { data: sourceResult.nextLastProcessedState });
 
       // Update run status
       yield* stateService.set(RedisKeys.jobRun(jobId, runId), {
@@ -236,11 +291,17 @@ const processSourceJob = (job: Job<SourceJobData>) =>
           const stateService = yield* StateService;
           const jobService = yield* JobService;
 
-          // Handle JobNotFoundError differently - don't try to update non-existent job
-          if (error.message?.includes('not found in database')) {
-            yield* Effect.logError(`Skipping job update for deleted job ${job.data.jobId}:`, error);
+          // Default to retryable
+          let shouldRetry = true;
+          let errorType = 'transient';
 
-            // Store failure state in Redis for monitoring
+          // Handle different error types using instanceof
+          if (error instanceof PluginError && error.retryable === false) {
+            yield* Effect.logError(`Configuration error for job ${job.data.jobId} - NOT RETRYING:`, error);
+            shouldRetry = false;
+            errorType = 'configuration';
+            
+            // Store configuration error state in Redis for monitoring
             yield* stateService.set(RedisKeys.jobError(job.data.jobId), {
               jobId: job.data.jobId,
               error: error.message,
@@ -249,20 +310,41 @@ const processSourceJob = (job: Job<SourceJobData>) =>
               attemptsMade: job.attemptsMade,
               shouldRemoveFromQueue: true,
             });
-
-            // Don't retry for deleted jobs
-            return yield* Effect.fail(error);
+          } else if (error instanceof JobNotFoundError) {
+            yield* Effect.logError(`Job ${job.data.jobId} not found, likely deleted - NOT RETRYING:`, error);
+            shouldRetry = false;
+            errorType = 'job_not_found';
+            
+            // Store job not found error state in Redis for monitoring
+            yield* stateService.set(RedisKeys.jobError(job.data.jobId), {
+              jobId: job.data.jobId,
+              error: error.message,
+              timestamp: new Date(),
+              bullmqJobId: job.id,
+              attemptsMade: job.attemptsMade,
+              shouldRemoveFromQueue: true,
+            });
+          } else {
+            yield* Effect.logError(`Source job ${job.data.jobId} failed with a transient error - will retry:`, error);
+            errorType = 'transient';
           }
 
-          // For other errors, try to update job status
-          yield* jobService.updateJob(job.data.jobId, { status: 'failed' }).pipe(
-            Effect.catchAll(() => Effect.void) // Ignore update failures
-          );
+          // Update job status to failed, unless it was a JobNotFoundError
+          if (!(error instanceof JobNotFoundError)) {
+            yield* jobService.updateJob(job.data.jobId, { status: 'failed' }).pipe(
+              Effect.catchAll(() => Effect.void) // Ignore update failures
+            );
+          }
 
-          yield* Effect.logError("Source job failed", error);
-
-          // Re-throw to let BullMQ handle retries
-          return yield* Effect.fail(error);
+          // If the error is not retryable, we consume it and return Effect.void
+          // to signal success to BullMQ and stop retries.
+          // Otherwise, we re-throw it by returning Effect.fail(error).
+          if (!shouldRetry) {
+            yield* Effect.log(`Job ${job.data.jobId} permanently failed due to ${errorType} error - stopping retries`);
+            return yield* Effect.void; // Stop the job permanently
+          } else {
+            return yield* Effect.fail(error); // Allow BullMQ to retry
+          }
         })
       )
     );

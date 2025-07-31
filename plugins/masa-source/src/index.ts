@@ -1,4 +1,14 @@
-import type { Plugin } from '@usersdotfun/core-sdk';
+import type { 
+  SourcePlugin,
+  PluginSourceItem,
+  PluginSourceOutput,
+  AsyncJobProgress,
+  PlatformState,
+  LastProcessedState,
+  IPlatformSearchService,
+  SourcePluginSearchOptions
+} from '@usersdotfun/core-sdk';
+import { ConfigurationError, ContentType } from '@usersdotfun/core-sdk';
 import { z } from 'zod';
 import {
   MasaSourceConfigSchema,
@@ -8,53 +18,29 @@ import {
 import { MasaClient, MasaClientConfig, MasaSearchResult } from './masa-client';
 import { serviceRegistry, PlatformConfig } from './services';
 
-// --- Local Interfaces to remove dependency on @curatedotfun/types ---
-
-export interface LastProcessedState<TPlatformState> {
-  data: TPlatformState;
-}
-
-export interface SourceItem {
-    id: string;
-    [key: string]: any;
-}
-
-export interface AsyncJobProgress {
-    jobId: string;
-    status: 'submitted' | 'processing' | 'pending' | 'done' | 'error' | 'timeout';
-    errorMessage?: string;
-    [key: string]: any;
-}
-
-export interface PlatformState {
-    latestProcessedId?: string | number | Record<string, any>;
-    currentAsyncJob?: AsyncJobProgress | null;
-    [key: string]: any;
-}
-
-export interface IPlatformSearchService<
-  TItem extends SourceItem,
-  TPlatformOptions = Record<string, unknown>,
-  TPlatformState extends PlatformState = PlatformState
-> {
-  initialize?(config?: any): Promise<void>;
-  search(
-    options: TPlatformOptions,
-    currentState: LastProcessedState<TPlatformState> | null
-  ): Promise<{
-    items: TItem[];
-    nextStateData: TPlatformState | null;
-  }>;
-  shutdown?(): Promise<void>;
-}
-
 // --- Derived Types ---
 type MasaSourceConfig = z.infer<typeof MasaSourceConfigSchema>;
 type MasaSourceInput = z.infer<typeof MasaSourceInputSchema>;
 type MasaSourceOutput = z.infer<typeof MasaSourceOutputSchema>;
 
+// Define the specific PluginSourceItem type for Masa
+interface MasaPluginSourceItem extends PluginSourceItem<MasaSearchResult> {
+  externalId: string;
+  content: string;
+  contentType?: string;
+  createdAt?: string;
+  url?: string;
+  authors?: Array<{
+    id?: string;
+    username?: string;
+    displayName?: string;
+    url?: string;
+  }>;
+  raw: MasaSearchResult;
+}
+
 export class MasaSourcePlugin
-  implements Plugin<MasaSourceInput, MasaSourceOutput, MasaSourceConfig>
+  implements SourcePlugin<MasaSourceInput, PluginSourceOutput<MasaPluginSourceItem>, MasaSourceConfig>
 {
   readonly type = 'source' as const;
 
@@ -67,7 +53,7 @@ export class MasaSourcePlugin
 
   async initialize(config: MasaSourceConfig): Promise<void> {
     if (!config?.secrets?.apiKey) {
-      throw new Error('Masa API key is required.');
+      throw new ConfigurationError('Masa API key is required.');
     }
 
     const clientConfig: MasaClientConfig = {
@@ -83,7 +69,7 @@ export class MasaSourcePlugin
     }
   }
 
-  async execute(input: MasaSourceInput): Promise<MasaSourceOutput> {
+  async execute(input: MasaSourceInput): Promise<PluginSourceOutput<MasaPluginSourceItem>> {
     const { searchOptions, lastProcessedState } = input;
     const searchPlatformType = searchOptions.type as string;
 
@@ -120,20 +106,40 @@ export class MasaSourcePlugin
 
     try {
       const rawServiceOptions = platformConfig.preparePlatformArgs(
-        searchOptions
+        searchOptions as SourcePluginSearchOptions
       );
       const validatedServiceOptions =
         platformConfig.optionsSchema.parse(rawServiceOptions);
 
+      // Wrap lastProcessedState in the expected format if it exists
+      const wrappedState: LastProcessedState<PlatformState> | null = lastProcessedState 
+        ? { data: lastProcessedState as PlatformState }
+        : null; // TODO: maybe clean this up
+
       const serviceResults = await service.search(
         validatedServiceOptions,
-        lastProcessedState
+        wrappedState
       );
+
+      // Transform MasaSearchResult[] to MasaPluginSourceItem[]
+      const pluginSourceItems: MasaPluginSourceItem[] = serviceResults.items.map((masaResult: MasaSearchResult) => ({
+        externalId: masaResult.ExternalID,
+        content: masaResult.Content,
+        contentType: searchPlatformType === 'twitter-scraper' ? ContentType.POST : ContentType.UNKNOWN,
+        createdAt: masaResult.Metadata?.created_at,
+        url: masaResult.Metadata?.url,
+        authors: masaResult.Metadata?.author ? [{
+          id: masaResult.Metadata?.user_id,
+          username: masaResult.Metadata?.author,
+          displayName: masaResult.Metadata?.author,
+        }] : undefined,
+        raw: masaResult, // Store the entire Masa result as raw data
+      }));
 
       return {
         success: true,
         data: {
-          items: serviceResults.items as MasaSearchResult[],
+          items: pluginSourceItems,
           nextLastProcessedState: serviceResults.nextStateData,
         },
       };

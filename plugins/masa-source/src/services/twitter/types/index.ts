@@ -1,4 +1,4 @@
-import { PlatformState } from "@curatedotfun/types";
+import type { PlatformState } from "@usersdotfun/core-sdk";
 import { z } from "zod";
 
 // Corresponds to TPlatformState for TwitterSearchService, extending the generic PlatformState

@@ -1,4 +1,4 @@
-import type { SourceItem } from "@curatedotfun/types";
+import type { SourceItem } from "@usersdotfun/core-sdk";
 
 export interface MasaSearchResult extends SourceItem {
   ID: string;

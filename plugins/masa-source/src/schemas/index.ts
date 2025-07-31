@@ -1,7 +1,7 @@
 import {
   createConfigSchema,
-  createInputSchema,
-  createOutputSchema,
+  createSourceInputSchema,
+  createSourceOutputSchema,
 } from '@usersdotfun/core-sdk';
 import { z } from 'zod';
 
@@ -16,24 +16,35 @@ export const MasaSourceConfigSchema = createConfigSchema(
   })
 );
 
-export const MasaSourceInputSchema = createInputSchema(
-  z.object({
-    searchOptions: z.record(z.string(), z.unknown()),
-    lastProcessedState: z.record(z.string(), z.unknown()).optional().nullable(),
-  })
-);
+// Schema for search options - based on SourcePluginSearchOptions
+const MasaSearchOptionsSchema = z.object({
+  type: z.string(), // e.g., "twitter-scraper", "reddit-scraper"
+  query: z.string().optional(), // General query string
+  pageSize: z.number().optional(), // General hint for how many items to fetch per request
+  platformArgs: z.record(z.string(), z.unknown()).optional(), // Platform-specific arguments
+}).catchall(z.unknown()); // Allow additional dynamic arguments
 
-// Schema for a single search result item from Masa
-const MasaSearchResultItemSchema = z.object({
-  ID: z.string(),
-  ExternalID: z.string(),
-  Content: z.string(),
-  Metadata: z.record(z.string(), z.unknown()),
+export const MasaSourceInputSchema = createSourceInputSchema(MasaSearchOptionsSchema);
+
+// Schema for a single search result item from Masa - based on PluginSourceItem interface
+const MasaPluginSourceItemSchema = z.object({
+  // Required PluginSourceItem fields
+  externalId: z.string(),
+  content: z.string(),
+  
+  // Optional PluginSourceItem fields
+  contentType: z.string().optional(), // Can be from ContentType enum or custom
+  createdAt: z.string().optional(),
+  url: z.string().optional(),
+  authors: z.array(z.object({
+    id: z.string().optional(),
+    username: z.string().optional(),
+    displayName: z.string().optional(),
+    url: z.string().optional(),
+  })).optional(),
+  
+  // Raw data from Masa API
+  raw: z.unknown(),
 });
 
-export const MasaSourceOutputSchema = createOutputSchema(
-  z.object({
-    items: z.array(MasaSearchResultItemSchema),
-    nextLastProcessedState: z.record(z.string(), z.unknown()).optional().nullable(),
-  })
-);
+export const MasaSourceOutputSchema = createSourceOutputSchema(MasaPluginSourceItemSchema);

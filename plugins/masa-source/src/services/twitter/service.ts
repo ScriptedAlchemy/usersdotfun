@@ -1,8 +1,8 @@
-import {
+import type {
   IPlatformSearchService,
   LastProcessedState,
   AsyncJobProgress,
-} from "@curatedotfun/types";
+} from "@usersdotfun/core-sdk";
 
 import {
   MasaApiSearchOptions,
@@ -98,16 +98,14 @@ export class TwitterSearchService
         const nextStateData: TwitterPlatformState = {
           ...currentState?.data, // Preserve other potential state fields
           latestProcessedId: newLatestProcessedId,
-          currentAsyncJob: {
-            ...currentAsyncJob,
-            status: "done",
-            lastCheckedAt: new Date().toISOString(),
-          },
+          currentAsyncJob: null, // Clear the completed job
         };
+        
         console.log(
           `TwitterSearchService: Returning ${items.length} items. Next state:`,
           JSON.stringify(nextStateData, null, 2),
         );
+        
         return { items, nextStateData };
       } else if (
         jobStatus === "error" ||
@@ -117,14 +115,10 @@ export class TwitterSearchService
         console.error(
           `TwitterSearchService: Job ${currentAsyncJob.jobId} failed or status check error.`,
         );
+        // Clear the failed job so a new one can be submitted on the next polling cycle
         const nextStateData: TwitterPlatformState = {
           ...currentState?.data,
-          currentAsyncJob: {
-            ...currentAsyncJob,
-            status: "error",
-            errorMessage: `Job status: ${jobStatus}`,
-            lastCheckedAt: new Date().toISOString(),
-          },
+          currentAsyncJob: null, 
         };
         return { items: [], nextStateData };
       } else {

@@ -1,7 +1,7 @@
-import {
+import type {
   IPlatformSearchService,
   SourcePluginSearchOptions,
-} from "@curatedotfun/types";
+} from "@usersdotfun/core-sdk";
 import { MasaClient, MasaSearchResult } from "src/masa-client";
 import { TwitterSearchService } from "./service";
 import {

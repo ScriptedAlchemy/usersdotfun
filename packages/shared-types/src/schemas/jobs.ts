@@ -64,7 +64,27 @@ export const jobDefinitionSchema = z.object({
 });
 
 // Create JobDefinition schema (without id)
-export const createJobDefinitionSchema = jobDefinitionSchema.omit({ id: true });
+export const createJobDefinitionSchema = jobDefinitionSchema.omit({ id: true }).extend({
+  pipeline: z.object({
+    id: z.string(),
+    name: z.string(),
+    steps: z.array(
+      pipelineStepSchema.omit({
+        id: true,
+        jobId: true,
+        status: true,
+        input: true,
+        output: true,
+        error: true,
+        startedAt: true,
+        completedAt: true,
+      })
+    ),
+    env: z.object({
+      secrets: z.array(z.string()),
+    }).optional(),
+  }),
+});
 
 // Update JobDefinition schema (partial)
 export const updateJobDefinitionSchema = createJobDefinitionSchema.partial();

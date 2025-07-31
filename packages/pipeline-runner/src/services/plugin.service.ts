@@ -1,5 +1,6 @@
 
 import type { Config, PluginMetadata } from "@usersdotfun/core-sdk";
+import { ConfigurationError } from "@usersdotfun/core-sdk";
 import { Cache, Duration, Effect, Schedule } from "effect";
 import {
   PluginError
@@ -186,15 +187,35 @@ export const loadPlugin = (
             Effect.flatMap((instance) => {
               const initialize: Effect.Effect<void, PluginError> = Effect.tryPromise({
                 try: () => instance.initialize(config),
-                catch: (error): PluginError =>
-                  new PluginError({
+                catch: (error): PluginError => {
+                  if (error instanceof ConfigurationError) {
+                    return new PluginError({
+                      message: `Configuration error in ${pluginName}: ${error.message}`,
+                      pluginName,
+                      operation: "initialize",
+                      cause: error,
+                      retryable: false,
+                    });
+                  }
+                  
+                  return new PluginError({
                     message: `Failed to initialize ${pluginName}`,
                     pluginName,
                     operation: "initialize",
                     cause: error,
                     retryable: true,
-                  }),
-              }).pipe(Effect.retry(retrySchedule));
+                  });
+                },
+              }).pipe(
+                Effect.catchAll((pluginError) => {
+                  // Only retry if the error is retryable
+                  if (pluginError.retryable) {
+                    return Effect.fail(pluginError).pipe(Effect.retry(retrySchedule));
+                  } else {
+                    return Effect.fail(pluginError);
+                  }
+                })
+              );
 
               // Return instance after successful initialization
               return initialize.pipe(Effect.map(() => instance));

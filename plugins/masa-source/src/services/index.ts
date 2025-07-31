@@ -1,9 +1,9 @@
-import {
+import type {
   IPlatformSearchService,
   PlatformState,
   SourceItem,
   SourcePluginSearchOptions,
-} from "@curatedotfun/types";
+} from "@usersdotfun/core-sdk";
 import { z } from "zod";
 import { MasaClient } from "../masa-client";
 import { twitterService } from "./twitter";
