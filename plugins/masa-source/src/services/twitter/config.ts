@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { PlatformConfig } from '../../types';
+import type { MasaSearchOptions, PlatformConfig } from '../../types';
 
 // Twitter-specific options schema
 export const TwitterOptionsSchema = z.object({
@@ -26,8 +26,8 @@ export const TwitterOptionsSchema = z.object({
 }).strict();
 
 // Prepare Twitter arguments from generic search options
-const prepareTwitterArgs = (options: Record<string, unknown>): Record<string, unknown> => {
-  const { query, pageSize, platformArgs, ...rest } = options;
+const prepareTwitterArgs = (options: MasaSearchOptions): Record<string, unknown> => {
+  const { query, pageSize, platformArgs, type, ...rest } = options;
 
   // Safely handle platformArgs as it could be unknown
   const safePlatformArgs = platformArgs && typeof platformArgs === 'object' && !Array.isArray(platformArgs)

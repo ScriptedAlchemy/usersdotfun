@@ -128,12 +128,16 @@ export type SourceConfig<
   S extends z.ZodTypeAny = z.ZodRecord<z.ZodString, z.ZodUnknown>
 > = Config<V, S>;
 
-export interface SourceInput<TSearchOptions extends z.ZodTypeAny = z.ZodRecord<z.ZodString, z.ZodUnknown>> extends Input<z.ZodAny> {
+export interface SourceInput<TSearchOptions extends z.ZodTypeAny = z.ZodTypeAny> extends Input<z.ZodAny> {
   searchOptions: TSearchOptions;
   lastProcessedState?: LastProcessedState<PlatformState> | null;
 }
 
-// The output data from a source plugin (before system enrichment)
+export interface PluginSourceInput<TSearchOptions = Record<string, unknown>> extends Input<z.ZodAny> {
+  searchOptions: TSearchOptions;
+  lastProcessedState?: LastProcessedState<PlatformState> | null;
+}
+
 export interface PluginSourceOutputData<TItem extends PluginSourceItem = PluginSourceItem> {
   items: TItem[];
   nextLastProcessedState?: PlatformState | null;
@@ -161,7 +165,7 @@ export interface SourceOutput extends Output<z.ZodAny> {
 
 // Source plugin interface that extends the base Plugin interface
 export interface SourcePlugin<
-  TInput extends SourceInput = SourceInput,
+  TInput extends PluginSourceInput | SourceInput = PluginSourceInput,
   TOutput extends PluginSourceOutput = PluginSourceOutput,
   TConfig extends SourceConfig = SourceConfig
 > extends Plugin<TInput, TOutput, TConfig> {

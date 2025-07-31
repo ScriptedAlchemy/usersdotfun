@@ -1,7 +1,7 @@
 import type {
   LastProcessedState,
+  PluginSourceInput,
   PluginSourceOutput,
-  SourceInput,
   SourcePlugin,
 } from '@usersdotfun/core-sdk';
 import { ConfigurationError, ContentType } from '@usersdotfun/core-sdk';
@@ -10,19 +10,18 @@ import { MasaClient } from './masa-client';
 import {
   MasaSourceConfig
 } from './schemas';
-import { serviceRegistry } from './services';
+import { ServiceManager, ServiceMap } from './services';
 import { MasaPlatformState, MasaPluginSourceItem, MasaSearchOptions, MasaSearchResult } from './types';
 
 export class MasaSourcePlugin implements SourcePlugin<
-  SourceInput<MasaSearchOptions>,
+  PluginSourceInput<MasaSearchOptions>,
   PluginSourceOutput<MasaPluginSourceItem>,
   MasaSourceConfig
 > {
   readonly type = 'source' as const;
 
   private masaClient!: MasaClient;
-  private services = new Map<string, any>();
-  private configs = new Map<string, any>();
+  private serviceManager!: ServiceManager;
 
   async initialize(config: MasaSourceConfig): Promise<void> {
     if (!config?.secrets?.apiKey) {
@@ -34,15 +33,10 @@ export class MasaSourcePlugin implements SourcePlugin<
       baseUrl: config.variables?.baseUrl,
     });
 
-    // Initialize services
-    for (const entry of serviceRegistry) {
-      const service = entry.factory(this.masaClient);
-      this.services.set(entry.platformType, service);
-      this.configs.set(entry.platformType, entry.config);
-    }
+    this.serviceManager = new ServiceManager(this.masaClient);
   }
 
-  async execute(input: SourceInput<MasaSearchOptions>): Promise<PluginSourceOutput<MasaPluginSourceItem>> {
+  async execute(input: PluginSourceInput<MasaSearchOptions>): Promise<PluginSourceOutput<MasaPluginSourceItem>> {
     const { searchOptions, lastProcessedState } = input;
 
     console.log("MasaSourcePlugin: execute called with:", {
@@ -51,8 +45,8 @@ export class MasaSourcePlugin implements SourcePlugin<
     });
 
     try {
-      const service = this.services.get(searchOptions.type);
-      const config = this.configs.get(searchOptions.type);
+      const service = this.serviceManager.getService(searchOptions.type as keyof ServiceMap);
+      const config = this.serviceManager.getConfig(searchOptions.type);
 
       if (!service || !config) {
         return {

@@ -274,6 +274,9 @@
                 "type": "string"
               },
               "additionalProperties": {}
+            },
+            "language": {
+              "type": "string"
             }
           },
           "required": [
@@ -285,10 +288,19 @@
           "anyOf": [
             {
               "type": "object",
-              "propertyNames": {
-                "type": "string"
+              "properties": {
+                "data": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {}
+                }
               },
-              "additionalProperties": {}
+              "required": [
+                "data"
+              ],
+              "additionalProperties": false
             },
             {
               "type": "null"
@@ -352,7 +364,43 @@
                       "additionalProperties": false
                     }
                   },
-                  "raw": {}
+                  "raw": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "content": {
+                        "type": "string"
+                      },
+                      "created_at": {
+                        "type": "string"
+                      },
+                      "Metadata": {
+                        "type": "object",
+                        "properties": {
+                          "created_at": {
+                            "type": "string"
+                          },
+                          "url": {
+                            "type": "string"
+                          },
+                          "username": {
+                            "type": "string"
+                          },
+                          "user_id": {
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": {}
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "content"
+                    ],
+                    "additionalProperties": {}
+                  }
                 },
                 "required": [
                   "externalId",

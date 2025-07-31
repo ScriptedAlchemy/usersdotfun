@@ -12,9 +12,20 @@ export const MasaSearchOptionsSchema = z.object({
   pageSize: z.number().optional(),
   platformArgs: z.record(z.string(), z.unknown()).optional(),
   language: z.string().optional(),
-}).catchall(z.unknown()); // Allow additional dynamic arguments
+}).catchall(z.unknown());
 
-export const MasaSearchResultSchema = z.object({
+export const MasaSourceConfigSchema = createConfigSchema(
+  z.object({
+    baseUrl: z.url().optional(),
+  }),
+  z.object({
+    apiKey: z.string().min(1, "Masa API key is required"),
+  })
+);
+
+export const MasaSourceInputSchema = createSourceInputSchema(MasaSearchOptionsSchema);
+
+export const MasaApiResponseSchema = z.object({
   id: z.string(),
   content: z.string(),
   created_at: z.string().optional(),
@@ -26,22 +37,10 @@ export const MasaSearchResultSchema = z.object({
   }).catchall(z.unknown()).optional(),
 }).catchall(z.unknown());
 
-export const MasaSourceConfigSchema = createConfigSchema(
-  // Variables
-  z.object({
-    baseUrl: z.url().optional(),
-  }),
-  // Secrets
-  z.object({
-    apiKey: z.string().min(1, "Masa API key is required"),
-  })
-);
-
-export const MasaSourceInputSchema = createSourceInputSchema(MasaSearchOptionsSchema);
-
-export const MasaSourceOutputSchema = createSourceOutputSchema(MasaSearchResultSchema);
+export const MasaSourceOutputSchema = createSourceOutputSchema(MasaApiResponseSchema);
 
 // Derived types
 export type MasaSourceConfig = z.infer<typeof MasaSourceConfigSchema>;
+export type MasaSearchOptions = z.infer<typeof MasaSearchOptionsSchema>;
 export type MasaSourceInput = z.infer<typeof MasaSourceInputSchema>;
 export type MasaSourceOutput = z.infer<typeof MasaSourceOutputSchema>;

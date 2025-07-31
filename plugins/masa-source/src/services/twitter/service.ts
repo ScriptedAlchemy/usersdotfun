@@ -3,7 +3,7 @@ import type {
   LastProcessedState
 } from "@usersdotfun/core-sdk";
 import type { MasaApiSearchOptions, MasaClient } from "../../masa-client";
-import type { IPlatformSearchService, MasaPlatformState, MasaSearchResult } from "../../types";
+import type { IPlatformSearchService, MasaPlatformState, MasaSearchOptions, MasaSearchResult } from "../../types";
 import { TwitterOptionsSchema } from "./config";
 import { buildTwitterQuery } from "./query-builder";
 
@@ -21,7 +21,7 @@ export class TwitterSearchService implements IPlatformSearchService {
   }
 
   async search(
-    options: Record<string, unknown>,
+    options: MasaSearchOptions,
     currentState: LastProcessedState<MasaPlatformState> | null,
   ): Promise<{
     items: MasaSearchResult[];
