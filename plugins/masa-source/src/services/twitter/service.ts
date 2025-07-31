@@ -1,29 +1,15 @@
 import type {
-  IPlatformSearchService,
-  LastProcessedState,
   AsyncJobProgress,
+  LastProcessedState
 } from "@usersdotfun/core-sdk";
-
-import {
-  MasaApiSearchOptions,
-  MasaClient,
-  MasaSearchResult,
-} from "../../masa-client";
-import { TwitterQueryOptionsOutput, TwitterPlatformState } from "./types";
-import { buildTwitterQuery } from "./utils/twitterQueryBuilder";
-
-export type ServiceTweet = MasaSearchResult;
+import type { MasaApiSearchOptions, MasaClient } from "../../masa-client";
+import type { IPlatformSearchService, MasaPlatformState, MasaSearchResult } from "../../types";
+import { TwitterOptionsSchema } from "./config";
+import { buildTwitterQuery } from "./query-builder";
 
 const DEFAULT_PAGE_SIZE = 25;
 
-export class TwitterSearchService
-  implements
-    IPlatformSearchService<
-      ServiceTweet,
-      TwitterQueryOptionsOutput,
-      TwitterPlatformState
-    >
-{
+export class TwitterSearchService implements IPlatformSearchService {
   private masaClient: MasaClient;
 
   constructor(masaClient: MasaClient) {
@@ -35,12 +21,14 @@ export class TwitterSearchService
   }
 
   async search(
-    platformOptions: TwitterQueryOptionsOutput,
-    currentState: LastProcessedState<TwitterPlatformState> | null,
+    options: Record<string, unknown>,
+    currentState: LastProcessedState<MasaPlatformState> | null,
   ): Promise<{
-    items: ServiceTweet[];
-    nextStateData: TwitterPlatformState | null;
+    items: MasaSearchResult[];
+    nextStateData: MasaPlatformState | null;
   }> {
+    // Validate and cast the options to Twitter-specific options
+    const platformOptions = TwitterOptionsSchema.parse(options);
     console.log(
       "TwitterSearchService: search called with options:",
       platformOptions,
@@ -87,25 +75,22 @@ export class TwitterSearchService
         if (items.length > 0) {
           // Assuming items are sorted newest first, or we find the max ID
           const newestItem = items.reduce((prev, current) =>
-            (current.ID || current.ExternalID) > (prev.ID || prev.ExternalID)
-              ? current
-              : prev,
+            current.id > prev.id ? current : prev,
           );
-          newLatestProcessedId =
-            newestItem.ID || newestItem.ExternalID || newLatestProcessedId;
+          newLatestProcessedId = newestItem.id || newLatestProcessedId;
         }
 
-        const nextStateData: TwitterPlatformState = {
+        const nextStateData: MasaPlatformState = {
           ...currentState?.data, // Preserve other potential state fields
           latestProcessedId: newLatestProcessedId,
           currentAsyncJob: null, // Clear the completed job
         };
-        
+
         console.log(
           `TwitterSearchService: Returning ${items.length} items. Next state:`,
           JSON.stringify(nextStateData, null, 2),
         );
-        
+
         return { items, nextStateData };
       } else if (
         jobStatus === "error" ||
@@ -116,9 +101,9 @@ export class TwitterSearchService
           `TwitterSearchService: Job ${currentAsyncJob.jobId} failed or status check error.`,
         );
         // Clear the failed job so a new one can be submitted on the next polling cycle
-        const nextStateData: TwitterPlatformState = {
+        const nextStateData: MasaPlatformState = {
           ...currentState?.data,
-          currentAsyncJob: null, 
+          currentAsyncJob: null,
         };
         return { items: [], nextStateData };
       } else {
@@ -126,7 +111,7 @@ export class TwitterSearchService
         console.log(
           `TwitterSearchService: Job ${currentAsyncJob.jobId} status: ${jobStatus}.`,
         );
-        const nextStateData: TwitterPlatformState = {
+        const nextStateData: MasaPlatformState = {
           ...currentState?.data,
           currentAsyncJob: {
             ...currentAsyncJob,
@@ -148,7 +133,7 @@ export class TwitterSearchService
     if (latestProcessedId) {
       queryOptionsForBuilder.sinceId = latestProcessedId;
     }
-    const query = buildTwitterQuery(queryOptionsForBuilder);
+    const query = buildTwitterQuery(queryOptionsForBuilder); // TODO: take natural language and convert correctly https://github.com/igorbrigadir/twitter-advanced-search 
     const maxResults = platformOptions.pageSize || DEFAULT_PAGE_SIZE;
 
     const masaApiOpts: MasaApiSearchOptions = { query, maxResults };
@@ -168,7 +153,7 @@ export class TwitterSearchService
         status: "submitted",
         submittedAt: new Date().toISOString(),
       };
-      const nextStateData: TwitterPlatformState = {
+      const nextStateData: MasaPlatformState = {
         ...currentState?.data, // Preserve other state fields like latestProcessedId from previous successful chunk
         latestProcessedId: latestProcessedId, // Carry over the ID that bounded this search
         currentAsyncJob: newAsyncJob,
@@ -183,7 +168,7 @@ export class TwitterSearchService
         submittedAt: new Date().toISOString(),
         errorMessage: "Failed to submit job to Masa API",
       };
-      const nextStateData: TwitterPlatformState = {
+      const nextStateData: MasaPlatformState = {
         ...currentState?.data,
         latestProcessedId: latestProcessedId,
         currentAsyncJob: errorAsyncJob,

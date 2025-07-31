@@ -31,7 +31,7 @@ interface RunContext {
 
 const runSourcePlugin = (
   source: SourceConfig,
-  lastProcessedState: PlatformState | null,
+  lastProcessedState: LastProcessedState<PlatformState> | null,
   context: RunContext
 ) =>
   Effect.gen(function* () {
@@ -114,7 +114,7 @@ const runSourcePlugin = (
     }
 
     // 8. Parse with our generic schema for type safety
-    const parsedOutput = GenericPluginSourceOutputSchema.safeParse(validatedOutput.data);
+    const parsedOutput = GenericPluginSourceOutputSchema.safeParse(validatedOutput);
 
     if (!parsedOutput.success) {
       return yield* Effect.fail(
@@ -251,7 +251,12 @@ const processSourceJob = (job: Job<SourceJobData>) =>
 
     if (sourceResult.nextLastProcessedState) {
       yield* Effect.log(`New state found. Re-enqueuing poll job for ${jobId}.`);
-      yield* stateService.set(RedisKeys.jobState(jobId), { data: sourceResult.nextLastProcessedState });
+
+      const wrappedState: LastProcessedState<PlatformState> = {
+        data: sourceResult.nextLastProcessedState
+      };
+
+      yield* stateService.set(RedisKeys.jobState(jobId), wrappedState);
 
       // Update run status
       yield* stateService.set(RedisKeys.jobRun(jobId, runId), {
@@ -263,9 +268,10 @@ const processSourceJob = (job: Job<SourceJobData>) =>
         state: sourceResult.nextLastProcessedState,
       });
 
+      const delay = sourceResult.nextLastProcessedState.currentAsyncJob ? 60000 : 300000; // 1 min if active job, 5 min otherwise
       yield* queueService.add(QUEUE_NAMES.SOURCE_JOBS, 'poll-source',
         { jobId },
-        { delay: 60000 } // 60 second delay before polling again
+        { delay }
       );
     } else {
       yield* Effect.log(`Polling complete for ${jobId}. Clearing state.`);

@@ -1,139 +1,103 @@
 import type {
-  IPlatformSearchService,
-  PlatformState,
-  PluginSourceItem,
+  LastProcessedState,
   PluginSourceOutput,
+  SourceInput,
   SourcePlugin,
-  SourcePluginSearchOptions
 } from '@usersdotfun/core-sdk';
 import { ConfigurationError, ContentType } from '@usersdotfun/core-sdk';
-import { z } from 'zod';
-import { MasaClient, MasaClientConfig, MasaSearchResult } from './masa-client';
+
+import { MasaClient } from './masa-client';
 import {
-  MasaSourceConfigSchema,
-  MasaSourceInputSchema,
-  MasaSourceOutputSchema,
+  MasaSourceConfig
 } from './schemas';
-import { PlatformConfig, serviceRegistry } from './services';
+import { serviceRegistry } from './services';
+import { MasaPlatformState, MasaPluginSourceItem, MasaSearchOptions, MasaSearchResult } from './types';
 
-// --- Derived Types ---
-type MasaSourceConfig = z.infer<typeof MasaSourceConfigSchema>;
-type MasaSourceInput = z.infer<typeof MasaSourceInputSchema>;
-type MasaSourceOutput = z.infer<typeof MasaSourceOutputSchema>;
-
-export class MasaSourcePlugin
-  implements SourcePlugin<MasaSourceInput, PluginSourceOutput<PluginSourceItem<MasaSearchResult>>, MasaSourceConfig> {
+export class MasaSourcePlugin implements SourcePlugin<
+  SourceInput<MasaSearchOptions>,
+  PluginSourceOutput<MasaPluginSourceItem>,
+  MasaSourceConfig
+> {
   readonly type = 'source' as const;
 
   private masaClient!: MasaClient;
-  private services: Map<
-    string,
-    IPlatformSearchService<any, any, PlatformState>
-  > = new Map();
-  private platformConfigs: Map<string, PlatformConfig<any, any>> = new Map();
+  private services = new Map<string, any>();
+  private configs = new Map<string, any>();
 
   async initialize(config: MasaSourceConfig): Promise<void> {
     if (!config?.secrets?.apiKey) {
       throw new ConfigurationError('Masa API key is required.');
     }
 
-    const clientConfig: MasaClientConfig = {
+    this.masaClient = new MasaClient({
       apiKey: config.secrets.apiKey,
       baseUrl: config.variables?.baseUrl,
-    };
-    this.masaClient = new MasaClient(clientConfig);
+    });
 
+    // Initialize services
     for (const entry of serviceRegistry) {
-      const serviceInstance = entry.factory(this.masaClient);
-      this.services.set(entry.platformType, serviceInstance);
-      this.platformConfigs.set(entry.platformType, entry.config);
+      const service = entry.factory(this.masaClient);
+      this.services.set(entry.platformType, service);
+      this.configs.set(entry.platformType, entry.config);
     }
   }
 
-  async execute(input: MasaSourceInput): Promise<PluginSourceOutput<PluginSourceItem<MasaSearchResult>>> {
+  async execute(input: SourceInput<MasaSearchOptions>): Promise<PluginSourceOutput<MasaPluginSourceItem>> {
     const { searchOptions, lastProcessedState } = input;
-    const searchPlatformType = searchOptions.type as string;
 
-    console.log("RUNNING ON INPUT", input);
-
-    if (!this.masaClient) {
-      return {
-        success: false,
-        errors: [{ message: 'MasaSourcePlugin not initialized.' }],
-      };
-    }
-
-    const service = this.services.get(searchPlatformType);
-    if (!service) {
-      return {
-        success: false,
-        errors: [
-          {
-            message: `No service registered for platform type: "${searchPlatformType}"`,
-          },
-        ],
-      };
-    }
-
-    const platformConfig = this.platformConfigs.get(searchPlatformType);
-    if (!platformConfig) {
-      return {
-        success: false,
-        errors: [
-          {
-            message: `No platform configuration found for type: "${searchPlatformType}"`,
-          },
-        ],
-      };
-    }
+    console.log("MasaSourcePlugin: execute called with:", {
+      type: searchOptions.type,
+      hasState: !!lastProcessedState
+    });
 
     try {
-      const rawServiceOptions = platformConfig.preparePlatformArgs(
-        searchOptions as SourcePluginSearchOptions
-      );
-      const validatedServiceOptions =
-        platformConfig.optionsSchema.parse(rawServiceOptions);
+      const service = this.services.get(searchOptions.type);
+      const config = this.configs.get(searchOptions.type);
 
-      const serviceResults = await service.search(
-        validatedServiceOptions,
-        lastProcessedState
-      );
+      if (!service || !config) {
+        return {
+          success: false,
+          errors: [{ message: `Unsupported platform type: ${searchOptions.type}` }],
+        };
+      }
 
-      // Transform MasaSearchResult[] to MasaPluginSourceItem[]
-      const pluginSourceItems: PluginSourceItem<MasaSearchResult>[] = serviceResults.items.map((masaResult: MasaSearchResult) => ({
-        externalId: masaResult.ExternalID,
-        content: masaResult.Content,
-        contentType: searchPlatformType === 'twitter-scraper' ? ContentType.POST : ContentType.UNKNOWN,
-        createdAt: masaResult.Metadata?.created_at,
+      // Prepare platform-specific arguments
+      const platformArgs = config.preparePlatformArgs(searchOptions);
+
+      // Validate platform arguments
+      const validatedArgs = config.optionsSchema.parse(platformArgs);
+
+      // Cast the state to our specific type
+      const typedState = lastProcessedState as LastProcessedState<MasaPlatformState> | null;
+
+      // Execute service
+      const result = await service.search(validatedArgs, typedState);
+
+      // Transform results to plugin items
+      const items: MasaPluginSourceItem[] = result.items.map((masaResult: MasaSearchResult) => ({
+        externalId: masaResult.id,
+        content: masaResult.content,
+        contentType: searchOptions.type === 'twitter-scraper' ? ContentType.POST : ContentType.UNKNOWN,
+        createdAt: masaResult.Metadata?.created_at || masaResult.created_at,
         url: masaResult.Metadata?.url,
-        authors: masaResult.Metadata?.author ? [{
+        authors: masaResult.Metadata?.username ? [{
           id: masaResult.Metadata?.user_id,
-          username: masaResult.Metadata?.author,
-          displayName: masaResult.Metadata?.author,
+          username: masaResult.Metadata?.username,
+          displayName: masaResult.Metadata?.username,
         }] : undefined,
-        raw: masaResult, // Store the entire Masa result as raw data
+        raw: masaResult,
       }));
 
       return {
         success: true,
         data: {
-          items: pluginSourceItems,
-          nextLastProcessedState: serviceResults.nextStateData,
+          items,
+          nextLastProcessedState: result.nextStateData,
         },
       };
+
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return {
-          success: false,
-          errors: [
-            {
-              message: `Invalid options for ${searchPlatformType}: ${error.issues
-                .map((e) => `${e.path.join('.')} - ${e.message}`)
-                .join(', ')}`,
-            },
-          ],
-        };
-      }
+      console.error("MasaSourcePlugin: Error in execute:", error);
       return {
         success: false,
         errors: [{ message: (error as Error).message }],

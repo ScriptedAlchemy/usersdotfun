@@ -5,6 +5,27 @@ import {
 } from '@usersdotfun/core-sdk';
 import { z } from 'zod';
 
+// Search options schema
+export const MasaSearchOptionsSchema = z.object({
+  type: z.string(), // e.g., "twitter-scraper", "tiktok-transcription"
+  query: z.string().optional(),
+  pageSize: z.number().optional(),
+  platformArgs: z.record(z.string(), z.unknown()).optional(),
+  language: z.string().optional(),
+}).catchall(z.unknown()); // Allow additional dynamic arguments
+
+export const MasaSearchResultSchema = z.object({
+  id: z.string(),
+  content: z.string(),
+  created_at: z.string().optional(),
+  Metadata: z.object({
+    created_at: z.string().optional(),
+    url: z.string().optional(),
+    username: z.string().optional(),
+    user_id: z.string().optional(),
+  }).catchall(z.unknown()).optional(),
+}).catchall(z.unknown());
+
 export const MasaSourceConfigSchema = createConfigSchema(
   // Variables
   z.object({
@@ -16,35 +37,11 @@ export const MasaSourceConfigSchema = createConfigSchema(
   })
 );
 
-// Schema for search options - based on SourcePluginSearchOptions
-const MasaSearchOptionsSchema = z.object({
-  type: z.string(), // e.g., "twitter-scraper", "reddit-scraper"
-  query: z.string().optional(), // General query string
-  pageSize: z.number().optional(), // General hint for how many items to fetch per request
-  platformArgs: z.record(z.string(), z.unknown()).optional(), // Platform-specific arguments
-}).catchall(z.unknown()); // Allow additional dynamic arguments
-
 export const MasaSourceInputSchema = createSourceInputSchema(MasaSearchOptionsSchema);
 
-// Schema for a single search result item from Masa - based on PluginSourceItem interface
-const MasaPluginSourceItemSchema = z.object({
-  // Required PluginSourceItem fields
-  externalId: z.string(),
-  content: z.string(),
-  
-  // Optional PluginSourceItem fields
-  contentType: z.string().optional(), // Can be from ContentType enum or custom
-  createdAt: z.string().optional(),
-  url: z.string().optional(),
-  authors: z.array(z.object({
-    id: z.string().optional(),
-    username: z.string().optional(),
-    displayName: z.string().optional(),
-    url: z.string().optional(),
-  })).optional(),
-  
-  // Raw data from Masa API
-  raw: z.unknown(),
-});
+export const MasaSourceOutputSchema = createSourceOutputSchema(MasaSearchResultSchema);
 
-export const MasaSourceOutputSchema = createSourceOutputSchema(MasaPluginSourceItemSchema);
+// Derived types
+export type MasaSourceConfig = z.infer<typeof MasaSourceConfigSchema>;
+export type MasaSourceInput = z.infer<typeof MasaSourceInputSchema>;
+export type MasaSourceOutput = z.infer<typeof MasaSourceOutputSchema>;

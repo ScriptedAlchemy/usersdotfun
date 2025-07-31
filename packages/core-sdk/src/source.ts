@@ -122,43 +122,13 @@ export interface LastProcessedState<
   // timestamp?: number;
 }
 
-/**
- * Configuration options for a specific search operation by a SourcePlugin.
- * TPlatformOpts allows for platform-specific arguments.
- */
-export interface SourcePluginSearchOptions<
-  TPlatformOpts = Record<string, any>,
-> {
-  type: string; // e.g., "twitter-scraper", "reddit-scraper". The plugin will interpret this.
-  query?: string; // General query string. Its interpretation depends on the plugin and the 'type'.
-  pageSize?: number; // General hint for how many items to fetch per request. The plugin/service might override or interpret this.
-  platformArgs?: TPlatformOpts; // Typed platform-specific arguments
-
-  // Allows for additional dynamic arguments if needed.
-  [key: string]: any;
-}
-
-// Standard Service Interface for platform-specific search services
-export interface IPlatformSearchService<
-  TItem extends PluginSourceItem,
-  TPlatformOptions = Record<string, unknown>,
-  TPlatformState extends PlatformState = PlatformState,
-> {
-  initialize?(config?: any): Promise<void>;
-  search(
-    options: TPlatformOptions,
-    currentState: LastProcessedState<TPlatformState> | null,
-  ): Promise<{ items: TItem[]; nextStateData: TPlatformState | null }>;
-  shutdown?(): Promise<void>;
-}
-
 // Source-specific plugin types that extend the base plugin types
 export type SourceConfig<
   V extends z.ZodTypeAny = z.ZodRecord<z.ZodString, z.ZodUnknown>,
   S extends z.ZodTypeAny = z.ZodRecord<z.ZodString, z.ZodUnknown>
 > = Config<V, S>;
 
-export interface SourceInput<TSearchOptions = SourcePluginSearchOptions> extends Input<z.ZodAny> {
+export interface SourceInput<TSearchOptions extends z.ZodTypeAny = z.ZodRecord<z.ZodString, z.ZodUnknown>> extends Input<z.ZodAny> {
   searchOptions: TSearchOptions;
   lastProcessedState?: LastProcessedState<PlatformState> | null;
 }
@@ -204,17 +174,31 @@ export const createSourceInputSchema = <TSearchOptions extends z.ZodTypeAny>(
 ) =>
   z.object({
     searchOptions: searchOptionsSchema,
-    lastProcessedState: z.record(z.string(), z.unknown()).optional().nullable(),
+    lastProcessedState: z.object({
+      data: z.record(z.string(), z.unknown()),
+      // TODO: expand to include a timestamp
+    }).optional().nullable(),
   });
 
 export const createSourceOutputSchema = <TItem extends z.ZodTypeAny>(
-  itemSchema: TItem
-) =>
-  z.object({
+  itemData: TItem
+) => {
+  const pluginSourceItemSchema = z.object({
+    externalId: z.string(),
+    content: z.string(),
+    contentType: z.string().optional(),
+    createdAt: z.string().optional(),
+    url: z.string().optional(),
+    authors: z.array(authorSchema).optional(),
+    raw: itemData,
+  });
+
+  return z.object({
     success: z.boolean(),
     data: z.object({
-      items: z.array(itemSchema),
+      items: z.array(pluginSourceItemSchema),
       nextLastProcessedState: z.record(z.string(), z.unknown()).optional().nullable(),
     }).optional(),
     errors: z.array(ErrorDetailsSchema).optional(),
   });
+};

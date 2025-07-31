@@ -1,20 +1,4 @@
-import type { SourceItem } from "@usersdotfun/core-sdk";
-
-export interface MasaSearchResult extends SourceItem {
-  ID: string;
-  ExternalID: string;
-  Content: string;
-  Metadata: {
-    author?: string;
-    user_id?: string;
-    created_at?: string;
-    conversation_id?: string;
-    IsReply?: boolean;
-    InReplyToStatusID?: string;
-    [key: string]: any;
-  };
-  [key: string]: any;
-}
+import type { MasaSearchResult } from './types';
 
 export interface MasaApiSearchOptions {
   query: string;
@@ -59,6 +43,8 @@ export class MasaClient {
     query: string,
     maxResults: number,
   ): Promise<string | null> {
+    // TODO: searchType will need to modify, /twitter, /tiktok
+    // web scrape
     const url = `${this.baseUrl}/search/live/${searchType.replace("-scraper", "")}`;
 
     const payload = {

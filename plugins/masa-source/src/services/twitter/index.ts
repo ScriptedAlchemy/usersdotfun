@@ -1,53 +1,9 @@
-import type {
-  IPlatformSearchService,
-  SourcePluginSearchOptions,
-} from "@usersdotfun/core-sdk";
-import { MasaClient, MasaSearchResult } from "src/masa-client";
-import { TwitterSearchService } from "./service";
-import {
-  TwitterPlatformState,
-  TwitterQueryOptionsInput,
-  TwitterQueryOptionsOutput,
-  TwitterQueryOptionsSchema,
-} from "./types";
+import { MasaClient } from '../../masa-client';
+import { TwitterSearchService } from './service';
+import { twitterServiceConfig } from './config';
 
-const prepareTwitterArgs = (
-  options: SourcePluginSearchOptions,
-): TwitterQueryOptionsInput => {
-  const { query: baseQuery, pageSize, ...platformSpecificOptions } = options;
+export { twitterServiceConfig };
 
-  const rawOptions: TwitterQueryOptionsInput = {
-    ...(platformSpecificOptions.platformArgs as Partial<TwitterQueryOptionsInput>),
-    ...(baseQuery &&
-      !(
-        platformSpecificOptions.platformArgs as Partial<TwitterQueryOptionsInput>
-      )?.allWords && { allWords: baseQuery }),
-    ...(pageSize &&
-      !(
-        platformSpecificOptions.platformArgs as Partial<TwitterQueryOptionsInput>
-      )?.pageSize && { pageSize: pageSize }),
-  };
+export { TwitterSearchService };
 
-  if (rawOptions.pageSize === undefined) {
-    delete rawOptions.pageSize;
-  }
-  if (platformSpecificOptions.language) {
-    rawOptions.language = platformSpecificOptions.language as string;
-  }
-
-  return rawOptions;
-};
-
-export const twitterService = {
-  platformType: "twitter-scraper",
-  factory: (masaClient: MasaClient) =>
-    new TwitterSearchService(masaClient) as IPlatformSearchService<
-      MasaSearchResult,
-      TwitterQueryOptionsOutput,
-      TwitterPlatformState
-    >,
-  config: {
-    optionsSchema: TwitterQueryOptionsSchema,
-    preparePlatformArgs: prepareTwitterArgs,
-  },
-};
+export const createTwitterService = (masaClient: MasaClient) => new TwitterSearchService(masaClient);
