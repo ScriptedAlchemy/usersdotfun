@@ -8,7 +8,7 @@ import { z } from 'zod';
 export const MasaSourceConfigSchema = createConfigSchema(
   // Variables
   z.object({
-    baseUrl: z.string().url().optional(),
+    baseUrl: z.url().optional(),
   }),
   // Secrets
   z.object({

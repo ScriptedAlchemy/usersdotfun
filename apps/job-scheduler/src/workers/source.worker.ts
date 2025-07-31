@@ -1,17 +1,16 @@
-import { EnvironmentServiceTag, getPlugin, PluginError, PluginLoaderTag, SchemaValidator } from '@usersdotfun/pipeline-runner';
-import { JobService, JobNotFoundError } from '@usersdotfun/shared-db';
-import { QUEUE_NAMES, QueueService, RedisKeys, StateService } from '@usersdotfun/shared-queue';
-import type { JobDefinition, SourceJobData } from '@usersdotfun/shared-types/types';
-import type { 
-  PluginSourceItem, 
-  SourceItem, 
-  PlatformState, 
-  PluginSourceOutput,
+import type {
+  LastProcessedState,
+  PlatformState,
+  SourceItem
 } from '@usersdotfun/core-sdk';
 import { createSourceOutputSchema, pluginSourceItemSchema } from "@usersdotfun/core-sdk";
+import { EnvironmentServiceTag, getPlugin, PluginError, PluginLoaderTag, SchemaValidator } from '@usersdotfun/pipeline-runner';
+import { JobNotFoundError, JobService } from '@usersdotfun/shared-db';
+import { QUEUE_NAMES, QueueService, RedisKeys, StateService } from '@usersdotfun/shared-queue';
+import type { JobDefinition, SourceJobData } from '@usersdotfun/shared-types/types';
 import { type Job } from 'bullmq';
-import { Effect, Option } from 'effect';
 import { randomUUID } from 'crypto';
+import { Effect, Option } from 'effect';
 
 // Use the core SDK's schema and createSourceOutputSchema
 const GenericPluginSourceOutputSchema = createSourceOutputSchema(pluginSourceItemSchema);
@@ -207,12 +206,12 @@ const processSourceJob = (job: Job<SourceJobData>) =>
     // Add to run history
     yield* stateService.addToRunHistory(jobId, runId);
 
-    const lastProcessedState = yield* stateService.get(RedisKeys.jobState(jobId));
+    const lastProcessedState = yield* stateService.get(RedisKeys.jobState<LastProcessedState>(jobId));
     const stateValue = Option.isSome(lastProcessedState) ? lastProcessedState.value : null;
 
     const sourceResult = yield* runSourcePlugin(
       jobDefinition.source,
-      stateValue as PlatformState | null,
+      stateValue,
       {
         jobId: dbJob.id,
         runId,
@@ -266,7 +265,7 @@ const processSourceJob = (job: Job<SourceJobData>) =>
 
       yield* queueService.add(QUEUE_NAMES.SOURCE_JOBS, 'poll-source',
         { jobId },
-        { delay: 5000 } // 5 second delay before polling again
+        { delay: 60000 } // 60 second delay before polling again
       );
     } else {
       yield* Effect.log(`Polling complete for ${jobId}. Clearing state.`);
@@ -300,7 +299,7 @@ const processSourceJob = (job: Job<SourceJobData>) =>
             yield* Effect.logError(`Configuration error for job ${job.data.jobId} - NOT RETRYING:`, error);
             shouldRetry = false;
             errorType = 'configuration';
-            
+
             // Store configuration error state in Redis for monitoring
             yield* stateService.set(RedisKeys.jobError(job.data.jobId), {
               jobId: job.data.jobId,
@@ -314,7 +313,7 @@ const processSourceJob = (job: Job<SourceJobData>) =>
             yield* Effect.logError(`Job ${job.data.jobId} not found, likely deleted - NOT RETRYING:`, error);
             shouldRetry = false;
             errorType = 'job_not_found';
-            
+
             // Store job not found error state in Redis for monitoring
             yield* stateService.set(RedisKeys.jobError(job.data.jobId), {
               jobId: job.data.jobId,

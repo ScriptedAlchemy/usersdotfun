@@ -258,9 +258,27 @@
       "properties": {
         "searchOptions": {
           "type": "object",
-          "propertyNames": {
-            "type": "string"
+          "properties": {
+            "type": {
+              "type": "string"
+            },
+            "query": {
+              "type": "string"
+            },
+            "pageSize": {
+              "type": "number"
+            },
+            "platformArgs": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
+            }
           },
+          "required": [
+            "type"
+          ],
           "additionalProperties": {}
         },
         "lastProcessedState": {
@@ -298,28 +316,48 @@
               "items": {
                 "type": "object",
                 "properties": {
-                  "ID": {
+                  "externalId": {
                     "type": "string"
                   },
-                  "ExternalID": {
+                  "content": {
                     "type": "string"
                   },
-                  "Content": {
+                  "contentType": {
                     "type": "string"
                   },
-                  "Metadata": {
-                    "type": "object",
-                    "propertyNames": {
-                      "type": "string"
-                    },
-                    "additionalProperties": {}
-                  }
+                  "createdAt": {
+                    "type": "string"
+                  },
+                  "url": {
+                    "type": "string"
+                  },
+                  "authors": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "username": {
+                          "type": "string"
+                        },
+                        "displayName": {
+                          "type": "string"
+                        },
+                        "url": {
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "raw": {}
                 },
                 "required": [
-                  "ID",
-                  "ExternalID",
-                  "Content",
-                  "Metadata"
+                  "externalId",
+                  "content",
+                  "raw"
                 ],
                 "additionalProperties": false
               }

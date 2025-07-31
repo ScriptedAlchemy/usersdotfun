@@ -1,34 +1,7 @@
- import fs from 'fs/promises';
+import { createConfigSchema, createInputSchema, createOutputSchema, createSourceInputSchema, createSourceOutputSchema, } from "@usersdotfun/core-sdk";
+import fs from 'fs/promises';
 import path from 'path';
 import { z } from "zod";
-
-// Inline core-sdk functions to avoid workspace dependency issues
-const ErrorDetailsSchema = z.object({
-  message: z.string(),
-  details: z.record(z.string(), z.unknown()).optional(),
-  stack: z.string().optional(),
-});
-
-const createOutputSchema = <T extends z.ZodTypeAny>(dataSchema: T) =>
-  z.object({
-    success: z.boolean(),
-    data: dataSchema.optional(),
-    errors: z.array(ErrorDetailsSchema).optional(),
-  });
-
-function createConfigSchema<
-  V extends z.ZodTypeAny = z.ZodRecord<z.ZodString, z.ZodUnknown>,
-  S extends z.ZodTypeAny = z.ZodRecord<z.ZodString, z.ZodUnknown>
->(variablesSchema?: V, secretsSchema?: S) {
-  return z.object({
-    variables: (variablesSchema ?? z.record(z.string(), z.unknown())).optional(),
-    secrets: (secretsSchema ?? z.record(z.string(), z.unknown())).optional(),
-  });
-}
-
-function createInputSchema<I extends z.ZodTypeAny>(inputSchema: I) {
-  return inputSchema;
-}
 
 // Plugin schema definitions (avoiding imports from plugin files)
 const pluginSchemas = {
@@ -38,7 +11,7 @@ const pluginSchemas = {
     outputSchema: createOutputSchema(z.object({ content: z.string() }))
   },
   'object-transform': {
-    configSchema: createConfigSchema(z.object({ 
+    configSchema: createConfigSchema(z.object({
       transformations: z.array(z.object({
         path: z.string(),
         operation: z.enum(['set', 'delete', 'rename']),
@@ -52,33 +25,45 @@ const pluginSchemas = {
   'masa-source': {
     configSchema: createConfigSchema(
       z.object({
-        baseUrl: z.string().url().optional(),
+        baseUrl: z.url().optional(),
       }),
       z.object({
         apiKey: z.string().min(1, "Masa API key is required"),
       })
     ),
-    inputSchema: createInputSchema(z.object({
-      searchOptions: z.record(z.string(), z.unknown()),
-      lastProcessedState: z.record(z.string(), z.unknown()).optional().nullable(),
-    })),
-    outputSchema: createOutputSchema(z.object({
-      items: z.array(z.object({
-        ID: z.string(),
-        ExternalID: z.string(),
-        Content: z.string(),
-        Metadata: z.record(z.string(), z.unknown()),
-      })),
-      nextLastProcessedState: z.record(z.string(), z.unknown()).optional().nullable(),
+    inputSchema: createSourceInputSchema(z.object({
+      type: z.string(), // e.g., "twitter-scraper", "reddit-scraper"
+      query: z.string().optional(), // General query string
+      pageSize: z.number().optional(), // General hint for how many items to fetch per request
+      platformArgs: z.record(z.string(), z.unknown()).optional(), // Platform-specific arguments
+    }).catchall(z.unknown())),
+    outputSchema: createSourceOutputSchema(z.object({
+      // Required PluginSourceItem fields
+      externalId: z.string(),
+      content: z.string(),
+
+      // Optional PluginSourceItem fields
+      contentType: z.string().optional(), // Can be from ContentType enum or custom
+      createdAt: z.string().optional(),
+      url: z.string().optional(),
+      authors: z.array(z.object({
+        id: z.string().optional(),
+        username: z.string().optional(),
+        displayName: z.string().optional(),
+        url: z.string().optional(),
+      })).optional(),
+
+      // Raw data from Masa API
+      raw: z.unknown(),
     }))
   }
 } as const;
 
 // This list will be the single source of truth for which plugins are active.
 const pluginsToRegister = {
-    'simple-transform': "SimpleTransformer",
-    'object-transform': "ObjectTransformer", 
-    'masa-source': "MasaSource"
+  'simple-transform': "SimpleTransformer",
+  'object-transform': "ObjectTransformer",
+  'masa-source': "MasaSource"
 } as const;
 
 const registry: Record<string, any> = {};
@@ -86,37 +71,37 @@ const registry: Record<string, any> = {};
 console.log('Starting registry generation...');
 
 for (const [pluginName, schemaPrefix] of Object.entries(pluginsToRegister)) {
-    console.log(`Processing plugin: ${pluginName}`);
-    // Assumes the script is run from the root of the monorepo
-    const pluginPath = path.resolve(process.cwd(), `plugins/${pluginName}`);
-    const packageJsonPath = path.join(pluginPath, 'package.json');
-    const rspackConfigPath = path.join(pluginPath, 'rspack.config.cjs');
+  console.log(`Processing plugin: ${pluginName}`);
+  // Assumes the script is run from the root of the monorepo
+  const pluginPath = path.resolve(process.cwd(), `plugins/${pluginName}`);
+  const packageJsonPath = path.join(pluginPath, 'package.json');
+  const rspackConfigPath = path.join(pluginPath, 'rspack.config.cjs');
 
-    try {
-        const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf-8'));
-        const rspackConfig = await import(rspackConfigPath);
-        const port = rspackConfig.default.devServer.port;
+  try {
+    const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf-8'));
+    const rspackConfig = await import(rspackConfigPath);
+    const port = rspackConfig.default.devServer.port;
 
-        const schemas = pluginSchemas[pluginName as keyof typeof pluginSchemas];
-        if (!schemas) {
-            throw new Error(`Schema definition not found for plugin: ${pluginName}`);
-        }
-
-        const { configSchema, inputSchema, outputSchema } = schemas;
-
-        registry[packageJson.name] = {
-            remoteUrl: `http://localhost:${port}/remoteEntry.js`,
-            configSchema: z.toJSONSchema(configSchema),
-            inputSchema: z.toJSONSchema(inputSchema),
-            outputSchema: z.toJSONSchema(outputSchema),
-            version: packageJson.version,
-            description: packageJson.description
-        };
-        console.log(`Successfully processed plugin: ${pluginName}`);
-
-    } catch (error) {
-        console.error(`Failed to process plugin: ${pluginName}`, error);
+    const schemas = pluginSchemas[pluginName as keyof typeof pluginSchemas];
+    if (!schemas) {
+      throw new Error(`Schema definition not found for plugin: ${pluginName}`);
     }
+
+    const { configSchema, inputSchema, outputSchema } = schemas;
+
+    registry[packageJson.name] = {
+      remoteUrl: `http://localhost:${port}/remoteEntry.js`,
+      configSchema: z.toJSONSchema(configSchema),
+      inputSchema: z.toJSONSchema(inputSchema),
+      outputSchema: z.toJSONSchema(outputSchema),
+      version: packageJson.version,
+      description: packageJson.description
+    };
+    console.log(`Successfully processed plugin: ${pluginName}`);
+
+  } catch (error) {
+    console.error(`Failed to process plugin: ${pluginName}`, error);
+  }
 }
 
 const registryPath = path.resolve(process.cwd(), 'packages/registry-builder/registry.json');

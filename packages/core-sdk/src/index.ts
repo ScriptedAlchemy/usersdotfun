@@ -1,3 +1,3 @@
-export * from './plugin';
-export * from './source';
-export * from './errors';
+export * from './plugin.js';
+export * from './source.js';
+export * from './errors.js';

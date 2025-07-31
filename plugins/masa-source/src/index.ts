@@ -1,47 +1,28 @@
-import type { 
-  SourcePlugin,
+import type {
+  IPlatformSearchService,
+  PlatformState,
   PluginSourceItem,
   PluginSourceOutput,
-  AsyncJobProgress,
-  PlatformState,
-  LastProcessedState,
-  IPlatformSearchService,
+  SourcePlugin,
   SourcePluginSearchOptions
 } from '@usersdotfun/core-sdk';
 import { ConfigurationError, ContentType } from '@usersdotfun/core-sdk';
 import { z } from 'zod';
+import { MasaClient, MasaClientConfig, MasaSearchResult } from './masa-client';
 import {
   MasaSourceConfigSchema,
   MasaSourceInputSchema,
   MasaSourceOutputSchema,
 } from './schemas';
-import { MasaClient, MasaClientConfig, MasaSearchResult } from './masa-client';
-import { serviceRegistry, PlatformConfig } from './services';
+import { PlatformConfig, serviceRegistry } from './services';
 
 // --- Derived Types ---
 type MasaSourceConfig = z.infer<typeof MasaSourceConfigSchema>;
 type MasaSourceInput = z.infer<typeof MasaSourceInputSchema>;
 type MasaSourceOutput = z.infer<typeof MasaSourceOutputSchema>;
 
-// Define the specific PluginSourceItem type for Masa
-interface MasaPluginSourceItem extends PluginSourceItem<MasaSearchResult> {
-  externalId: string;
-  content: string;
-  contentType?: string;
-  createdAt?: string;
-  url?: string;
-  authors?: Array<{
-    id?: string;
-    username?: string;
-    displayName?: string;
-    url?: string;
-  }>;
-  raw: MasaSearchResult;
-}
-
 export class MasaSourcePlugin
-  implements SourcePlugin<MasaSourceInput, PluginSourceOutput<MasaPluginSourceItem>, MasaSourceConfig>
-{
+  implements SourcePlugin<MasaSourceInput, PluginSourceOutput<PluginSourceItem<MasaSearchResult>>, MasaSourceConfig> {
   readonly type = 'source' as const;
 
   private masaClient!: MasaClient;
@@ -69,9 +50,11 @@ export class MasaSourcePlugin
     }
   }
 
-  async execute(input: MasaSourceInput): Promise<PluginSourceOutput<MasaPluginSourceItem>> {
+  async execute(input: MasaSourceInput): Promise<PluginSourceOutput<PluginSourceItem<MasaSearchResult>>> {
     const { searchOptions, lastProcessedState } = input;
     const searchPlatformType = searchOptions.type as string;
+
+    console.log("RUNNING ON INPUT", input);
 
     if (!this.masaClient) {
       return {
@@ -111,18 +94,13 @@ export class MasaSourcePlugin
       const validatedServiceOptions =
         platformConfig.optionsSchema.parse(rawServiceOptions);
 
-      // Wrap lastProcessedState in the expected format if it exists
-      const wrappedState: LastProcessedState<PlatformState> | null = lastProcessedState 
-        ? { data: lastProcessedState as PlatformState }
-        : null; // TODO: maybe clean this up
-
       const serviceResults = await service.search(
         validatedServiceOptions,
-        wrappedState
+        lastProcessedState
       );
 
       // Transform MasaSearchResult[] to MasaPluginSourceItem[]
-      const pluginSourceItems: MasaPluginSourceItem[] = serviceResults.items.map((masaResult: MasaSearchResult) => ({
+      const pluginSourceItems: PluginSourceItem<MasaSearchResult>[] = serviceResults.items.map((masaResult: MasaSearchResult) => ({
         externalId: masaResult.ExternalID,
         content: masaResult.Content,
         contentType: searchPlatformType === 'twitter-scraper' ? ContentType.POST : ContentType.UNKNOWN,

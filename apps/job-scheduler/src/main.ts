@@ -103,9 +103,7 @@ const AppLayer = Layer.mergeAll(
 
 const program = Effect.gen(function* () {
   const queueService = yield* QueueService;
-  const { db } = yield* Database;
   const jobService = yield* JobService;
-  const stateService = yield* StateService;
 
   yield* Effect.log('Fetching jobs from database...');
   const dbJobs = yield* jobService.getJobs();
