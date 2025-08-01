@@ -1,6 +1,6 @@
 import { QueryClient } from '@tanstack/react-query';
 import { queueOverviewSchema } from '@usersdotfun/shared-types/schemas';
-import type { Job, JobRunInfo, JobWithSteps, WebSocketEvent } from '@usersdotfun/shared-types/types';
+import type { Job, WorkflowRunInfo, JobWithSteps, WebSocketEvent } from '@usersdotfun/shared-types/types';
 import { z } from 'zod';
 import { queryKeys } from './query-keys';
 import { parseQueueJobId } from './queue-utils';
@@ -32,15 +32,15 @@ export const eventHandlers: Record<WebSocketEvent['type'], EventHandler> = {
   },
 
   'job:deleted': (client, data) => {
-    const { jobId } = data;
+    const { workflowId } = data;
 
     // Remove from the main jobs list
     client.setQueryData(queryKeys.jobs.lists(), (oldData: Job[] | undefined) =>
-      oldData ? oldData.filter(job => job.id !== jobId) : []
+      oldData ? oldData.filter(job => job.id !== workflowId) : []
     );
 
     // Invalidate and remove the specific job query
-    client.removeQueries({ queryKey: queryKeys.jobs.detail(jobId) });
+    client.removeQueries({ queryKey: queryKeys.jobs.detail(workflowId) });
 
     // Remove from all-queue-jobs list
     client.setQueryData(queryKeys.queues.allJobs(), (oldData: any | undefined) => {
@@ -49,7 +49,7 @@ export const eventHandlers: Record<WebSocketEvent['type'], EventHandler> = {
         if (!job.id) return true;
         try {
           const parsedId = parseQueueJobId(job.id);
-          return parsedId.jobId !== jobId;
+          return parsedId.workflowId !== workflowId;
         } catch {
           return true; // Keep jobs that can't be parsed
         }
@@ -66,10 +66,10 @@ export const eventHandlers: Record<WebSocketEvent['type'], EventHandler> = {
   },
 
   'job:progress': (client, data) => {
-    const { jobId } = data;
+    const { workflowId } = data;
 
     // Update job monitoring data if it exists
-    client.setQueryData(queryKeys.jobs.monitoring(jobId), (oldData: any) => {
+    client.setQueryData(queryKeys.jobs.monitoring(workflowId), (oldData: any) => {
       if (!oldData) return oldData;
       return {
         ...oldData,
@@ -86,7 +86,7 @@ export const eventHandlers: Record<WebSocketEvent['type'], EventHandler> = {
   },
 
   'job:run-started': (client, data) => {
-    client.setQueryData(queryKeys.jobs.runs(data.jobId), (oldData: JobRunInfo[] | undefined) => {
+    client.setQueryData(queryKeys.jobs.runs(data.workflowId), (oldData: WorkflowRunInfo[] | undefined) => {
       if (!oldData) return [data.run];
       const runExists = oldData.some(run => run.runId === data.run.runId);
       if (runExists) {
@@ -95,12 +95,12 @@ export const eventHandlers: Record<WebSocketEvent['type'], EventHandler> = {
         return [data.run, ...oldData];
       }
     });
-    client.invalidateQueries({ queryKey: queryKeys.jobs.monitoring(data.jobId) });
+    client.invalidateQueries({ queryKey: queryKeys.jobs.monitoring(data.workflowId) });
     client.invalidateQueries({ queryKey: queryKeys.queues.allJobs() });
   },
 
   'job:run-completed': (client, data) => {
-    client.setQueryData(queryKeys.jobs.runs(data.jobId), (oldData: JobRunInfo[] | undefined) => {
+    client.setQueryData(queryKeys.jobs.runs(data.workflowId), (oldData: WorkflowRunInfo[] | undefined) => {
       if (!oldData) return [data.run];
       const runExists = oldData.some(run => run.runId === data.run.runId);
       if (runExists) {
@@ -109,16 +109,16 @@ export const eventHandlers: Record<WebSocketEvent['type'], EventHandler> = {
         return [data.run, ...oldData];
       }
     });
-    client.invalidateQueries({ queryKey: queryKeys.jobs.monitoring(data.jobId) });
+    client.invalidateQueries({ queryKey: queryKeys.jobs.monitoring(data.workflowId) });
     client.invalidateQueries({ queryKey: queryKeys.queues.allJobs() });
   },
 
   'pipeline:step-completed': (client, data) => {
-    client.invalidateQueries({ queryKey: queryKeys.jobs.monitoring(data.jobId) });
+    client.invalidateQueries({ queryKey: queryKeys.jobs.monitoring(data.workflowId) });
   },
 
   'pipeline:step-failed': (client, data) => {
-    client.invalidateQueries({ queryKey: queryKeys.jobs.monitoring(data.jobId) });
+    client.invalidateQueries({ queryKey: queryKeys.jobs.monitoring(data.workflowId) });
   },
 
   'queue:status-changed': (client, data) => {
@@ -165,8 +165,8 @@ export const eventHandlers: Record<WebSocketEvent['type'], EventHandler> = {
     setTimeout(() => {
       client.invalidateQueries({ queryKey: queryKeys.queues.all() });
       client.invalidateQueries({ queryKey: queryKeys.queues.allJobs() });
-      if (data.jobId) {
-        client.invalidateQueries({ queryKey: queryKeys.jobs.detail(data.jobId) });
+      if (data.workflowId) {
+        client.invalidateQueries({ queryKey: queryKeys.jobs.detail(data.workflowId) });
         client.invalidateQueries({ queryKey: queryKeys.jobs.lists() });
       }
     }, 100);
@@ -197,8 +197,8 @@ export const eventHandlers: Record<WebSocketEvent['type'], EventHandler> = {
         client.invalidateQueries({ queryKey: queryKeys.queues.allJobs() });
       }
       client.invalidateQueries({ queryKey: queryKeys.jobs.lists() });
-      if (data.jobId) {
-        client.invalidateQueries({ queryKey: queryKeys.jobs.detail(data.jobId) });
+      if (data.workflowId) {
+        client.invalidateQueries({ queryKey: queryKeys.jobs.detail(data.workflowId) });
       }
     }, 200);
   },

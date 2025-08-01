@@ -1,14 +1,14 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { retryPipelineStep } from '~/api/workflows';
+import { retryPluginRun } from '~/api/workflows';
 import { Button } from '~/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs';
 import { StatusBadge } from './status-badge';
 import { toast } from 'sonner';
-import type { PipelineStep } from '@usersdotfun/shared-types/types';
+import type { PluginRun } from '@usersdotfun/shared-types/types';
 import { queryKeys } from '~/lib/query-keys';
 
 interface StepDetailsProps {
-  step: PipelineStep | {
+  step: PluginRun | {
     stepId: string;
     pluginName: string;
     status?: string;
@@ -19,7 +19,7 @@ interface StepDetailsProps {
     startedAt?: string;
     completedAt?: string;
   };
-  jobId: string;
+  workflowId: string;
 }
 
 function JsonViewer({ data, label }: { data: any; label: string }) {
@@ -40,7 +40,7 @@ function JsonViewer({ data, label }: { data: any; label: string }) {
   );
 }
 
-export function StepDetails({ step, jobId }: StepDetailsProps) {
+export function StepDetails({ step, workflowId }: StepDetailsProps) {
   const queryClient = useQueryClient();
 
   const retryMutation = useMutation({
@@ -49,12 +49,12 @@ export function StepDetails({ step, jobId }: StepDetailsProps) {
       if (!stepId) {
         throw new Error('Step ID is required for retry');
       }
-      return retryPipelineStep(jobId, stepId);
+      return retryPluginRun(workflowId, stepId);
     },
     onSuccess: () => {
       toast.success('Step retry initiated');
-      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.monitoring(jobId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.detail(jobId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.monitoring(workflowId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.detail(workflowId) });
     },
     onError: (error) => {
       toast.error(`Failed to retry step: ${error.message}`);

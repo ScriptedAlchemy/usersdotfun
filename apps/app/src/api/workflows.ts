@@ -16,7 +16,7 @@ import type {
   CreateWorkflow,
   Job,
   JobMonitoringData,
-  JobRunInfo,
+  WorkflowRunInfo,
   JobWithSteps,
   UpdateWorkflow,
   JobStatusSummary,
@@ -113,7 +113,7 @@ export const getJobStatus = async (id: string): Promise<JobStatusSummary> => {
   return extractData(apiResponse);
 };
 
-export const getJobRuns = async (id: string): Promise<JobRunInfo[]> => {
+export const getJobRuns = async (id: string): Promise<WorkflowRunInfo[]> => {
   const res = await fetch(`${API_BASE_URL}/workflows/${id}/runs`);
   const apiResponse = await handleResponse(res, ApiSuccessResponseSchema(JobRunsListDataSchema));
   return extractData(apiResponse);
@@ -133,8 +133,8 @@ export const retryJob = async (id: string): Promise<{ message: string }> => {
   return extractData(apiResponse);
 };
 
-export const retryPipelineStep = async (jobId: string, stepId: string): Promise<{ message: string }> => {
-  const res = await fetch(`${API_BASE_URL}/workflows/${jobId}/steps/${stepId}/retry`, {
+export const retryPluginRun = async (workflowId: string, stepId: string): Promise<{ message: string }> => {
+  const res = await fetch(`${API_BASE_URL}/workflows/${workflowId}/steps/${stepId}/retry`, {
     method: 'POST',
   });
   const apiResponse = await handleResponse(res, ApiSuccessResponseSchema(SimpleMessageDataSchema));

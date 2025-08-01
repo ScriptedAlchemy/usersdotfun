@@ -136,8 +136,8 @@ export function QueueItemList({ queueName, items, isLoading }: QueueItemListProp
     removeMutation.mutate({ itemId });
   };
 
-  const handleViewJob = (jobId: string) => {
-    navigate({ to: '/workflows', search: { jobId } });
+  const handleViewJob = (workflowId: string) => {
+    navigate({ to: '/workflows', search: { workflowId } });
   };
 
   const getStatusBadge = (status: 'waiting' | 'active' | 'failed' | 'delayed') => {
@@ -178,8 +178,8 @@ export function QueueItemList({ queueName, items, isLoading }: QueueItemListProp
       cell: ({ row }) => (
         <div className="flex flex-col">
           <span className="font-medium">{row.original.name}</span>
-          {row.original.jobId && (
-            <span className="text-xs text-gray-500">Job: {row.original.jobId}</span>
+          {row.original.workflowId && (
+            <span className="text-xs text-gray-500">Job: {row.original.workflowId}</span>
           )}
         </div>
       ),
@@ -232,13 +232,13 @@ export function QueueItemList({ queueName, items, isLoading }: QueueItemListProp
         
         return (
           <div className="flex items-center gap-1">
-            {item.jobId && (
+            {item.workflowId && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleViewJob(item.jobId!);
+                  handleViewJob(item.workflowId!);
                 }}
                 className="h-8 w-8 p-0"
               >

@@ -1,5 +1,5 @@
 import { Cause } from 'effect';
-import { JobNotFoundError, ValidationError, DbError } from '@usersdotfun/shared-db';
+import { WorkflowNotFoundError, ValidationError, DbError } from '@usersdotfun/shared-db';
 
 export class HttpError extends Error {
   constructor(message: string, public status: number, public details?: any) {
@@ -15,7 +15,7 @@ export const toHttpError = (error: any): HttpError => {
     cause: error?.cause,
     stack: error?.stack,
     constructor: error?.constructor?.name,
-    isJobNotFoundError: error instanceof JobNotFoundError,
+    isWorkflowNotFoundError: error instanceof WorkflowNotFoundError,
     isValidationError: error instanceof ValidationError,
     isDbError: error instanceof DbError,
     isRuntimeException: Cause.isRuntimeException(error),
@@ -45,7 +45,7 @@ export const toHttpError = (error: any): HttpError => {
     return new HttpError(`Validation failed: ${formattedDetails}`, 400, validationDetails);
   }
 
-  if (error instanceof JobNotFoundError) {
+  if (error instanceof WorkflowNotFoundError) {
     return new HttpError('Job not found', 404);
   }
 

@@ -3,6 +3,7 @@ import {
   jwtPayloadSchema,
   authenticatedContextSchema,
   UserRole,
+  userSchema
 } from '../schemas/auth';
 
 // ============================================================================
@@ -11,5 +12,6 @@ import {
 
 export { UserRole };
 
+export type User = z.infer<typeof userSchema>;
 export type JWTPayload = z.infer<typeof jwtPayloadSchema>;
 export type AuthenticatedContext = z.infer<typeof authenticatedContextSchema>;

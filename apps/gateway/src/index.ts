@@ -3,7 +3,7 @@ import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
 import { rateLimiter } from 'hono-rate-limiter'
 import { authMiddleware } from './middleware/auth'
-import { jobsRouter } from './routes/workflows'
+import { workflowsRouter } from './routes/workflows'
 import { queuesRouter } from './routes/queues'
 import websocketRoutes, { websocket } from './routes/websocket'
 import './types/hono'
@@ -36,8 +36,8 @@ app.use('*', rateLimiter({
 app.use('*', authMiddleware)
 
 // Routes
-app.get('/', (c) => c.text('Jobs API'))
-app.route('/api/workflows', jobsRouter)
+app.get('/', (c) => c.text('Gateway API'))
+app.route('/api/workflows', workflowsRouter)
 app.route('/api/queues', queuesRouter)
 app.route('/api/ws', websocketRoutes)
 

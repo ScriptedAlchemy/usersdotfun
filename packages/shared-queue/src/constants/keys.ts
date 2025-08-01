@@ -1,4 +1,4 @@
-import type { JobRunInfo, PipelineStep, JobError, QueueStatus } from '@usersdotfun/shared-types/types';
+import type { PluginRun, WorkflowError, WorkflowRunInfo } from '@usersdotfun/shared-types/types';
 
 /**
  * A type-safe representation of a Redis key.
@@ -18,72 +18,53 @@ export type RedisKey<T> = {
 
 export const RedisKeys = {
   /**
-   * Generates a RedisKey for a job's state.
-   * Example: `job:JOB_ID:state`
-   * @param jobId The ID of the job.
+   * Key for a workflow's resumable state (e.g., for source cursors).
+   * Example: `workflow:WORKFLOW_ID:state`
    */
-  jobState: <T>(jobId: string): RedisKey<T> => ({
+  workflowState: <T>(workflowId: string): RedisKey<T> => ({
     __type: 'RedisKey',
-    value: `job:${jobId}:state`,
+    value: `workflow:${workflowId}:state`,
     _value: undefined as T,
   }),
 
   /**
-   * Generates a RedisKey for a specific job run's information.
-   * Example: `job:JOB_ID:run:RUN_ID`
-   * @param jobId The ID of the source job.
-   * @param runId The ID of the specific run.
+   * Key for a specific workflow run's real-time summary information.
+   * Example: `workflow:WORKFLOW_ID:run:RUN_ID`
    */
-  jobRun: (jobId: string, runId: string): RedisKey<JobRunInfo> => ({
+  runSummary: (workflowId: string, runId: string): RedisKey<WorkflowRunInfo> => ({
     __type: 'RedisKey',
-    value: `job:${jobId}:run:${runId}`,
-    _value: undefined as unknown as JobRunInfo,
+    value: `workflow:${workflowId}:run:${runId}`,
+    _value: undefined as unknown as WorkflowRunInfo,
   }),
 
   /**
-   * Generates a RedisKey for the history of runs for a given job.
-   * Example: `job:JOB_ID:runs:history`
-   * Stores string[] (list of runIds)
-   * @param jobId The ID of the job.
+   * Key for the list of recent run IDs for a given workflow. (Redis List)
+   * Example: `workflow:WORKFLOW_ID:runs:history`
    */
-  jobRunHistory: (jobId: string): RedisKey<string[]> => ({
+  workflowRunHistory: (workflowId: string): RedisKey<string[]> => ({
     __type: 'RedisKey',
-    value: `job:${jobId}:runs:history`,
+    value: `workflow:${workflowId}:runs:history`,
     _value: undefined as unknown as string[],
   }),
 
   /**
-   * Generates a RedisKey for a specific pipeline item within a run.
-   * Example: `pipeline:RUN_ID:item:ITEM_INDEX`
-   * @param runId The ID of the job run.
-   * @param itemIndex The index of the item within the pipeline.
+   * Key for the real-time state of a single plugin execution for a specific item.
+   * Example: `run:RUN_ID:item:ITEM_ID:step:STEP_ID`
    */
-  pipelineItem: (runId: string, itemIndex: number): RedisKey<PipelineStep> => ({
+  pluginRunState: (runId: string, itemId: string, stepId: string): RedisKey<PluginRun> => ({
     __type: 'RedisKey',
-    value: `pipeline:${runId}:item:${itemIndex}`,
-    _value: undefined as unknown as PipelineStep,
+    value: `run:${runId}:item:${itemId}:step:${stepId}`,
+    _value: undefined as unknown as PluginRun,
   }),
 
   /**
-   * Generates a RedisKey for job errors.
-   * Example: `job-error:JOB_ID`
-   * @param jobId The ID of the job.
+   * Key for storing the last known error for a workflow.
+   * Example: `workflow-error:WORKFLOW_ID`
    */
-  jobError: (jobId: string): RedisKey<JobError> => ({
+  workflowError: (workflowId: string): RedisKey<WorkflowError> => ({
     __type: 'RedisKey',
-    value: `job-error:${jobId}`,
-    _value: undefined as unknown as JobError,
-  }),
-
-  /**
-   * Generates a RedisKey for queue status.
-   * Example: `queue:QUEUE_NAME:status`
-   * @param queueName The name of the queue.
-   */
-  queueStatus: (queueName: string): RedisKey<QueueStatus> => ({
-    __type: 'RedisKey',
-    value: `queue:${queueName}:status`,
-    _value: undefined as unknown as QueueStatus,
+    value: `workflow-error:${workflowId}`,
+    _value: undefined as unknown as WorkflowError,
   }),
 } as const;
 

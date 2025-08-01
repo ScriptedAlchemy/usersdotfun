@@ -72,7 +72,7 @@ export interface SourceItem<TRaw = Record<string, any>> extends PluginSourceItem
   // System-injected metadata for traceability
   metadata: {
     sourcePlugin: string;
-    jobId: string;
+    workflowId: string;
     runId: string;
     [key: string]: any;
   };
@@ -82,7 +82,7 @@ export interface SourceItem<TRaw = Record<string, any>> extends PluginSourceItem
  * Defines the progress of a job submitted to an external asynchronous service (e.g., Masa).
  */
 export interface AsyncJobProgress {
-  jobId: string;
+  workflowId: string;
   status: "submitted" | "pending" | "processing" | "done" | "error" | "timeout";
   submittedAt: string; // ISO timestamp
   lastCheckedAt?: string; // ISO timestamp

@@ -121,7 +121,7 @@ const program = Effect.gen(function* () {
         const result = yield* queueService.addRepeatableIfNotExists(
           'source-jobs',
           'scheduled-source-run',
-          { jobId: job.id },
+          { workflowId: job.id },
           { pattern: job.schedule! } // TODO: fix if undefined
         );
 
@@ -142,7 +142,7 @@ const program = Effect.gen(function* () {
         yield* queueService.add(
           'source-jobs',
           'immediate-source-run',
-          { jobId: job.id },
+          { workflowId: job.id },
           { delay: 1000 }
         );
         yield* Effect.log(`Added immediate job for ${job.name} (${job.id})`);

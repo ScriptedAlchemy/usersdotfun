@@ -660,7 +660,7 @@ export interface SourceItem<TRaw = Record<string, any>> extends PluginSourceItem
   // System-injected metadata for traceability
   metadata: {
     sourcePlugin: string;
-    jobId: string;
+    workflowId: string;
     runId: string;
     [key: string]: any;
   };
@@ -670,7 +670,7 @@ export interface SourceItem<TRaw = Record<string, any>> extends PluginSourceItem
  * Defines the progress of a job submitted to an external asynchronous service (e.g., Masa).
  */
 export interface AsyncJobProgress {
-  jobId: string;
+  workflowId: string;
   status: "submitted" | "pending" | "processing" | "done" | "error" | "timeout";
   submittedAt: string; // ISO timestamp
   lastCheckedAt?: string; // ISO timestamp
@@ -998,8 +998,8 @@ export * from "./services/secrets.config";
 ```ts
 import {
   DbError,
-  JobNotFoundError,
-  PipelineStepNotFoundError,
+  WorkflowNotFoundError,
+  PluginRunNotFoundError,
   ValidationError as DbValidationError,
 } from "@usersdotfun/shared-db";
 import { Data } from "effect";
@@ -1039,8 +1039,8 @@ export type StepError =
   | PluginError
   | DbError
   | DbValidationError
-  | JobNotFoundError
-  | PipelineStepNotFoundError;
+  | WorkflowNotFoundError
+  | PluginRunNotFoundError;
 export type PipelineExecutionError = PipelineError | StepError;
 
 ```
@@ -1055,7 +1055,7 @@ export interface PipelineExecutionContext {
   runId: string;
   itemIndex: number;
   sourceJobId: string;
-  jobId: string;
+  workflowId: string;
   env: {
     secrets: string[];
   };
@@ -1152,7 +1152,7 @@ export const getPlugin = (pluginName: string): Effect.Effect<PluginMetadata, Plu
 ```ts
 import { WorkflowService } from "@usersdotfun/shared-db";
 import { RedisKeys } from "@usersdotfun/shared-queue";
-import type { PipelineStep } from "@usersdotfun/shared-types/types";
+import type { PluginRun } from "@usersdotfun/shared-types/types";
 import { Effect } from "effect";
 import { EnvironmentServiceTag, type EnvironmentService } from "../services/environment.service";
 import { StateServiceTag, type StateService } from "../services/state.service";
@@ -1162,7 +1162,7 @@ import { getPlugin, PluginLoaderTag } from "./services";
 import { SchemaValidator } from "./validation";
 
 export const executeStep = (
-  step: PipelineStep,
+  step: PluginRun,
   input: Record<string, unknown>,
   context: PipelineExecutionContext,
 ): Effect.Effect<Record<string, unknown>, StepError, PluginLoaderTag | WorkflowService | StateService | EnvironmentService> =>
@@ -1178,7 +1178,7 @@ export const executeStep = (
     // Store step data in Redis for real-time monitoring
     yield* stateService.set(RedisKeys.pipelineItem(context.runId, context.itemIndex), {
       id: stepId,
-      jobId: context.jobId,
+      workflowId: context.workflowId,
       stepId: step.stepId,
       pluginName: step.pluginName,
       config: step.config,
@@ -1197,9 +1197,9 @@ export const executeStep = (
       }))
     );
 
-    yield* jobService.createPipelineStep({
+    yield* jobService.createPluginRun({
       id: stepId,
-      jobId: context.jobId,
+      workflowId: context.workflowId,
       stepId: step.stepId,
       pluginName: step.pluginName,
       config: step.config,
@@ -1256,7 +1256,7 @@ export const executeStep = (
       })
     }).pipe(
       Effect.mapError((error) => {
-        jobService.updatePipelineStep(stepId, {
+        jobService.updatePluginRun(stepId, {
           status: "failed",
           error,
           completedAt: new Date(),
@@ -1266,7 +1266,7 @@ export const executeStep = (
     );
 
     if (output === undefined || output === null) {
-      jobService.updatePipelineStep(stepId, {
+      jobService.updatePluginRun(stepId, {
         status: "failed",
         error: { message: `Plugin returned ${output === null ? 'null' : 'undefined'} output` },
         completedAt: new Date(),
@@ -1294,7 +1294,7 @@ export const executeStep = (
           errors: validatedOutput.errors,
         }
       });
-      jobService.updatePipelineStep(stepId, {
+      jobService.updatePluginRun(stepId, {
         status: "failed",
         error,
         completedAt: new Date(),
@@ -1304,7 +1304,7 @@ export const executeStep = (
 
     const completedAt = new Date();
 
-    yield* jobService.updatePipelineStep(stepId, {
+    yield* jobService.updatePluginRun(stepId, {
       status: "completed",
       output: validatedOutput,
       completedAt,
@@ -1313,7 +1313,7 @@ export const executeStep = (
     // Update Redis state with completion
     yield* stateService.set(RedisKeys.pipelineItem(context.runId, context.itemIndex), {
       id: stepId,
-      jobId: context.jobId,
+      workflowId: context.workflowId,
       stepId: step.stepId,
       pluginName: step.pluginName,
       config: step.config,
@@ -2332,8 +2332,8 @@ export class ValidationError extends Data.TaggedError("ValidationError")<{
 export { DbError, ValidationError } from "./errors";
 export { Database, DatabaseConfig, DatabaseLive, WorkflowService, WorkflowServiceLive } from "./services";
 export {
-  JobNotFoundError,
-  PipelineStepNotFoundError
+  WorkflowNotFoundError,
+  PluginRunNotFoundError
 } from "./services/job.service";
 export { schema } from "./schema";
 export type { DB } from "./schema";
@@ -2443,12 +2443,12 @@ export {
 } from "./workflows";
 
 export {
-  selectPipelineStepSchema,
-  insertPipelineStepSchema,
-  updatePipelineStepSchema,
-  type SelectPipelineStep,
-  type InsertPipelineStepData,
-  type UpdatePipelineStepData,
+  selectPluginRunSchema,
+  insertPluginRunSchema,
+  updatePluginRunSchema,
+  type SelectPluginRun,
+  type InsertPluginRunData,
+  type UpdatePluginRunData,
 } from "./pipeline-steps";
 
 import * as auth from "./auth";
@@ -2532,7 +2532,7 @@ import { jobs } from "./workflows";
 
 export const pipelineSteps = pgTable("pipeline_steps", {
   id: varchar("id", { length: 255 }).primaryKey(),
-  jobId: varchar("job_id", { length: 255 })
+  workflowId: varchar("job_id", { length: 255 })
     .notNull()
     .references(() => jobs.id),
   stepId: varchar("step_id", { length: 255 }).notNull(),
@@ -2548,17 +2548,17 @@ export const pipelineSteps = pgTable("pipeline_steps", {
 
 export const pipelineStepsRelations = relations(pipelineSteps, ({ one }) => ({
   job: one(jobs, {
-    fields: [pipelineSteps.jobId],
+    fields: [pipelineSteps.workflowId],
     references: [jobs.id],
   }),
 }));
 
-export type PipelineStep = typeof pipelineSteps.$inferSelect;
-export type NewPipelineStep = typeof pipelineSteps.$inferInsert;
+export type PluginRun = typeof pipelineSteps.$inferSelect;
+export type NewPluginRun = typeof pipelineSteps.$inferInsert;
 
-export const selectPipelineStepSchema = z.object({
+export const selectPluginRunSchema = z.object({
   id: z.string().min(1),
-  jobId: z.uuid(),
+  workflowId: z.uuid(),
   stepId: z.string().min(1),
   pluginName: z.string().min(1),
   config: z.any().nullable(),
@@ -2570,9 +2570,9 @@ export const selectPipelineStepSchema = z.object({
   completedAt: z.date().nullable(),
 });
 
-export const insertPipelineStepSchema = z.object({
+export const insertPluginRunSchema = z.object({
   id: z.string().min(1),
-  jobId: z.uuid(),
+  workflowId: z.uuid(),
   stepId: z.string().min(1),
   pluginName: z.string().min(1),
   config: z.any().optional().nullable(),
@@ -2584,11 +2584,11 @@ export const insertPipelineStepSchema = z.object({
   completedAt: z.date().optional().nullable(),
 });
 
-export const updatePipelineStepSchema = insertPipelineStepSchema.omit({ id: true }).partial();
+export const updatePluginRunSchema = insertPluginRunSchema.omit({ id: true }).partial();
 
-export type SelectPipelineStep = z.infer<typeof selectPipelineStepSchema>;
-export type InsertPipelineStepData = z.infer<typeof insertPipelineStepSchema>;
-export type UpdatePipelineStepData = z.infer<typeof updatePipelineStepSchema>;
+export type SelectPluginRun = z.infer<typeof selectPluginRunSchema>;
+export type InsertPluginRunData = z.infer<typeof insertPluginRunSchema>;
+export type UpdatePluginRunData = z.infer<typeof updatePluginRunSchema>;
 
 ```
 
@@ -2674,24 +2674,24 @@ import {
   updateJobSchema,
 } from "../schema/workflows";
 import {
-  type InsertPipelineStepData,
-  type SelectPipelineStep,
-  type UpdatePipelineStepData,
-  insertPipelineStepSchema,
-  selectPipelineStepSchema,
-  updatePipelineStepSchema,
+  type InsertPluginRunData,
+  type SelectPluginRun,
+  type UpdatePluginRunData,
+  insertPluginRunSchema,
+  selectPluginRunSchema,
+  updatePluginRunSchema,
 } from "../schema/pipeline-steps";
 import { Database } from "./db.service";
 
-export class JobNotFoundError extends Data.TaggedError("JobNotFoundError")<{
-  readonly jobId: string;
+export class WorkflowNotFoundError extends Data.TaggedError("WorkflowNotFoundError")<{
+  readonly workflowId: string;
 }> { }
 
-export class PipelineStepNotFoundError extends Data.TaggedError(
-  "PipelineStepNotFoundError"
+export class PluginRunNotFoundError extends Data.TaggedError(
+  "PluginRunNotFoundError"
 )<{
   readonly stepId: string;
-  readonly jobId?: string;
+  readonly workflowId?: string;
 }> { }
 
 const validateData = <A>(
@@ -2782,7 +2782,7 @@ const mapUpdateWorkflowToDbJob = (jobDef: UpdateWorkflow): UpdateJobData => {
 export interface WorkflowService {
   readonly getJobById: (
     id: string
-  ) => Effect.Effect<SelectJob, JobNotFoundError | DbError>;
+  ) => Effect.Effect<SelectJob, WorkflowNotFoundError | DbError>;
   readonly getJobs: () => Effect.Effect<Array<SelectJob>, DbError>;
   readonly createJob: (
     data: InsertJobData
@@ -2795,36 +2795,36 @@ export interface WorkflowService {
     data: UpdateJobData
   ) => Effect.Effect<
     SelectJob,
-    JobNotFoundError | ValidationError | DbError
+    WorkflowNotFoundError | ValidationError | DbError
   >;
   readonly deleteJob: (
     id: string
-  ) => Effect.Effect<void, JobNotFoundError | DbError>;
+  ) => Effect.Effect<void, WorkflowNotFoundError | DbError>;
   readonly retryJob: (
     id: string
-  ) => Effect.Effect<void, JobNotFoundError | DbError>;
+  ) => Effect.Effect<void, WorkflowNotFoundError | DbError>;
   readonly getStepById: (
     id: string
   ) => Effect.Effect<
-    SelectPipelineStep,
-    PipelineStepNotFoundError | DbError
+    SelectPluginRun,
+    PluginRunNotFoundError | DbError
   >;
   readonly getStepsForJob: (
-    jobId: string
-  ) => Effect.Effect<Array<SelectPipelineStep>, DbError>;
-  readonly createPipelineStep: (
-    data: InsertPipelineStepData
-  ) => Effect.Effect<SelectPipelineStep, ValidationError | DbError>;
-  readonly updatePipelineStep: (
+    workflowId: string
+  ) => Effect.Effect<Array<SelectPluginRun>, DbError>;
+  readonly createPluginRun: (
+    data: InsertPluginRunData
+  ) => Effect.Effect<SelectPluginRun, ValidationError | DbError>;
+  readonly updatePluginRun: (
     id: string,
-    data: UpdatePipelineStepData
+    data: UpdatePluginRunData
   ) => Effect.Effect<
-    SelectPipelineStep,
-    PipelineStepNotFoundError | ValidationError | DbError
+    SelectPluginRun,
+    PluginRunNotFoundError | ValidationError | DbError
   >;
-  readonly retryPipelineStep: (
+  readonly retryPluginRun: (
     id: string
-  ) => Effect.Effect<void, PipelineStepNotFoundError | DbError>;
+  ) => Effect.Effect<void, PluginRunNotFoundError | DbError>;
 }
 
 export const WorkflowService = Context.GenericTag<WorkflowService>("WorkflowService");
@@ -2835,14 +2835,14 @@ export const WorkflowServiceLive = Layer.effect(
     const { db } = yield* Database;
 
     // Internal helper methods that work with database format
-    const getDbJobById = (id: string): Effect.Effect<SelectJob, JobNotFoundError | DbError> =>
+    const getDbJobById = (id: string): Effect.Effect<SelectJob, WorkflowNotFoundError | DbError> =>
       Effect.tryPromise({
         try: () => db.query.jobs.findFirst({ where: eq(schema.jobs.id, id) }),
         catch: (cause) =>
           new DbError({ cause, message: "Failed to get job by id" }),
       }).pipe(
         Effect.flatMap((result) =>
-          requireRecord(result, new JobNotFoundError({ jobId: id }))
+          requireRecord(result, new WorkflowNotFoundError({ workflowId: id }))
         ),
         Effect.flatMap((job) =>
           validateData(selectJobSchema, job).pipe(
@@ -2916,7 +2916,7 @@ export const WorkflowServiceLive = Layer.effect(
     const updateDbJob = (
       id: string,
       data: UpdateJobData
-    ): Effect.Effect<SelectJob, JobNotFoundError | ValidationError | DbError> =>
+    ): Effect.Effect<SelectJob, WorkflowNotFoundError | ValidationError | DbError> =>
       validateData(updateJobSchema, data).pipe(
         Effect.flatMap((validatedData) =>
           Effect.tryPromise({
@@ -2931,7 +2931,7 @@ export const WorkflowServiceLive = Layer.effect(
           })
         ),
         Effect.flatMap((result) =>
-          requireRecord(result[0], new JobNotFoundError({ jobId: id }))
+          requireRecord(result[0], new WorkflowNotFoundError({ workflowId: id }))
         ),
         Effect.flatMap((updatedJob) =>
           validateData(selectJobSchema, updatedJob).pipe(
@@ -2947,7 +2947,7 @@ export const WorkflowServiceLive = Layer.effect(
       );
 
     // Public methods - GET methods return database format, create methods support both formats
-    const getJobById = (id: string): Effect.Effect<SelectJob, JobNotFoundError | DbError> =>
+    const getJobById = (id: string): Effect.Effect<SelectJob, WorkflowNotFoundError | DbError> =>
       getDbJobById(id);
 
     const getJobs = (): Effect.Effect<Array<SelectJob>, DbError> =>
@@ -2967,10 +2967,10 @@ export const WorkflowServiceLive = Layer.effect(
     const updateJob = (
       id: string,
       data: UpdateJobData
-    ): Effect.Effect<SelectJob, JobNotFoundError | ValidationError | DbError> =>
+    ): Effect.Effect<SelectJob, WorkflowNotFoundError | ValidationError | DbError> =>
       updateDbJob(id, data);
 
-    const deleteJob = (id: string): Effect.Effect<void, JobNotFoundError | DbError> =>
+    const deleteJob = (id: string): Effect.Effect<void, WorkflowNotFoundError | DbError> =>
       Effect.tryPromise({
         try: () =>
           db.delete(schema.jobs).where(eq(schema.jobs.id, id)).returning(),
@@ -2978,11 +2978,11 @@ export const WorkflowServiceLive = Layer.effect(
           new DbError({ cause, message: "Failed to delete job" }),
       }).pipe(
         Effect.flatMap((result) =>
-          requireNonEmptyArray(result, new JobNotFoundError({ jobId: id }))
+          requireNonEmptyArray(result, new WorkflowNotFoundError({ workflowId: id }))
         )
       );
 
-    const getStepById = (id: string): Effect.Effect<SelectPipelineStep, PipelineStepNotFoundError | DbError> =>
+    const getStepById = (id: string): Effect.Effect<SelectPluginRun, PluginRunNotFoundError | DbError> =>
       Effect.tryPromise({
         try: () =>
           db.query.pipelineSteps.findFirst({
@@ -2995,10 +2995,10 @@ export const WorkflowServiceLive = Layer.effect(
           }),
       }).pipe(
         Effect.flatMap((result) =>
-          requireRecord(result, new PipelineStepNotFoundError({ stepId: id }))
+          requireRecord(result, new PluginRunNotFoundError({ stepId: id }))
         ),
         Effect.flatMap((step) =>
-          validateData(selectPipelineStepSchema, step).pipe(
+          validateData(selectPluginRunSchema, step).pipe(
             Effect.mapError(
               (err) =>
                 new DbError({
@@ -3010,11 +3010,11 @@ export const WorkflowServiceLive = Layer.effect(
         )
       );
 
-    const getStepsForJob = (jobId: string): Effect.Effect<Array<SelectPipelineStep>, DbError> =>
+    const getStepsForJob = (workflowId: string): Effect.Effect<Array<SelectPluginRun>, DbError> =>
       Effect.tryPromise({
         try: () =>
           db.query.pipelineSteps.findMany({
-            where: eq(schema.pipelineSteps.jobId, jobId),
+            where: eq(schema.pipelineSteps.workflowId, workflowId),
             orderBy: (steps, { asc }) => asc(steps.startedAt),
           }),
         catch: (cause) =>
@@ -3024,7 +3024,7 @@ export const WorkflowServiceLive = Layer.effect(
           }),
       }).pipe(
         Effect.flatMap((steps) =>
-          validateData(Zod.array(selectPipelineStepSchema), steps).pipe(
+          validateData(Zod.array(selectPluginRunSchema), steps).pipe(
             Effect.mapError(
               (err) =>
                 new DbError({
@@ -3036,8 +3036,8 @@ export const WorkflowServiceLive = Layer.effect(
         )
       );
 
-    const createPipelineStep = (data: InsertPipelineStepData): Effect.Effect<SelectPipelineStep, ValidationError | DbError> =>
-      validateData(insertPipelineStepSchema, data).pipe(
+    const createPluginRun = (data: InsertPluginRunData): Effect.Effect<SelectPluginRun, ValidationError | DbError> =>
+      validateData(insertPluginRunSchema, data).pipe(
         Effect.flatMap((validatedData) =>
           Effect.tryPromise({
             try: () =>
@@ -3062,7 +3062,7 @@ export const WorkflowServiceLive = Layer.effect(
           )
         ),
         Effect.flatMap((newStep) =>
-          validateData(selectPipelineStepSchema, newStep).pipe(
+          validateData(selectPluginRunSchema, newStep).pipe(
             Effect.mapError(
               (err) =>
                 new DbError({
@@ -3074,11 +3074,11 @@ export const WorkflowServiceLive = Layer.effect(
         )
       );
 
-    const updatePipelineStep = (
+    const updatePluginRun = (
       id: string,
-      data: UpdatePipelineStepData
-    ): Effect.Effect<SelectPipelineStep, PipelineStepNotFoundError | ValidationError | DbError> =>
-      validateData(updatePipelineStepSchema, data).pipe(
+      data: UpdatePluginRunData
+    ): Effect.Effect<SelectPluginRun, PluginRunNotFoundError | ValidationError | DbError> =>
+      validateData(updatePluginRunSchema, data).pipe(
         Effect.flatMap((validatedData) =>
           Effect.tryPromise({
             try: () =>
@@ -3097,11 +3097,11 @@ export const WorkflowServiceLive = Layer.effect(
         Effect.flatMap((result) =>
           requireRecord(
             result[0],
-            new PipelineStepNotFoundError({ stepId: id })
+            new PluginRunNotFoundError({ stepId: id })
           )
         ),
         Effect.flatMap((updatedStep) =>
-          validateData(selectPipelineStepSchema, updatedStep).pipe(
+          validateData(selectPluginRunSchema, updatedStep).pipe(
             Effect.mapError(
               (err) =>
                 new DbError({
@@ -3113,7 +3113,7 @@ export const WorkflowServiceLive = Layer.effect(
         )
       );
 
-    const retryJob = (id: string): Effect.Effect<void, JobNotFoundError | DbError> =>
+    const retryJob = (id: string): Effect.Effect<void, WorkflowNotFoundError | DbError> =>
       Effect.tryPromise({
         try: () =>
           db
@@ -3125,11 +3125,11 @@ export const WorkflowServiceLive = Layer.effect(
           new DbError({ cause, message: "Failed to retry job" }),
       }).pipe(
         Effect.flatMap((result) =>
-          requireNonEmptyArray(result, new JobNotFoundError({ jobId: id }))
+          requireNonEmptyArray(result, new WorkflowNotFoundError({ workflowId: id }))
         )
       );
 
-    const retryPipelineStep = (id: string): Effect.Effect<void, PipelineStepNotFoundError | DbError> =>
+    const retryPluginRun = (id: string): Effect.Effect<void, PluginRunNotFoundError | DbError> =>
       Effect.tryPromise({
         try: () =>
           db
@@ -3146,7 +3146,7 @@ export const WorkflowServiceLive = Layer.effect(
           new DbError({ cause, message: "Failed to retry pipeline step" }),
       }).pipe(
         Effect.flatMap((result) =>
-          requireNonEmptyArray(result, new PipelineStepNotFoundError({ stepId: id }))
+          requireNonEmptyArray(result, new PluginRunNotFoundError({ stepId: id }))
         )
       );
 
@@ -3160,9 +3160,9 @@ export const WorkflowServiceLive = Layer.effect(
       retryJob,
       getStepById,
       getStepsForJob,
-      createPipelineStep,
-      updatePipelineStep,
-      retryPipelineStep,
+      createPluginRun,
+      updatePluginRun,
+      retryPluginRun,
     };
   })
 );
@@ -3293,7 +3293,7 @@ export const QueueConfig = Context.GenericTag<QueueConfig>('QueueConfig');
 `usersdotfun/packages/shared-queue/src/constants/keys.ts`:
 
 ```ts
-import type { JobRunInfo, PipelineStep, JobError, QueueStatus } from '@usersdotfun/shared-types/types';
+import type { WorkflowRunInfo, PluginRun, WorkflowError, QueueStatus } from '@usersdotfun/shared-types/types';
 
 /**
  * A type-safe representation of a Redis key.
@@ -3315,35 +3315,35 @@ export const RedisKeys = {
   /**
    * Generates a RedisKey for a job's state.
    * Example: `job:JOB_ID:state`
-   * @param jobId The ID of the job.
+   * @param workflowId The ID of the job.
    */
-  jobState: <T>(jobId: string): RedisKey<T> => ({
+  workflowState: <T>(workflowId: string): RedisKey<T> => ({
     __type: 'RedisKey',
-    value: `job:${jobId}:state`,
+    value: `job:${workflowId}:state`,
     _value: undefined as T,
   }),
 
   /**
    * Generates a RedisKey for a specific job run's information.
    * Example: `job:JOB_ID:run:RUN_ID`
-   * @param jobId The ID of the source job.
+   * @param workflowId The ID of the source job.
    * @param runId The ID of the specific run.
    */
-  jobRun: (jobId: string, runId: string): RedisKey<JobRunInfo> => ({
+  jobRun: (workflowId: string, runId: string): RedisKey<WorkflowRunInfo> => ({
     __type: 'RedisKey',
-    value: `job:${jobId}:run:${runId}`,
-    _value: undefined as unknown as JobRunInfo,
+    value: `job:${workflowId}:run:${runId}`,
+    _value: undefined as unknown as WorkflowRunInfo,
   }),
 
   /**
    * Generates a RedisKey for the history of runs for a given job.
    * Example: `job:JOB_ID:runs:history`
    * Stores string[] (list of runIds)
-   * @param jobId The ID of the job.
+   * @param workflowId The ID of the job.
    */
-  jobRunHistory: (jobId: string): RedisKey<string[]> => ({
+  workflowRunHistory: (workflowId: string): RedisKey<string[]> => ({
     __type: 'RedisKey',
-    value: `job:${jobId}:runs:history`,
+    value: `job:${workflowId}:runs:history`,
     _value: undefined as unknown as string[],
   }),
 
@@ -3353,21 +3353,21 @@ export const RedisKeys = {
    * @param runId The ID of the job run.
    * @param itemIndex The index of the item within the pipeline.
    */
-  pipelineItem: (runId: string, itemIndex: number): RedisKey<PipelineStep> => ({
+  pipelineItem: (runId: string, itemIndex: number): RedisKey<PluginRun> => ({
     __type: 'RedisKey',
     value: `pipeline:${runId}:item:${itemIndex}`,
-    _value: undefined as unknown as PipelineStep,
+    _value: undefined as unknown as PluginRun,
   }),
 
   /**
    * Generates a RedisKey for job errors.
    * Example: `job-error:JOB_ID`
-   * @param jobId The ID of the job.
+   * @param workflowId The ID of the job.
    */
-  jobError: (jobId: string): RedisKey<JobError> => ({
+  workflowError: (workflowId: string): RedisKey<WorkflowError> => ({
     __type: 'RedisKey',
-    value: `job-error:${jobId}`,
-    _value: undefined as unknown as JobError,
+    value: `job-error:${workflowId}`,
+    _value: undefined as unknown as WorkflowError,
   }),
 
   /**
@@ -3443,7 +3443,7 @@ export interface QueueStatusService {
   readonly getCompletedJobs: (queueName: QueueName, start?: number, end?: number) => Effect.Effect<JobStatus[], Error>;
   readonly getFailedJobs: (queueName: QueueName, start?: number, end?: number) => Effect.Effect<JobStatus[], Error>;
   readonly getDelayedJobs: (queueName: QueueName, start?: number, end?: number) => Effect.Effect<JobStatus[], Error>;
-  readonly getJobById: (queueName: QueueName, jobId: string) => Effect.Effect<JobStatus | null, Error>;
+  readonly getJobById: (queueName: QueueName, workflowId: string) => Effect.Effect<JobStatus | null, Error>;
 }
 
 export const QueueStatusService = Context.GenericTag<QueueStatusService>('QueueStatusService');
@@ -3579,14 +3579,14 @@ export const QueueStatusServiceLive = Layer.scoped(
           })
         ),
 
-      getJobById: (queueName, jobId) =>
+      getJobById: (queueName, workflowId) =>
         Effect.flatMap(getQueue(queueName), (queue) =>
           Effect.tryPromise({
             try: async () => {
-              const job = await queue.getJob(jobId);
+              const job = await queue.getJob(workflowId);
               return job ? mapBullJobToJobStatus(job) : null;
             },
-            catch: (error) => new Error(`Failed to get job ${jobId} from ${queueName}: ${error}`),
+            catch: (error) => new Error(`Failed to get job ${workflowId} from ${queueName}: ${error}`),
           })
         ),
     };
@@ -3639,7 +3639,7 @@ export interface QueueService {
 
   readonly removeRepeatableJob: (
     queueName: QueueName,
-    jobId: string,
+    workflowId: string,
     jobName?: string
   ) => Effect.Effect<{ removed: boolean; count: number }, Error>;
 
@@ -3658,12 +3658,12 @@ export interface QueueService {
 
   readonly removeJob: (
     queueName: QueueName,
-    jobId: string
+    workflowId: string
   ) => Effect.Effect<{ removed: boolean; reason?: string }, Error>;
 
   readonly retryJob: (
     queueName: QueueName,
-    jobId: string
+    workflowId: string
   ) => Effect.Effect<{ retried: boolean; reason?: string }, Error>;
 
   readonly createWorker: <T extends JobData, E, R>(
@@ -3790,11 +3790,11 @@ export const QueueServiceLive = Layer.scoped(
 
           // Check if a job with the same name and pattern already exists
           // RepeatableJob has properties: key, name, id, endDate, tz, pattern, every
-          const jobId = (data as JobData).jobId;
+          const workflowId = (data as JobData).workflowId;
           const existingJob = existingJobs.find(job =>
             job.name === jobName &&
             job.pattern === options.pattern &&
-            job.key.includes(jobId) // The key often contains job data info
+            job.key.includes(workflowId) // The key often contains job data info
           );
 
           if (existingJob) {
@@ -3805,7 +3805,7 @@ export const QueueServiceLive = Layer.scoped(
           // Check if job exists with different schedule - remove old one first
           const jobWithDifferentSchedule = existingJobs.find(job =>
             job.name === jobName &&
-            job.key.includes(jobId) &&
+            job.key.includes(workflowId) &&
             job.pattern !== options.pattern
           );
 
@@ -3826,7 +3826,7 @@ export const QueueServiceLive = Layer.scoped(
           return { added: true, job };
         }),
 
-      removeRepeatableJob: (queueName: QueueName, jobId: string, jobName = 'scheduled-source-run') =>
+      removeRepeatableJob: (queueName: QueueName, workflowId: string, jobName = 'scheduled-source-run') =>
         Effect.gen(function* () {
           const queue = yield* getQueue(queueName);
           const existingJobs = yield* Effect.tryPromise({
@@ -3834,9 +3834,9 @@ export const QueueServiceLive = Layer.scoped(
             catch: (error) => new Error(`Failed to get repeatable jobs: ${error}`)
           });
 
-          // Find all jobs that match the jobId
+          // Find all jobs that match the workflowId
           const jobsToRemove = existingJobs.filter(job =>
-            job.name === jobName && job.key.includes(jobId)
+            job.name === jobName && job.key.includes(workflowId)
           );
 
           if (jobsToRemove.length === 0) {
@@ -3921,14 +3921,14 @@ export const QueueServiceLive = Layer.scoped(
           return { removed: totalRemoved };
         }),
 
-      removeJob: (queueName: QueueName, jobId: string) =>
+      removeJob: (queueName: QueueName, workflowId: string) =>
         Effect.gen(function* () {
           const queue = yield* getQueue(queueName);
 
           // Get the job first to check its state
           const job = yield* Effect.tryPromise({
-            try: () => queue.getJob(jobId),
-            catch: (error) => new Error(`Failed to get job ${jobId}: ${error}`)
+            try: () => queue.getJob(workflowId),
+            catch: (error) => new Error(`Failed to get job ${workflowId}: ${error}`)
           });
 
           if (!job) {
@@ -3941,7 +3941,7 @@ export const QueueServiceLive = Layer.scoped(
             catch: (error) => new Error(`Failed to get active jobs: ${error}`)
           });
 
-          const isActive = activeJobs.some(activeJob => activeJob.id === jobId);
+          const isActive = activeJobs.some(activeJob => activeJob.id === workflowId);
           if (isActive) {
             return { removed: false, reason: 'Cannot remove active job' };
           }
@@ -3949,20 +3949,20 @@ export const QueueServiceLive = Layer.scoped(
           // Remove the job
           yield* Effect.tryPromise({
             try: () => job.remove(),
-            catch: (error) => new Error(`Failed to remove job ${jobId}: ${error}`)
+            catch: (error) => new Error(`Failed to remove job ${workflowId}: ${error}`)
           });
 
           return { removed: true };
         }),
 
-      retryJob: (queueName: QueueName, jobId: string) =>
+      retryJob: (queueName: QueueName, workflowId: string) =>
         Effect.gen(function* () {
           const queue = yield* getQueue(queueName);
 
           // Get the job first
           const job = yield* Effect.tryPromise({
-            try: () => queue.getJob(jobId),
-            catch: (error) => new Error(`Failed to get job ${jobId}: ${error}`)
+            try: () => queue.getJob(workflowId),
+            catch: (error) => new Error(`Failed to get job ${workflowId}: ${error}`)
           });
 
           if (!job) {
@@ -3970,23 +3970,23 @@ export const QueueServiceLive = Layer.scoped(
           }
 
           // Check job state - only retry failed jobs or completed jobs that can be retried
-          const jobState = yield* Effect.tryPromise({
+          const workflowState = yield* Effect.tryPromise({
             try: () => job.getState(),
             catch: (error) => new Error(`Failed to get job state: ${error}`)
           });
 
-          if (jobState === 'active') {
+          if (workflowState === 'active') {
             return { retried: false, reason: 'Cannot retry active job' };
           }
 
-          if (jobState === 'waiting' || jobState === 'delayed') {
+          if (workflowState === 'waiting' || workflowState === 'delayed') {
             return { retried: false, reason: 'Job is already queued' };
           }
 
           // Retry the job
           yield* Effect.tryPromise({
             try: () => job.retry(),
-            catch: (error) => new Error(`Failed to retry job ${jobId}: ${error}`)
+            catch: (error) => new Error(`Failed to retry job ${workflowId}: ${error}`)
           });
 
           return { retried: true };
@@ -4090,7 +4090,7 @@ export const RedisConfigLive = Layer.effect(
 import { Context, Effect, Layer, Option } from 'effect';
 import { Redis } from 'ioredis';
 import { RedisConfig } from './redis-config.service';
-import type { JobRunInfo, PipelineStep } from '@usersdotfun/shared-types/types';
+import type { WorkflowRunInfo, PluginRun } from '@usersdotfun/shared-types/types';
 import { RedisKeys } from './constants/keys';
 import type { RedisKey } from './constants/keys';
 
@@ -4098,13 +4098,13 @@ export interface StateService {
   readonly get: <T>(key: RedisKey<T>) => Effect.Effect<Option.Option<T>, Error>;
   readonly set: <T>(key: RedisKey<T>, value: T) => Effect.Effect<void, Error>;
   readonly delete: (key: RedisKey<unknown>) => Effect.Effect<void, Error>;
-  readonly getJobRun: (jobId: string, runId: string) => Effect.Effect<Option.Option<JobRunInfo>, Error>;
-  readonly getJobRuns: (jobId: string) => Effect.Effect<string[], Error>;
-  readonly getPipelineItem: (runId: string, itemIndex: number) => Effect.Effect<Option.Option<PipelineStep>, Error>;
+  readonly getJobRun: (workflowId: string, runId: string) => Effect.Effect<Option.Option<WorkflowRunInfo>, Error>;
+  readonly getJobRuns: (workflowId: string) => Effect.Effect<string[], Error>;
+  readonly getPipelineItem: (runId: string, itemIndex: number) => Effect.Effect<Option.Option<PluginRun>, Error>;
   readonly exists: (key: RedisKey<unknown>) => Effect.Effect<boolean, Error>;
   readonly getKeys: (pattern: string) => Effect.Effect<string[], Error>;
-  readonly addToRunHistory: (jobId: string, runId: string) => Effect.Effect<void, Error>;
-  readonly getRunHistory: (jobId: string) => Effect.Effect<string[], Error>;
+  readonly addToRunHistory: (workflowId: string, runId: string) => Effect.Effect<void, Error>;
+  readonly getRunHistory: (workflowId: string) => Effect.Effect<string[], Error>;
 }
 
 export const StateService = Context.GenericTag<StateService>('StateService');
@@ -4153,29 +4153,29 @@ export const StateServiceLive = Layer.scoped(
           })
         ),
 
-      getJobRun: (jobId, runId) =>
+      getJobRun: (workflowId, runId) =>
         Effect.tryPromise({
           try: async () => {
-            const result = await redis.get(RedisKeys.jobRun(jobId, runId).value);
-            return result ? Option.some(JSON.parse(result) as JobRunInfo) : Option.none();
+            const result = await redis.get(RedisKeys.jobRun(workflowId, runId).value);
+            return result ? Option.some(JSON.parse(result) as WorkflowRunInfo) : Option.none();
           },
-          catch: (error) => new Error(`Failed to get job run ${runId} for ${jobId}: ${error}`),
+          catch: (error) => new Error(`Failed to get job run ${runId} for ${workflowId}: ${error}`),
         }),
 
-      getJobRuns: (jobId) =>
+      getJobRuns: (workflowId) =>
         Effect.tryPromise({
           try: async () => {
-            const result = await redis.lrange(RedisKeys.jobRunHistory(jobId).value, 0, -1);
+            const result = await redis.lrange(RedisKeys.workflowRunHistory(workflowId).value, 0, -1);
             return result || [];
           },
-          catch: (error) => new Error(`Failed to get job runs for ${jobId}: ${error}`),
+          catch: (error) => new Error(`Failed to get job runs for ${workflowId}: ${error}`),
         }),
 
       getPipelineItem: (runId, itemIndex) =>
         Effect.tryPromise({
           try: async () => {
             const result = await redis.get(RedisKeys.pipelineItem(runId, itemIndex).value);
-            return result ? Option.some(JSON.parse(result) as PipelineStep) : Option.none();
+            return result ? Option.some(JSON.parse(result) as PluginRun) : Option.none();
           },
           catch: (error) => new Error(`Failed to get pipeline item ${itemIndex} for run ${runId}: ${error}`),
         }),
@@ -4198,26 +4198,26 @@ export const StateServiceLive = Layer.scoped(
           catch: (error) => new Error(`Failed to get keys for pattern ${pattern}: ${error}`),
         }),
 
-      addToRunHistory: (jobId, runId) =>
+      addToRunHistory: (workflowId, runId) =>
         Effect.asVoid(
           Effect.tryPromise({
             try: async () => {
-              const historyKey = RedisKeys.jobRunHistory(jobId);
+              const historyKey = RedisKeys.workflowRunHistory(workflowId);
               await redis.lpush(historyKey.value, runId);
               // Keep only the last 50 runs
               await redis.ltrim(historyKey.value, 0, 49);
             },
-            catch: (error) => new Error(`Failed to add run to history for ${jobId}: ${error}`),
+            catch: (error) => new Error(`Failed to add run to history for ${workflowId}: ${error}`),
           })
         ),
 
-      getRunHistory: (jobId) =>
+      getRunHistory: (workflowId) =>
         Effect.tryPromise({
           try: async () => {
-            const result = await redis.lrange(RedisKeys.jobRunHistory(jobId).value, 0, -1);
+            const result = await redis.lrange(RedisKeys.workflowRunHistory(workflowId).value, 0, -1);
             return result || [];
           },
-          catch: (error) => new Error(`Failed to get run history for ${jobId}: ${error}`),
+          catch: (error) => new Error(`Failed to get run history for ${workflowId}: ${error}`),
         }),
     };
   })
@@ -4507,9 +4507,9 @@ export const JobRunParamsSchema = z.object({
 export const JobsListQuerySchema = StatusQuerySchema.merge(LimitQuerySchema);
 
 // Request Bodies
-export const CreateJobRequestBodySchema = createWorkflowSchema;
 export const CreateWorkflowRequestBodySchema = createWorkflowSchema;
-export const UpdateJobRequestBodySchema = updateWorkflowSchema;
+export const CreateWorkflowRequestBodySchema = createWorkflowSchema;
+export const UpdateWorkflowRequestBodySchema = updateWorkflowSchema;
 
 // ============================================================================
 // JOB API RESPONSE SCHEMAS
@@ -4519,12 +4519,12 @@ export const UpdateJobRequestBodySchema = updateWorkflowSchema;
 export const JobDataSchema = jobSchema;
 export const WorkflowDataSchema = workflowSchema;
 export const JobWithStepsDataSchema = jobWithStepsSchema;
-export const JobRunInfoDataSchema = jobRunInfoSchema;
+export const WorkflowRunInfoDataSchema = jobRunInfoSchema;
 export const JobStatusSummaryDataSchema = jobStatusSummarySchema;
 export const JobRunDetailsDataSchema = jobRunDetailsSchema;
 export const JobMonitoringDataSchema = jobMonitoringDataSchema;
 export const JobsListDataSchema = z.array(JobDataSchema);
-export const JobRunsListDataSchema = z.array(JobRunInfoDataSchema);
+export const JobRunsListDataSchema = z.array(WorkflowRunInfoDataSchema);
 
 // Cleanup Response Data
 export const CleanupOrphanedJobsDataSchema = z.object({
@@ -4547,16 +4547,16 @@ export const GetJobsRequestSchema = z.object({
 export const GetJobsResponseSchema = ApiSuccessResponseSchema(JobsListDataSchema);
 
 // GET /workflows/:id
-export const GetJobRequestSchema = z.object({
+export const GetWorkflowRequestSchema = z.object({
   params: JobIdParamSchema,
 });
 export const GetJobResponseSchema = ApiSuccessResponseSchema(JobWithStepsDataSchema);
 
 // POST /workflows
-export const CreateJobRequestSchema = z.object({
-  body: CreateJobRequestBodySchema,
+export const CreateWorkflowRequestSchema = z.object({
+  body: CreateWorkflowRequestBodySchema,
 });
-export const CreateJobResponseSchema = ApiSuccessResponseSchema(JobDataSchema);
+export const CreateWorkflowResponseSchema = ApiSuccessResponseSchema(JobDataSchema);
 
 // POST /workflows
 export const CreateWorkflowRequestSchema = z.object({
@@ -4565,11 +4565,11 @@ export const CreateWorkflowRequestSchema = z.object({
 export const CreateWorkflowResponseSchema = ApiSuccessResponseSchema(JobDataSchema);
 
 // PUT /workflows/:id
-export const UpdateJobRequestSchema = z.object({
+export const UpdateWorkflowRequestSchema = z.object({
   params: JobIdParamSchema,
-  body: UpdateJobRequestBodySchema,
+  body: UpdateWorkflowRequestBodySchema,
 });
-export const UpdateJobResponseSchema = ApiSuccessResponseSchema(JobDataSchema);
+export const UpdateWorkflowResponseSchema = ApiSuccessResponseSchema(JobDataSchema);
 
 // DELETE /workflows/:id
 export const DeleteJobRequestSchema = z.object({
@@ -4658,7 +4658,7 @@ export const QueueNameParamSchema = z.object({
 
 export const QueueJobParamsSchema = z.object({
   queueName: z.string().min(1),
-  jobId: z.string().min(1),
+  workflowId: z.string().min(1),
 });
 
 // Query Parameters
@@ -4778,13 +4778,13 @@ export const PurgeQueueRequestSchema = z.object({
 });
 export const PurgeQueueResponseSchema = ApiSuccessResponseSchema(QueueClearResultDataSchema);
 
-// DELETE /queues/:queueName/workflows/:jobId
+// DELETE /queues/:queueName/workflows/:workflowId
 export const RemoveQueueJobRequestSchema = z.object({
   params: QueueJobParamsSchema,
 });
 export const RemoveQueueJobResponseSchema = ApiSuccessResponseSchema(SimpleMessageDataSchema);
 
-// POST /queues/:queueName/workflows/:jobId/retry
+// POST /queues/:queueName/workflows/:workflowId/retry
 export const RetryQueueJobRequestSchema = z.object({
   params: QueueJobParamsSchema,
 });
@@ -4943,7 +4943,7 @@ import { queueStatusSchema } from './queues';
 // Pipeline step schema for database storage
 export const pipelineStepSchema = z.object({
   id: z.string(),
-  jobId: z.string(),
+  workflowId: z.string(),
   stepId: z.string(),
   pluginName: z.string(),
   config: z.any().nullable(),
@@ -5005,7 +5005,7 @@ export const createWorkflowSchema = workflowSchema.omit({ id: true }).extend({
     steps: z.array(
       pipelineStepSchema.omit({
         id: true,
-        jobId: true,
+        workflowId: true,
         status: true,
         input: true,
         output: true,
@@ -5167,7 +5167,7 @@ export const queueItemSchema = z.object({
   failedReason: z.string().optional(),
   delay: z.number().optional(),
   priority: z.number().optional(),
-  jobId: z.string().optional(),
+  workflowId: z.string().optional(),
 });
 
 export const queueDetailsSchema = queueOverviewSchema.extend({
@@ -5213,7 +5213,7 @@ export const webSocketEventSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('job:progress'),
     data: z.object({
-      jobId: z.string(),
+      workflowId: z.string(),
       progress: z.number(),
       currentStep: z.string().optional(),
       runId: z.string().optional(),
@@ -5233,7 +5233,7 @@ export const webSocketEventSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('pipeline:step-completed'),
     data: z.object({
-      jobId: z.string(),
+      workflowId: z.string(),
       runId: z.string(),
       step: pipelineStepSchema,
     }),
@@ -5241,7 +5241,7 @@ export const webSocketEventSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('pipeline:step-failed'),
     data: z.object({
-      jobId: z.string(),
+      workflowId: z.string(),
       runId: z.string(),
       stepId: z.string(),
       error: z.string(),
@@ -5251,14 +5251,14 @@ export const webSocketEventSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('job:run-started'),
     data: z.object({
-      jobId: z.string(),
+      workflowId: z.string(),
       run: jobRunInfoSchema,
     }),
   }),
   z.object({
     type: z.literal('job:run-completed'),
     data: z.object({
-      jobId: z.string(),
+      workflowId: z.string(),
       run: jobRunInfoSchema,
     }),
   }),
@@ -5317,7 +5317,7 @@ export const webSocketEventSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('job:deleted'),
     data: z.object({
-      jobId: z.string(),
+      workflowId: z.string(),
       queueName: z.string().optional(),
       timestamp: z.iso.datetime(),
     }),
@@ -5327,7 +5327,7 @@ export const webSocketEventSchema = z.discriminatedUnion('type', [
     data: z.object({
       queueName: z.string(),
       itemId: z.string(),
-      jobId: z.string().optional(),
+      workflowId: z.string().optional(),
       timestamp: z.iso.datetime(),
     }),
   }),
@@ -5335,7 +5335,7 @@ export const webSocketEventSchema = z.discriminatedUnion('type', [
     type: z.literal('queue:job-removed'),
     data: z.object({
       queueName: z.string(),
-      jobId: z.string(),
+      workflowId: z.string(),
       timestamp: z.iso.datetime(),
     }),
   }),
@@ -5426,8 +5426,8 @@ import {
   CleanupOrphanedJobsResponseSchema,
   CreateWorkflowRequestSchema,
   CreateWorkflowResponseSchema,
-  CreateJobRequestSchema,
-  CreateJobResponseSchema,
+  CreateWorkflowRequestSchema,
+  CreateWorkflowResponseSchema,
   DeleteJobResponseSchema,
   GetJobMonitoringResponseSchema,
   GetJobResponseSchema,
@@ -5442,8 +5442,8 @@ import {
   JobStepParamsSchema,
   RetryJobResponseSchema,
   RetryJobStepResponseSchema,
-  UpdateJobRequestSchema,
-  UpdateJobResponseSchema
+  UpdateWorkflowRequestSchema,
+  UpdateWorkflowResponseSchema
 } from '../../schemas/api/workflows';
 
 // ============================================================================
@@ -5459,9 +5459,9 @@ export type JobsListQuery = z.infer<typeof JobsListQuerySchema>;
 // API REQUEST TYPES
 // ============================================================================
 
-export type CreateJobRequest = z.infer<typeof CreateJobRequestSchema>;
 export type CreateWorkflowRequest = z.infer<typeof CreateWorkflowRequestSchema>;
-export type UpdateJobRequest = z.infer<typeof UpdateJobRequestSchema>;
+export type CreateWorkflowRequest = z.infer<typeof CreateWorkflowRequestSchema>;
+export type UpdateWorkflowRequest = z.infer<typeof UpdateWorkflowRequestSchema>;
 
 // ============================================================================
 // API RESPONSE TYPES
@@ -5469,9 +5469,9 @@ export type UpdateJobRequest = z.infer<typeof UpdateJobRequestSchema>;
 
 export type GetJobsResponse = z.infer<typeof GetJobsResponseSchema>;
 export type GetJobResponse = z.infer<typeof GetJobResponseSchema>;
-export type CreateJobResponse = z.infer<typeof CreateJobResponseSchema>;
 export type CreateWorkflowResponse = z.infer<typeof CreateWorkflowResponseSchema>;
-export type UpdateJobResponse = z.infer<typeof UpdateJobResponseSchema>;
+export type CreateWorkflowResponse = z.infer<typeof CreateWorkflowResponseSchema>;
+export type UpdateWorkflowResponse = z.infer<typeof UpdateWorkflowResponseSchema>;
 export type DeleteJobResponse = z.infer<typeof DeleteJobResponseSchema>;
 export type GetJobStatusResponse = z.infer<typeof GetJobStatusResponseSchema>;
 export type GetJobMonitoringResponse = z.infer<typeof GetJobMonitoringResponseSchema>;
@@ -5664,20 +5664,20 @@ import {
 // ============================================================================
 
 export interface SourceJobData {
-  jobId: string;
+  workflowId: string;
 }
 
 export interface PipelineJobData {
   workflow: any;
   item: Record<string, unknown>;
   runId: string;
-  jobId: string;
+  workflowId: string;
   itemIndex: number;
   sourceJobId: string;
 }
 
-export interface JobError {
-  jobId: string;
+export interface WorkflowError {
+  workflowId: string;
   error: string;
   timestamp: Date;
   bullmqJobId?: string;
@@ -5690,8 +5690,8 @@ export type WorkflowSource = z.infer<typeof workflowSourceSchema>;
 export type Workflow = z.infer<typeof workflowSchema>;
 export type CreateWorkflow = z.infer<typeof createWorkflowSchema>;
 export type UpdateWorkflow = z.infer<typeof updateWorkflowSchema>;
-export type PipelineStep = z.infer<typeof pipelineStepSchema>;
-export type JobRunInfo = z.infer<typeof jobRunInfoSchema>;
+export type PluginRun = z.infer<typeof pipelineStepSchema>;
+export type WorkflowRunInfo = z.infer<typeof jobRunInfoSchema>;
 export type JobStatus = z.infer<typeof jobStatusSchema>;
 export type JobStatusSummary = z.infer<typeof jobStatusSummarySchema>;
 export type JobRunDetails = z.infer<typeof jobRunDetailsSchema>;

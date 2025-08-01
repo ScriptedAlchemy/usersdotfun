@@ -122,14 +122,14 @@ export class MyPlatformSearchService
     }
     
     // 2. Check job status
-    // const jobStatus = await this.masaClient.checkJobStatus(currentMasaJob.jobId);
+    // const jobStatus = await this.masaClient.checkJobStatus(currentMasaJob.workflowId);
     // if (jobStatus.status !== "completed") {
     //   // Job still in progress or failed
     //   return { items: [], nextStateData: { ...currentState?.data, currentMasaJob: jobStatus, latestProcessedId: currentState?.data.latestProcessedId } };
     // }
 
     // 3. Get job results
-    // const results = await this.masaClient.getJobResults<MasaSearchResult>(currentMasaJob.jobId);
+    // const results = await this.masaClient.getJobResults<MasaSearchResult>(currentMasaJob.workflowId);
     // const newLatestProcessedId = results.length > 0 ? results[results.length - 1].id : currentState?.data.latestProcessedId;
 
     // For simplicity, let's assume a direct fetch or mock data:

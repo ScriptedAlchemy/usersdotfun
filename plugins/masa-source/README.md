@@ -177,13 +177,13 @@ async function fetchAllResultsWithJobPolling(plugin, options) {
     const jobStatus = currentLastProcessedState.data?.currentMasaJob?.status;
 
     if (jobStatus === 'done') {
-      console.log(`Job ${currentLastProcessedState.data.currentMasaJob.jobId} is done.`);
+      console.log(`Job ${currentLastProcessedState.data.currentMasaJob.workflowId} is done.`);
       continueFetching = false; 
     } else if (jobStatus === 'error' || jobStatus === 'timeout') {
-      console.error(`Job ${currentLastProcessedState.data.currentMasaJob.jobId} failed: ${jobStatus}. Error: ${currentLastProcessedState.data.currentMasaJob.errorMessage}`);
+      console.error(`Job ${currentLastProcessedState.data.currentMasaJob.workflowId} failed: ${jobStatus}. Error: ${currentLastProcessedState.data.currentMasaJob.errorMessage}`);
       continueFetching = false;
     } else if (jobStatus === 'submitted' || jobStatus === 'processing' || jobStatus === 'pending') {
-      console.log(`Job ${currentLastProcessedState.data.currentMasaJob.jobId} is ${jobStatus}. Waiting...`);
+      console.log(`Job ${currentLastProcessedState.data.currentMasaJob.workflowId} is ${jobStatus}. Waiting...`);
       await sleep(5000); // Wait (e.g., 5 seconds)
 
       searchResults = await plugin.search(currentLastProcessedState, options);

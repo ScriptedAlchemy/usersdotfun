@@ -1,17 +1,15 @@
-import type { SourceJobData, PipelineJobData } from '@usersdotfun/shared-types/types';
-
-export const QUEUE_NAMES = {
-  SOURCE_JOBS: 'source-jobs',
-  PIPELINE_JOBS: 'pipeline-jobs',
-} as const;
-
-export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];
+import {
+  type QueueName,
+  type StartWorkflowRunJobData,
+  type ExecutePipelineJobData,
+  QUEUE_NAMES
+} from '@usersdotfun/shared-types/types';
 
 export const VALID_QUEUE_NAMES = Object.values(QUEUE_NAMES);
 
 export interface JobDataMapping {
-  [QUEUE_NAMES.SOURCE_JOBS]: SourceJobData;
-  [QUEUE_NAMES.PIPELINE_JOBS]: PipelineJobData;
+  [QUEUE_NAMES.WORKFLOW_RUN]: StartWorkflowRunJobData;
+  [QUEUE_NAMES.PIPELINE_EXECUTION]: ExecutePipelineJobData;
 }
 
 export type JobData = JobDataMapping[QueueName];

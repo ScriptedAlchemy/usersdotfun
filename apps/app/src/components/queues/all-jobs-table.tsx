@@ -86,9 +86,9 @@ export function AllJobsTable({ className }: AllJobsTableProps) {
   });
 
   // Fetch job details when a queue item is selected
-  const actualJobId = selectedQueueItem?.originalJobId || (selectedQueueItem ? parseQueueJobId(selectedQueueItem.id).jobId : null);
+  const actualJobId = selectedQueueItem?.originalJobId || (selectedQueueItem ? parseQueueJobId(selectedQueueItem.id).workflowId : null);
   
-  const { data: selectedJob, isLoading: jobLoading, error: jobError } = useQuery({
+  const { data: selectedJob, isLoading: jobLoading, error: workflowError } = useQuery({
     queryKey: queryKeys.jobs.detail(actualJobId!),
     queryFn: () => getJob(actualJobId!),
     enabled: !!actualJobId && actualJobId !== selectedQueueItem?.id,
@@ -104,7 +104,7 @@ export function AllJobsTable({ className }: AllJobsTableProps) {
   const { data: monitoringData, isLoading: monitoringLoading, error: monitoringError } = useQuery({
     queryKey: queryKeys.jobs.monitoring(actualJobId!),
     queryFn: () => getJobMonitoringData(actualJobId!),
-    enabled: !!actualJobId && actualJobId !== selectedQueueItem?.id && !jobError?.isNotFound,
+    enabled: !!actualJobId && actualJobId !== selectedQueueItem?.id && !workflowError?.isNotFound,
     staleTime: 15000,
     gcTime: 3 * 60 * 1000,
     refetchInterval: isConnected ? 60000 : 15000,
@@ -119,7 +119,7 @@ export function AllJobsTable({ className }: AllJobsTableProps) {
   const { data: jobRuns, isLoading: runsLoading, error: runsError } = useQuery({
     queryKey: queryKeys.jobs.runs(actualJobId!),
     queryFn: () => getJobRuns(actualJobId!),
-    enabled: !!actualJobId && actualJobId !== selectedQueueItem?.id && !jobError?.isNotFound,
+    enabled: !!actualJobId && actualJobId !== selectedQueueItem?.id && !workflowError?.isNotFound,
     staleTime: 45000,
     gcTime: 5 * 60 * 1000,
     refetchInterval: isConnected ? 90000 : 30000,
@@ -215,8 +215,8 @@ export function AllJobsTable({ className }: AllJobsTableProps) {
 
   const handleJobIdClick = (queueItem: AllJobsItem, e: React.MouseEvent) => {
     e.stopPropagation();
-    const actualJobId = queueItem.originalJobId || parseQueueJobId(queueItem.id).jobId;
-    navigate({ to: '/workflows', search: { jobId: actualJobId } });
+    const actualJobId = queueItem.originalJobId || parseQueueJobId(queueItem.id).workflowId;
+    navigate({ to: '/workflows', search: { workflowId: actualJobId } });
   };
 
   const handleRetry = (queueItem: AllJobsItem, e: React.MouseEvent) => {
@@ -270,9 +270,9 @@ export function AllJobsTable({ className }: AllJobsTableProps) {
           <button
             onClick={(e) => handleJobIdClick(row.original, e)}
             className="font-mono text-sm text-blue-600 hover:text-blue-800 hover:underline text-left"
-            title={`Click to view job: ${parsedId.jobId}`}
+            title={`Click to view job: ${parsedId.workflowId}`}
           >
-            {parsedId.prefix ? `${parsedId.prefix}:${parsedId.jobId}` : parsedId.jobId}
+            {parsedId.prefix ? `${parsedId.prefix}:${parsedId.workflowId}` : parsedId.workflowId}
           </button>
         );
       },
@@ -599,7 +599,7 @@ export function AllJobsTable({ className }: AllJobsTableProps) {
         isJobLoading={jobLoading}
         isMonitoringLoading={monitoringLoading}
         isRunsLoading={runsLoading}
-        jobError={jobError}
+        workflowError={workflowError}
         monitoringError={monitoringError}
         runsError={runsError}
         onClose={() => setSelectedQueueItem(null)}

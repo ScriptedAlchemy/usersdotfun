@@ -1,4 +1,4 @@
-import type { JobWithSteps, JobMonitoringData, JobRunInfo } from '@usersdotfun/shared-types/types';
+import type { JobWithSteps, JobMonitoringData, WorkflowRunInfo } from '@usersdotfun/shared-types/types';
 import { JobMonitoring } from './job-monitoring';
 import { PipelineViewer } from './pipeline-viewer';
 import { JobRuns } from './job-runs';
@@ -13,7 +13,7 @@ import {
 interface JobDetailsSheetProps {
   job: JobWithSteps | null;
   monitoringData?: JobMonitoringData;
-  jobRuns?: JobRunInfo[];
+  jobRuns?: WorkflowRunInfo[];
   isOpen: boolean;
   isJobLoading: boolean;
   isMonitoringLoading: boolean;

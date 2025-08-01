@@ -15,7 +15,7 @@ import { queryKeys } from "~/lib/query-keys";
 import { useWebSocket, useWebSocketSubscription } from "~/lib/websocket";
 
 const jobsSearchSchema = z.object({
-  jobId: z.string().optional(),
+  workflowId: z.string().optional(),
   queueFilter: z.string().optional(),
   statusFilter: z.string().optional(),
 });
@@ -91,21 +91,21 @@ function AuthPrompt({ error }: { error: Error }) {
 
 function JobsComponent() {
   const navigate = useNavigate({ from: "/workflows" });
-  const { jobId, queueFilter, statusFilter } = Route.useSearch();
+  const { workflowId, queueFilter, statusFilter } = Route.useSearch();
   const { isConnected } = useWebSocket();
 
   const { data: selectedJob, isLoading: jobLoading } = useQuery({
-    queryKey: queryKeys.jobs.detail(jobId!),
-    queryFn: () => getJob(jobId!),
-    enabled: !!jobId,
+    queryKey: queryKeys.jobs.detail(workflowId!),
+    queryFn: () => getJob(workflowId!),
+    enabled: !!workflowId,
     staleTime: 30000,
     gcTime: 5 * 60 * 1000,
   });
 
   const { data: monitoringData, isLoading: monitoringLoading } = useQuery({
-    queryKey: queryKeys.jobs.monitoring(jobId!),
-    queryFn: () => getJobMonitoringData(jobId!),
-    enabled: !!jobId,
+    queryKey: queryKeys.jobs.monitoring(workflowId!),
+    queryFn: () => getJobMonitoringData(workflowId!),
+    enabled: !!workflowId,
     staleTime: 15000,
     gcTime: 3 * 60 * 1000,
     refetchInterval: isConnected ? false : 30000,
@@ -113,9 +113,9 @@ function JobsComponent() {
   });
 
   const { data: jobRuns, isLoading: runsLoading } = useQuery({
-    queryKey: queryKeys.jobs.runs(jobId!),
-    queryFn: () => getJobRuns(jobId!),
-    enabled: !!jobId,
+    queryKey: queryKeys.jobs.runs(workflowId!),
+    queryFn: () => getJobRuns(workflowId!),
+    enabled: !!workflowId,
     staleTime: 45000,
     gcTime: 5 * 60 * 1000,
     refetchInterval: isConnected ? false : 60000,
@@ -145,13 +145,13 @@ function JobsComponent() {
 
   const handleJobSelect = (job: Job) => {
     navigate({
-      search: (prev) => ({ ...prev, jobId: job.id }),
+      search: (prev) => ({ ...prev, workflowId: job.id }),
     });
   };
 
   const handleCloseSheet = () => {
     navigate({
-      search: (prev) => ({ ...prev, jobId: undefined }),
+      search: (prev) => ({ ...prev, workflowId: undefined }),
     });
   };
 
@@ -163,7 +163,7 @@ function JobsComponent() {
         job={selectedJob || null}
         monitoringData={monitoringData}
         jobRuns={jobRuns}
-        isOpen={!!jobId}
+        isOpen={!!workflowId}
         isJobLoading={jobLoading}
         isMonitoringLoading={monitoringLoading}
         isRunsLoading={runsLoading}

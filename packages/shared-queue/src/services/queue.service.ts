@@ -1,7 +1,7 @@
-import { Job, Queue, Worker, type RepeatableJob, type RepeatOptions } from 'bullmq';
+import { QUEUE_NAMES, type JobType, type QueueName } from '@usersdotfun/shared-types/types';
+import { Job, Queue, Worker, type JobsOptions, type RepeatOptions } from 'bullmq';
 import { Context, Effect, Layer, Runtime, Scope } from 'effect';
-import type { JobData, QueueName } from './constants/queues';
-import type { JobType } from '@usersdotfun/shared-types/types';
+import type { JobData } from '../constants/queues';
 import { RedisConfig } from './redis-config.service';
 
 export interface QueueService {
@@ -19,29 +19,50 @@ export interface QueueService {
     }
   ) => Effect.Effect<Job<T>, Error>;
 
-  readonly addRepeatable: <T extends JobData>(
+  /**
+   * Upserts a job scheduler. If a scheduler with the given ID exists, it updates it.
+   * Otherwise, it creates a new one.
+   *
+   * @param queueName The name of the queue.
+   * @param schedulerId A unique ID for this job scheduler.
+   * @param repeatOptions The repeat options for the scheduler (e.g., cron pattern, every N milliseconds).
+   * @param jobTemplate Optional template for the jobs produced by this scheduler (name, data, options).
+   * @returns An Effect that yields the first job created by this scheduler.
+   */
+  readonly upsertScheduledJob: <T extends JobData>(
     queueName: QueueName,
-    jobName: string,
-    data: T,
-    options: RepeatOptions
+    schedulerId: string,
+    repeatOptions: RepeatOptions,
+    jobTemplate?: {
+      name?: string;
+      data?: T;
+      opts?: JobsOptions;
+    }
   ) => Effect.Effect<Job<T>, Error>;
 
-  readonly getRepeatableJobs: (
-    queueName: QueueName
-  ) => Effect.Effect<Array<RepeatableJob>, Error>;
-
-  readonly addRepeatableIfNotExists: <T extends JobData>(
+  /**
+   * Retrieves information about a specific job scheduler.
+   *
+   * @param queueName The name of the queue.
+   * @param schedulerId The unique ID of the job scheduler.
+   * @returns An Effect that yields the job scheduler information, or null if not found.
+   */
+  readonly getScheduledJobInfo: (
     queueName: QueueName,
-    jobName: string,
-    data: T,
-    options: RepeatOptions
-  ) => Effect.Effect<{ added: boolean; job?: Job<T> }, Error>;
+    schedulerId: string
+  ) => Effect.Effect<any | null, Error>;
 
-  readonly removeRepeatableJob: (
+  /**
+ * Removes a job scheduler.
+ *
+ * @param queueName The name of the queue.
+ * @param schedulerId The unique ID of the job scheduler to remove.
+ * @returns An Effect that yields { removed: boolean } indicating if the scheduler was successfully removed.
+ */
+  readonly removeScheduledJob: (
     queueName: QueueName,
-    jobId: string,
-    jobName?: string
-  ) => Effect.Effect<{ removed: boolean; count: number }, Error>;
+    schedulerId: string
+  ) => Effect.Effect<{ removed: boolean }, Error>;
 
   readonly pauseQueue: (
     queueName: QueueName
@@ -58,12 +79,12 @@ export interface QueueService {
 
   readonly removeJob: (
     queueName: QueueName,
-    jobId: string
+    workflowId: string
   ) => Effect.Effect<{ removed: boolean; reason?: string }, Error>;
 
   readonly retryJob: (
     queueName: QueueName,
-    jobId: string
+    workflowId: string
   ) => Effect.Effect<{ retried: boolean; reason?: string }, Error>;
 
   readonly createWorker: <T extends JobData, E, R>(
@@ -88,43 +109,43 @@ export const QueueServiceLive = Layer.scoped(
       db: redisConfig.db,
     };
 
-    // Create queues with proper resource management
-    const sourceQueue = yield* Effect.acquireRelease(
-      Effect.sync(() => new Queue('source-jobs', {
-        connection: connectionConfig,
+    const queueConfigs: Record<QueueName, { defaultJobOptions: JobsOptions }> =
+    {
+      [QUEUE_NAMES.WORKFLOW_RUN]: {
         defaultJobOptions: {
           attempts: 3,
-          backoff: {
-            type: 'exponential',
-            delay: 2000,
-          },
+          backoff: { type: 'exponential', delay: 2000 },
           removeOnComplete: 100,
           removeOnFail: 50,
-        }
-      })),
-      (q) => Effect.promise(() => q.close())
-    );
-
-    const pipelineQueue = yield* Effect.acquireRelease(
-      Effect.sync(() => new Queue('pipeline-jobs', {
-        connection: connectionConfig,
+        },
+      },
+      [QUEUE_NAMES.PIPELINE_EXECUTION]: {
         defaultJobOptions: {
           attempts: 5,
-          backoff: {
-            type: 'exponential',
-            delay: 1000,
-          },
+          backoff: { type: 'exponential', delay: 1000 },
           removeOnComplete: 100,
           removeOnFail: 50,
-        }
-      })),
-      (q) => Effect.promise(() => q.close())
+        },
+      },
+    };
+
+
+    const queueEntries = yield* Effect.all(
+      Object.entries(queueConfigs).map(([name, config]) =>
+        Effect.acquireRelease(
+          Effect.sync(
+            () =>
+              new Queue(name, {
+                connection: connectionConfig,
+                defaultJobOptions: config.defaultJobOptions,
+              })
+          ),
+          (q) => Effect.promise(() => q.close())
+        ).pipe(Effect.map((queue) => [name, queue] as const))
+      )
     );
 
-    const queues = new Map<string, Queue>([
-      ['source-jobs', sourceQueue],
-      ['pipeline-jobs', pipelineQueue],
-    ]);
+    const queues = new Map<string, Queue>(queueEntries);
 
     const getQueue = (name: string): Effect.Effect<Queue, Error> => {
       const queue = queues.get(name);
@@ -151,118 +172,56 @@ export const QueueServiceLive = Layer.scoped(
           })
         ),
 
-      addRepeatable: <T extends JobData>(
+      upsertScheduledJob: <T extends JobData>(
         queueName: QueueName,
-        jobName: string,
-        data: T,
-        options: RepeatOptions
+        schedulerId: string,
+        repeatOptions: RepeatOptions,
+        jobTemplate?: {
+          name?: string;
+          data?: T;
+          opts?: JobsOptions;
+        }
       ) =>
         Effect.flatMap(getQueue(queueName), (queue) =>
           Effect.tryPromise({
-            try: () => queue.add(jobName, data, {
-              repeat: options,
-            }),
-            catch: (error) => new Error(`Failed to add repeatable job: ${error}`)
+            try: () =>
+              queue.upsertJobScheduler(schedulerId, repeatOptions, jobTemplate),
+            catch: (error) =>
+              new Error(`Failed to upsert scheduled job: ${error}`),
           })
         ),
 
-      getRepeatableJobs: (queueName: QueueName) =>
+      getScheduledJobInfo: (queueName: QueueName, schedulerId: string) =>
         Effect.flatMap(getQueue(queueName), (queue) =>
           Effect.tryPromise({
-            try: () => queue.getRepeatableJobs(),
-            catch: (error) => new Error(`Failed to get repeatable jobs: ${error}`)
+            try: () => queue.getJobScheduler(schedulerId),
+            catch: (error) =>
+              new Error(
+                `Failed to get scheduled job info for ${schedulerId}: ${error}`
+              ),
           })
         ),
 
-
-      addRepeatableIfNotExists: <T extends JobData>(
-        queueName: QueueName,
-        jobName: string,
-        data: T,
-        options: RepeatOptions
-      ) =>
-        Effect.gen(function* () {
-          const queue = yield* getQueue(queueName);
-          const existingJobs = yield* Effect.tryPromise({
-            try: () => queue.getRepeatableJobs(),
-            catch: (error) => new Error(`Failed to get repeatable jobs: ${error}`)
-          });
-
-          // Check if a job with the same name and pattern already exists
-          // RepeatableJob has properties: key, name, id, endDate, tz, pattern, every
-          const jobId = (data as JobData).jobId;
-          const existingJob = existingJobs.find(job =>
-            job.name === jobName &&
-            job.pattern === options.pattern &&
-            job.key.includes(jobId) // The key often contains job data info
-          );
-
-          if (existingJob) {
-            // Job already exists with same schedule - no need to add
-            return { added: false };
-          }
-
-          // Check if job exists with different schedule - remove old one first
-          const jobWithDifferentSchedule = existingJobs.find(job =>
-            job.name === jobName &&
-            job.key.includes(jobId) &&
-            job.pattern !== options.pattern
-          );
-
-          if (jobWithDifferentSchedule) {
-            // Remove the old job with different schedule using the newer method
-            yield* Effect.tryPromise({
-              try: () => queue.removeJobScheduler(jobWithDifferentSchedule.key),
-              catch: (error) => new Error(`Failed to remove old repeatable job: ${error}`)
-            });
-          }
-
-          // Add the new job
-          const job = yield* Effect.tryPromise({
-            try: () => queue.add(jobName, data, { repeat: options }),
-            catch: (error) => new Error(`Failed to add repeatable job: ${error}`)
-          });
-
-          return { added: true, job };
-        }),
-
-      removeRepeatableJob: (queueName: QueueName, jobId: string, jobName = 'scheduled-source-run') =>
-        Effect.gen(function* () {
-          const queue = yield* getQueue(queueName);
-          const existingJobs = yield* Effect.tryPromise({
-            try: () => queue.getRepeatableJobs(),
-            catch: (error) => new Error(`Failed to get repeatable jobs: ${error}`)
-          });
-
-          // Find all jobs that match the jobId
-          const jobsToRemove = existingJobs.filter(job =>
-            job.name === jobName && job.key.includes(jobId)
-          );
-
-          if (jobsToRemove.length === 0) {
-            return { removed: false, count: 0 };
-          }
-
-          // Remove all matching jobs
-          let removedCount = 0;
-          for (const job of jobsToRemove) {
-            yield* Effect.tryPromise({
-              try: async () => {
-                await queue.removeJobScheduler(job.key);
-                removedCount++;
-              },
-              catch: (error) => new Error(`Failed to remove repeatable job ${job.key}: ${error}`)
-            });
-          }
-
-          return { removed: removedCount > 0, count: removedCount };
-        }),
+      removeScheduledJob: (queueName: QueueName, schedulerId: string) =>
+        Effect.flatMap(getQueue(queueName), (queue) =>
+          Effect.tryPromise({
+            try: async () => {
+              const removed = await queue.removeJobScheduler(schedulerId);
+              return { removed };
+            },
+            catch: (error) =>
+              new Error(
+                `Failed to remove scheduled job ${schedulerId}: ${error}`
+              ),
+          })
+        ),
 
       pauseQueue: (queueName: QueueName) =>
         Effect.flatMap(getQueue(queueName), (queue) =>
           Effect.tryPromise({
             try: () => queue.pause(),
-            catch: (error) => new Error(`Failed to pause queue ${queueName}: ${error}`)
+            catch: (error) =>
+              new Error(`Failed to pause queue ${queueName}: ${error}`),
           })
         ),
 
@@ -270,7 +229,8 @@ export const QueueServiceLive = Layer.scoped(
         Effect.flatMap(getQueue(queueName), (queue) =>
           Effect.tryPromise({
             try: () => queue.resume(),
-            catch: (error) => new Error(`Failed to resume queue ${queueName}: ${error}`)
+            catch: (error) =>
+              new Error(`Failed to resume queue ${queueName}: ${error}`),
           })
         ),
 
@@ -282,7 +242,8 @@ export const QueueServiceLive = Layer.scoped(
           if (jobType === 'completed' || jobType === 'all') {
             const completedRemoved = yield* Effect.tryPromise({
               try: () => queue.clean(0, 0, 'completed'),
-              catch: (error) => new Error(`Failed to clean completed jobs: ${error}`)
+              catch: (error) =>
+                new Error(`Failed to clean completed jobs: ${error}`),
             });
             totalRemoved += completedRemoved.length;
           }
@@ -290,7 +251,8 @@ export const QueueServiceLive = Layer.scoped(
           if (jobType === 'failed' || jobType === 'all') {
             const failedRemoved = yield* Effect.tryPromise({
               try: () => queue.clean(0, 0, 'failed'),
-              catch: (error) => new Error(`Failed to clean failed jobs: ${error}`)
+              catch: (error) =>
+                new Error(`Failed to clean failed jobs: ${error}`),
             });
             totalRemoved += failedRemoved.length;
           }
@@ -299,20 +261,23 @@ export const QueueServiceLive = Layer.scoped(
             // Also clean delayed jobs (waiting jobs are handled differently)
             const delayedRemoved = yield* Effect.tryPromise({
               try: () => queue.clean(0, 0, 'delayed'),
-              catch: (error) => new Error(`Failed to clean delayed jobs: ${error}`)
+              catch: (error) =>
+                new Error(`Failed to clean delayed jobs: ${error}`),
             });
             totalRemoved += delayedRemoved.length;
 
             // For waiting jobs, we need to remove them individually since clean() doesn't support 'waiting'
             const waitingJobs = yield* Effect.tryPromise({
               try: () => queue.getWaiting(),
-              catch: (error) => new Error(`Failed to get waiting jobs: ${error}`)
+              catch: (error) =>
+                new Error(`Failed to get waiting jobs: ${error}`),
             });
 
             for (const job of waitingJobs) {
               yield* Effect.tryPromise({
                 try: () => job.remove(),
-                catch: (error) => new Error(`Failed to remove waiting job ${job.id}: ${error}`)
+                catch: (error) =>
+                  new Error(`Failed to remove waiting job ${job.id}: ${error}`),
               });
               totalRemoved++;
             }
@@ -321,14 +286,15 @@ export const QueueServiceLive = Layer.scoped(
           return { removed: totalRemoved };
         }),
 
-      removeJob: (queueName: QueueName, jobId: string) =>
+      removeJob: (queueName: QueueName, workflowId: string) =>
         Effect.gen(function* () {
           const queue = yield* getQueue(queueName);
 
           // Get the job first to check its state
           const job = yield* Effect.tryPromise({
-            try: () => queue.getJob(jobId),
-            catch: (error) => new Error(`Failed to get job ${jobId}: ${error}`)
+            try: () => queue.getJob(workflowId),
+            catch: (error) =>
+              new Error(`Failed to get job ${workflowId}: ${error}`),
           });
 
           if (!job) {
@@ -338,10 +304,13 @@ export const QueueServiceLive = Layer.scoped(
           // Check if job is active - don't allow removal of active jobs
           const activeJobs = yield* Effect.tryPromise({
             try: () => queue.getActive(),
-            catch: (error) => new Error(`Failed to get active jobs: ${error}`)
+            catch: (error) =>
+              new Error(`Failed to get active jobs: ${error}`),
           });
 
-          const isActive = activeJobs.some(activeJob => activeJob.id === jobId);
+          const isActive = activeJobs.some(
+            (activeJob) => activeJob.id === workflowId
+          );
           if (isActive) {
             return { removed: false, reason: 'Cannot remove active job' };
           }
@@ -349,20 +318,22 @@ export const QueueServiceLive = Layer.scoped(
           // Remove the job
           yield* Effect.tryPromise({
             try: () => job.remove(),
-            catch: (error) => new Error(`Failed to remove job ${jobId}: ${error}`)
+            catch: (error) =>
+              new Error(`Failed to remove job ${workflowId}: ${error}`),
           });
 
           return { removed: true };
         }),
 
-      retryJob: (queueName: QueueName, jobId: string) =>
+      retryJob: (queueName: QueueName, workflowId: string) =>
         Effect.gen(function* () {
           const queue = yield* getQueue(queueName);
 
           // Get the job first
           const job = yield* Effect.tryPromise({
-            try: () => queue.getJob(jobId),
-            catch: (error) => new Error(`Failed to get job ${jobId}: ${error}`)
+            try: () => queue.getJob(workflowId),
+            catch: (error) =>
+              new Error(`Failed to get job ${workflowId}: ${error}`),
           });
 
           if (!job) {
@@ -370,23 +341,24 @@ export const QueueServiceLive = Layer.scoped(
           }
 
           // Check job state - only retry failed jobs or completed jobs that can be retried
-          const jobState = yield* Effect.tryPromise({
+          const workflowState = yield* Effect.tryPromise({
             try: () => job.getState(),
-            catch: (error) => new Error(`Failed to get job state: ${error}`)
+            catch: (error) => new Error(`Failed to get job state: ${error}`),
           });
 
-          if (jobState === 'active') {
+          if (workflowState === 'active') {
             return { retried: false, reason: 'Cannot retry active job' };
           }
 
-          if (jobState === 'waiting' || jobState === 'delayed') {
+          if (workflowState === 'waiting' || workflowState === 'delayed') {
             return { retried: false, reason: 'Job is already queued' };
           }
 
           // Retry the job
           yield* Effect.tryPromise({
             try: () => job.retry(),
-            catch: (error) => new Error(`Failed to retry job ${jobId}: ${error}`)
+            catch: (error) =>
+              new Error(`Failed to retry job ${workflowId}: ${error}`),
           });
 
           return { retried: true };
@@ -409,10 +381,13 @@ export const QueueServiceLive = Layer.scoped(
           };
 
           const worker = yield* Effect.acquireRelease(
-            Effect.sync(() => new Worker<T>(queueName, bullProcessor, {
-              connection: connectionConfig,
-              concurrency: 5, // Process up to 5 jobs concurrently
-            })),
+            Effect.sync(
+              () =>
+                new Worker<T>(queueName, bullProcessor, {
+                  connection: connectionConfig,
+                  concurrency: 5, // Process up to 5 jobs concurrently
+                })
+            ),
             (worker) => Effect.promise(() => worker.close())
           );
 
@@ -425,7 +400,7 @@ export const QueueServiceLive = Layer.scoped(
           });
 
           return worker;
-        })
+        }),
     };
   })
 );

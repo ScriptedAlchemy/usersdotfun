@@ -1,7 +1,7 @@
 import {
   DbError,
-  JobNotFoundError,
-  PipelineStepNotFoundError,
+  WorkflowNotFoundError,
+  PluginRunNotFoundError,
   ValidationError as DbValidationError,
 } from "@usersdotfun/shared-db";
 import { Data } from "effect";
@@ -41,6 +41,6 @@ export type StepError =
   | PluginError
   | DbError
   | DbValidationError
-  | JobNotFoundError
-  | PipelineStepNotFoundError;
+  | WorkflowNotFoundError
+  | PluginRunNotFoundError;
 export type PipelineExecutionError = PipelineError | StepError;

@@ -1,6 +1,6 @@
 import { WorkflowService } from "@usersdotfun/shared-db";
 import { RedisKeys } from "@usersdotfun/shared-queue";
-import type { PipelineStep } from "@usersdotfun/shared-types/types";
+import type { PluginRun } from "@usersdotfun/shared-types/types";
 import { Effect } from "effect";
 import { EnvironmentServiceTag, type EnvironmentService } from "../services/environment.service";
 import { StateServiceTag, type StateService } from "../services/state.service";
@@ -10,7 +10,7 @@ import { getPlugin, PluginLoaderTag } from "./services";
 import { SchemaValidator } from "./validation";
 
 export const executeStep = (
-  step: PipelineStep,
+  step: PluginRun,
   input: Record<string, unknown>,
   context: PipelineExecutionContext,
 ): Effect.Effect<Record<string, unknown>, StepError, PluginLoaderTag | WorkflowService | StateService | EnvironmentService> =>
@@ -26,7 +26,7 @@ export const executeStep = (
     // Store step data in Redis for real-time monitoring
     yield* stateService.set(RedisKeys.pipelineItem(context.runId, context.itemIndex), {
       id: stepId,
-      jobId: context.jobId,
+      workflowId: context.workflowId,
       stepId: step.stepId,
       pluginName: step.pluginName,
       config: step.config,
@@ -45,9 +45,9 @@ export const executeStep = (
       }))
     );
 
-    yield* jobService.createPipelineStep({
+    yield* jobService.createPluginRun({
       id: stepId,
-      jobId: context.jobId,
+      workflowId: context.workflowId,
       stepId: step.stepId,
       pluginName: step.pluginName,
       config: step.config,
@@ -104,7 +104,7 @@ export const executeStep = (
       })
     }).pipe(
       Effect.mapError((error) => {
-        jobService.updatePipelineStep(stepId, {
+        jobService.updatePluginRun(stepId, {
           status: "failed",
           error,
           completedAt: new Date(),
@@ -114,7 +114,7 @@ export const executeStep = (
     );
 
     if (output === undefined || output === null) {
-      jobService.updatePipelineStep(stepId, {
+      jobService.updatePluginRun(stepId, {
         status: "failed",
         error: { message: `Plugin returned ${output === null ? 'null' : 'undefined'} output` },
         completedAt: new Date(),
@@ -142,7 +142,7 @@ export const executeStep = (
           errors: validatedOutput.errors,
         }
       });
-      jobService.updatePipelineStep(stepId, {
+      jobService.updatePluginRun(stepId, {
         status: "failed",
         error,
         completedAt: new Date(),
@@ -152,7 +152,7 @@ export const executeStep = (
 
     const completedAt = new Date();
 
-    yield* jobService.updatePipelineStep(stepId, {
+    yield* jobService.updatePluginRun(stepId, {
       status: "completed",
       output: validatedOutput,
       completedAt,
@@ -161,7 +161,7 @@ export const executeStep = (
     // Update Redis state with completion
     yield* stateService.set(RedisKeys.pipelineItem(context.runId, context.itemIndex), {
       id: stepId,
-      jobId: context.jobId,
+      workflowId: context.workflowId,
       stepId: step.stepId,
       pluginName: step.pluginName,
       config: step.config,

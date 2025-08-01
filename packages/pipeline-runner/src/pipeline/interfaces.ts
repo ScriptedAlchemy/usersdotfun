@@ -5,7 +5,7 @@ export interface PipelineExecutionContext {
   runId: string;
   itemIndex: number;
   sourceJobId: string;
-  jobId: string;
+  workflowId: string;
   env: {
     secrets: string[];
   };

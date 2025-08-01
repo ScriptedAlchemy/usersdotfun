@@ -5,7 +5,7 @@ import type {
 } from '@usersdotfun/core-sdk';
 import { createSourceOutputSchema } from "@usersdotfun/core-sdk";
 import { EnvironmentServiceTag, getPlugin, PluginError, PluginLoaderTag, SchemaValidator } from '@usersdotfun/pipeline-runner';
-import { JobNotFoundError, WorkflowService } from '@usersdotfun/shared-db';
+import { WorkflowNotFoundError, WorkflowService } from '@usersdotfun/shared-db';
 import { QUEUE_NAMES, QueueService, RedisKeys, StateService } from '@usersdotfun/shared-queue';
 import type { Workflow, SourceJobData } from '@usersdotfun/shared-types/types';
 import { type Job } from 'bullmq';
@@ -24,7 +24,7 @@ interface SourceConfig {
 
 // Type for the run context
 interface RunContext {
-  jobId: string;
+  workflowId: string;
   runId: string;
   jobName: string;
 }
@@ -136,7 +136,7 @@ const runSourcePlugin = (
       raw: item.raw as Record<string, any>, // Cast raw to expected type
       metadata: {
         sourcePlugin: source.plugin,
-        jobId: context.jobId,
+        workflowId: context.workflowId,
         runId: context.runId,
       },
     }));
@@ -149,53 +149,56 @@ const runSourcePlugin = (
 
 const processSourceJob = (job: Job<SourceJobData>) =>
   Effect.gen(function* () {
-    const { jobId } = job.data;
+    const { workflowId } = job.data;
 
     const stateService = yield* StateService;
     const queueService = yield* QueueService;
-    const jobService = yield* WorkflowService;
+    const workflowService = yield* WorkflowService;
 
-    // Get job from database and map to Workflow
-    const dbJob = yield* jobService.getJobById(jobId).pipe(
-      Effect.catchTag('JobNotFoundError', (error) =>
+    const workflowRun = yield* workflowService.createWorkflowRun({ workflowId });
+    const { id: runId } = workflowRun;
+
+    // Get workflow from database
+    const dbWorkflow = yield* workflowService.getWorkflowById(workflowId).pipe(
+      Effect.catchTag('WorkflowNotFoundError', (error) =>
         Effect.gen(function* () {
-          yield* Effect.log(`Job ${jobId} not found in database. This may be a deleted job with orphaned BullMQ repeatable job.`);
+          yield* Effect.log(`Workflow ${workflowId} not found in database. This may be a deleted workflow with an orphaned BullMQ repeatable job.`);
 
           // Store error state in Redis for monitoring
-          yield* stateService.set(RedisKeys.jobError(jobId), {
-            jobId,
-            error: 'Job not found in database',
-            timestamp: new Date(),
-            bullmqJobId: job.id,
-            attemptsMade: job.attemptsMade,
+          yield* stateService.set(RedisKeys.runSummary(workflowId, runId), {
+            runId,
+            status: 'failed',
+            error: 'Workflow not found in database',
+            startedAt: new Date().toISOString(),
+            completedAt: new Date().toISOString(),
+            itemsProcessed: 0,
+            itemsTotal: 0,
           });
 
           // Don't retry - this job should be removed from BullMQ
-          return yield* Effect.fail(new Error(`Job ${jobId} not found in database - likely deleted`));
+          return yield* Effect.fail(new Error(`Workflow ${workflowId} not found in database - likely deleted`));
         })
       )
     );
     const workflow: Workflow = {
-      id: dbJob.id,
-      name: dbJob.name,
-      schedule: dbJob.schedule ?? undefined,
+      id: dbWorkflow.id,
+      name: dbWorkflow.name,
+      schedule: dbWorkflow.schedule ?? undefined,
       source: {
-        plugin: dbJob.sourcePlugin,
-        config: dbJob.sourceConfig,
-        search: dbJob.sourceSearch,
+        plugin: dbWorkflow.sourcePlugin,
+        config: dbWorkflow.sourceConfig,
+        search: dbWorkflow.sourceSearch,
       },
-      pipeline: dbJob.pipeline,
+      pipeline: dbWorkflow.pipeline,
     };
 
-    // Generate unique run ID for this execution
-    const runId = `${jobId}:${Date.now()}:${Math.random().toString(36).substr(2, 9)}`;
     const runStartTime = new Date();
 
-    yield* Effect.log(`Processing source job: ${jobId} (run: ${runId}, attempt ${job.attemptsMade + 1})`);
-    yield* jobService.updateJob(jobId, { status: 'processing' });
+    yield* Effect.log(`Processing source job for workflow: ${workflowId} (run: ${runId}, attempt ${job.attemptsMade + 1})`);
+    yield* workflowService.updateWorkflow(workflowId, { status: 'processing' });
 
     // Store run information
-    yield* stateService.set(RedisKeys.jobRun(jobId, runId), {
+    yield* stateService.set(RedisKeys.runSummary(workflowId, runId), {
       runId,
       status: 'running',
       startedAt: runStartTime.toISOString(),
@@ -204,18 +207,18 @@ const processSourceJob = (job: Job<SourceJobData>) =>
     });
 
     // Add to run history
-    yield* stateService.addToRunHistory(jobId, runId);
+    yield* stateService.addToRunHistory(workflowId, runId);
 
-    const lastProcessedState = yield* stateService.get(RedisKeys.jobState<LastProcessedState>(jobId));
+    const lastProcessedState = yield* stateService.get(RedisKeys.workflowState<LastProcessedState>(workflowId));
     const stateValue = Option.isSome(lastProcessedState) ? lastProcessedState.value : null;
 
     const sourceResult = yield* runSourcePlugin(
       workflow.source,
       stateValue,
       {
-        jobId: dbJob.id,
+        workflowId: workflowId,
         runId,
-        jobName: dbJob.name,
+        jobName: dbWorkflow.name,
       }
     );
 
@@ -223,7 +226,7 @@ const processSourceJob = (job: Job<SourceJobData>) =>
       yield* Effect.log(`Enqueuing ${sourceResult.items.length} items for pipeline (run: ${runId}).`);
 
       // Update run with total items
-      yield* stateService.set(RedisKeys.jobRun(jobId, runId), {
+      yield* stateService.set(RedisKeys.runSummary(workflowId, runId), {
         runId,
         status: 'processing',
         startedAt: runStartTime.toISOString(),
@@ -233,33 +236,44 @@ const processSourceJob = (job: Job<SourceJobData>) =>
 
       yield* Effect.forEach(
         sourceResult.items,
-        (item, index) => queueService.add(QUEUE_NAMES.PIPELINE_JOBS, 'process-item',
-          {
-            workflow,
-            item,
-            runId,
-            itemIndex: index,
-            sourceJobId: jobId,
-            jobId: jobId
-          },
-          {
-            attempts: 3, backoff: { type: 'exponential', delay: 2000 }
-          }),
+        (item, index) => Effect.gen(function* () {
+          // For each item, it calls workflowService.upsertSourceItem(...)
+          yield* workflowService.upsertSourceItem({
+            workflowId,
+            sourceId: item.id,
+            data: item.raw,
+            hash: '', // Placeholder for hash
+          });
+
+          // Enqueue jobs to the pipeline-jobs queue with runId
+          yield* queueService.add(QUEUE_NAMES.PIPELINE_JOBS, 'process-item',
+            {
+              workflow,
+              item,
+              runId,
+              itemIndex: index,
+              sourceJobId: workflowId,
+              workflowId: workflowId
+            },
+            {
+              attempts: 3, backoff: { type: 'exponential', delay: 2000 }
+            });
+        }),
         { concurrency: 10, discard: true }
       );
     }
 
     if (sourceResult.nextLastProcessedState) {
-      yield* Effect.log(`New state found. Re-enqueuing poll job for ${jobId}.`);
+      yield* Effect.log(`New state found. Re-enqueuing poll job for ${workflowId}.`);
 
       const wrappedState: LastProcessedState<PlatformState> = {
         data: sourceResult.nextLastProcessedState
       };
 
-      yield* stateService.set(RedisKeys.jobState(jobId), wrappedState);
+      yield* stateService.set(RedisKeys.workflowState(workflowId), wrappedState);
 
       // Update run status
-      yield* stateService.set(RedisKeys.jobRun(jobId, runId), {
+      yield* stateService.set(RedisKeys.runSummary(workflowId, runId), {
         runId,
         status: 'polling',
         startedAt: runStartTime.toISOString(),
@@ -270,15 +284,15 @@ const processSourceJob = (job: Job<SourceJobData>) =>
 
       const delay = sourceResult.nextLastProcessedState.currentAsyncJob ? 60000 : 300000; // 1 min if active job, 5 min otherwise
       yield* queueService.add(QUEUE_NAMES.SOURCE_JOBS, 'poll-source',
-        { jobId },
+        { workflowId },
         { delay }
       );
     } else {
-      yield* Effect.log(`Polling complete for ${jobId}. Clearing state.`);
-      yield* stateService.delete(RedisKeys.jobState(jobId));
+      yield* Effect.log(`Polling complete for ${workflowId}. Clearing state.`);
+      yield* stateService.delete(RedisKeys.workflowState(workflowId));
 
       // Mark run as completed
-      yield* stateService.set(RedisKeys.jobRun(jobId, runId), {
+      yield* stateService.set(RedisKeys.runSummary(workflowId, runId), {
         runId,
         status: 'completed',
         startedAt: runStartTime.toISOString(),
@@ -287,14 +301,17 @@ const processSourceJob = (job: Job<SourceJobData>) =>
         itemsTotal: sourceResult.items.length,
       });
 
-      yield* jobService.updateJob(jobId, { status: 'completed' });
+      yield* workflowService.updateWorkflow(workflowId, { status: 'completed' });
     }
   })
     .pipe(
       Effect.catchAll(error =>
         Effect.gen(function* () {
           const stateService = yield* StateService;
-          const jobService = yield* WorkflowService;
+          const workflowService = yield* WorkflowService;
+          const { workflowId } = job.data;
+          // We may not have a runId if createWorkflowRun failed, so we generate a temporary one for logging
+          const runId = (job.data as any).runId ?? `failed-run-${Date.now()}`;
 
           // Default to retryable
           let shouldRetry = true;
@@ -302,41 +319,34 @@ const processSourceJob = (job: Job<SourceJobData>) =>
 
           // Handle different error types using instanceof
           if (error instanceof PluginError && error.retryable === false) {
-            yield* Effect.logError(`Configuration error for job ${job.data.jobId} - NOT RETRYING:`, error);
+            yield* Effect.logError(`Configuration error for workflow ${workflowId} - NOT RETRYING:`, error);
             shouldRetry = false;
             errorType = 'configuration';
 
             // Store configuration error state in Redis for monitoring
-            yield* stateService.set(RedisKeys.jobError(job.data.jobId), {
-              jobId: job.data.jobId,
-              error: error.message,
-              timestamp: new Date(),
-              bullmqJobId: job.id,
-              attemptsMade: job.attemptsMade,
-              shouldRemoveFromQueue: true,
+            yield* stateService.set(RedisKeys.runSummary(workflowId, runId), {
+              runId,
+              status: 'failed',
+              error: `Configuration error: ${error.message}`,
+              startedAt: new Date().toISOString(),
+              completedAt: new Date().toISOString(),
+              itemsProcessed: 0,
+              itemsTotal: 0,
             });
-          } else if (error instanceof JobNotFoundError) {
-            yield* Effect.logError(`Job ${job.data.jobId} not found, likely deleted - NOT RETRYING:`, error);
+          } else if (error instanceof WorkflowNotFoundError) {
+            yield* Effect.logError(`Workflow ${workflowId} not found, likely deleted - NOT RETRYING:`, error);
             shouldRetry = false;
-            errorType = 'job_not_found';
+            errorType = 'workflow_not_found';
 
-            // Store job not found error state in Redis for monitoring
-            yield* stateService.set(RedisKeys.jobError(job.data.jobId), {
-              jobId: job.data.jobId,
-              error: error.message,
-              timestamp: new Date(),
-              bullmqJobId: job.id,
-              attemptsMade: job.attemptsMade,
-              shouldRemoveFromQueue: true,
-            });
+            // State is already set in the catchTag for WorkflowNotFoundError
           } else {
-            yield* Effect.logError(`Source job ${job.data.jobId} failed with a transient error - will retry:`, error);
+            yield* Effect.logError(`Source job for workflow ${workflowId} failed with a transient error - will retry:`, error);
             errorType = 'transient';
           }
 
-          // Update job status to failed, unless it was a JobNotFoundError
-          if (!(error instanceof JobNotFoundError)) {
-            yield* jobService.updateJob(job.data.jobId, { status: 'failed' }).pipe(
+          // Update workflow status to failed
+          if (!(error instanceof WorkflowNotFoundError)) {
+            yield* workflowService.updateWorkflow(workflowId, { status: 'failed' }).pipe(
               Effect.catchAll(() => Effect.void) // Ignore update failures
             );
           }
@@ -345,7 +355,7 @@ const processSourceJob = (job: Job<SourceJobData>) =>
           // to signal success to BullMQ and stop retries.
           // Otherwise, we re-throw it by returning Effect.fail(error).
           if (!shouldRetry) {
-            yield* Effect.log(`Job ${job.data.jobId} permanently failed due to ${errorType} error - stopping retries`);
+            yield* Effect.log(`Workflow ${workflowId} permanently failed due to ${errorType} error - stopping retries`);
             return yield* Effect.void; // Stop the job permanently
           } else {
             return yield* Effect.fail(error); // Allow BullMQ to retry

@@ -4,18 +4,15 @@ import { z } from "zod";
 // QUEUE MANAGEMENT ENUMS
 // ============================================================================
 
-export const jobStatusEnum = z.enum([
-  'active',
-  'waiting',
+export const jobTypeEnum = z.enum([
   'completed',
   'failed',
-  'delayed',
-  'scheduled'
+  'all'
 ]);
 
 export const queueStatusEnum = z.enum(['active', 'paused']);
 
-export const jobTypeEnum = z.enum([
+export const workflowTypeEnum = z.enum([
   'completed',
   'failed',
   'all'
@@ -25,27 +22,19 @@ export const jobTypeEnum = z.enum([
 // QUEUE MANAGEMENT SCHEMAS
 // ============================================================================
 
+// Schema for the status of a single queue.
 export const queueStatusSchema = z.object({
   name: z.string(),
-  waiting: z.number(),
-  active: z.number(),
-  completed: z.number(),
-  failed: z.number(),
-  delayed: z.number(),
+  waiting: z.number().int(),
+  active: z.number().int(),
+  completed: z.number().int(),
+  failed: z.number().int(),
+  delayed: z.number().int(),
   paused: z.boolean(),
 });
 
-export const queueOverviewSchema = z.object({
-  name: z.string(),
-  status: queueStatusEnum,
-  waiting: z.number(),
-  active: z.number(),
-  completed: z.number(),
-  failed: z.number(),
-  delayed: z.number(),
-});
-
-export const queueItemSchema = z.object({
+// Schema for a single job item within a queue (from BullMQ).
+export const jobStatusSchema = z.object({
   id: z.string(),
   name: z.string(),
   data: z.any(),
@@ -55,27 +44,25 @@ export const queueItemSchema = z.object({
   processedOn: z.number().optional(),
   finishedOn: z.number().optional(),
   failedReason: z.string().optional(),
-  delay: z.number().optional(),
-  priority: z.number().optional(),
-  jobId: z.string().optional(),
+  returnvalue: z.any().optional(),
 });
 
-export const queueDetailsSchema = queueOverviewSchema.extend({
-  items: z.object({
-    waiting: z.array(queueItemSchema),
-    active: z.array(queueItemSchema),
-    failed: z.array(queueItemSchema),
-    delayed: z.array(queueItemSchema),
-  }),
-  performance: z.object({
-    processingRate: z.number(),
-    averageProcessTime: z.number(),
-    errorRate: z.number(),
-  }),
+// Payload for the queue that starts a new workflow run.
+export const startWorkflowRunJobDataSchema = z.object({
+  workflowId: z.string(),
+  triggeredBy: z.string().optional(),
 });
 
-export const queueActionResultSchema = z.object({
-  success: z.boolean(),
-  message: z.string(),
-  itemsRemoved: z.number().optional(),
+// Payload for the queue that processes an item through the pipeline.
+export const executePipelineJobDataSchema = z.object({
+  workflowRunId: z.string(),
+  sourceItemId: z.string(),
+  input: z.record(z.string(), z.unknown()),
+  startAtStepId: z.string().optional(),
 });
+
+// A discriminated union of all possible job data payloads.
+export const jobDataSchema = z.union([
+  startWorkflowRunJobDataSchema,
+  executePipelineJobDataSchema,
+]);

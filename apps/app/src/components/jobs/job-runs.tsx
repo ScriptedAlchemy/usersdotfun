@@ -1,8 +1,8 @@
-import type { JobRunInfo } from '@usersdotfun/shared-types/types';
+import type { WorkflowRunInfo } from '@usersdotfun/shared-types/types';
 import { StatusBadge } from './status-badge';
 
 interface JobRunsProps {
-  jobRuns: JobRunInfo[];
+  jobRuns: WorkflowRunInfo[];
   isLoading: boolean;
 }
 
@@ -36,7 +36,7 @@ export function JobRuns({ jobRuns, isLoading }: JobRunsProps) {
 }
 
 interface JobRunCardProps {
-  run: JobRunInfo;
+  run: WorkflowRunInfo;
 }
 
 function JobRunCard({ run }: JobRunCardProps) {

@@ -1,9 +1,9 @@
 import { randomUUID } from "crypto";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { Context, Data, Effect, Layer } from "effect";
 
 import { DbError } from "../errors";
-import { schema, type NewPipelineStep, type NewSourceItem, type NewWorkflow, type NewWorkflowRun, type PipelineStep, type SourceItem, type Workflow, type WorkflowRun, type User } from "../schema";
+import { schema, type NewPluginRun, type NewSourceItem, type NewWorkflow, type NewWorkflowRun, type PluginRun, type SourceItem, type User, type Workflow, type WorkflowRun } from "../schema";
 import { Database } from "./db.service";
 
 export class WorkflowNotFoundError extends Data.TaggedError("WorkflowNotFoundError")<{
@@ -14,8 +14,8 @@ export class WorkflowRunNotFoundError extends Data.TaggedError("WorkflowRunNotFo
   readonly runId: string;
 }> { }
 
-export class PipelineStepNotFoundError extends Data.TaggedError(
-  "PipelineStepNotFoundError"
+export class PluginRunNotFoundError extends Data.TaggedError(
+  "PluginRunNotFoundError"
 )<{
   readonly stepId: string;
   readonly runId?: string;
@@ -47,9 +47,9 @@ export interface UpdateWorkflowRunData extends Partial<Omit<NewWorkflowRun, 'id'
 
 export interface CreateSourceItemData extends Omit<NewSourceItem, 'id' | 'createdAt'> { }
 
-export interface CreatePipelineStepData extends Omit<NewPipelineStep, 'id'> { }
+export interface CreatePluginRunData extends Omit<NewPluginRun, 'id'> { }
 
-export interface UpdatePipelineStepData extends Partial<Omit<NewPipelineStep, 'id' | 'runId'>> { }
+export interface UpdatePluginRunData extends Partial<Omit<NewPluginRun, 'id' | 'runId'>> { }
 
 export interface WorkflowService {
   // Workflow methods
@@ -72,6 +72,9 @@ export interface WorkflowService {
   readonly createWorkflowRun: (
     data: CreateWorkflowRunData
   ) => Effect.Effect<WorkflowRun, DbError>;
+  readonly getRunById: (
+    runId: string
+  ) => Effect.Effect<WorkflowRun, WorkflowRunNotFoundError | DbError>;
   readonly getRunsForWorkflow: (
     workflowId: string
   ) => Effect.Effect<Array<WorkflowRun & { triggeredBy: User | null }>, DbError>;
@@ -89,16 +92,21 @@ export interface WorkflowService {
   ) => Effect.Effect<Array<SourceItem>, DbError>;
 
   // Pipeline step methods (for historical record)
-  readonly createPipelineStep: (
-    data: CreatePipelineStepData
-  ) => Effect.Effect<PipelineStep, DbError>;
-  readonly updatePipelineStep: (
+  readonly createPluginRun: (
+    data: CreatePluginRunData
+  ) => Effect.Effect<PluginRun, DbError>;
+  readonly updatePluginRun: (
     id: string,
-    data: UpdatePipelineStepData
-  ) => Effect.Effect<PipelineStep, PipelineStepNotFoundError | DbError>;
-  readonly getStepsForRun: (
+    data: UpdatePluginRunData
+  ) => Effect.Effect<PluginRun, PluginRunNotFoundError | DbError>;
+  readonly getPluginRunsForRun: (
     runId: string
-  ) => Effect.Effect<Array<PipelineStep>, DbError>;
+  ) => Effect.Effect<Array<PluginRun>, DbError>;
+  readonly getPluginRunByStep: (
+    runId: string,
+    itemId: string,
+    stepId: string
+  ) => Effect.Effect<PluginRun, DbError | SourceItemNotFoundError>;
 }
 
 export const WorkflowService = Context.GenericTag<WorkflowService>("WorkflowService");
@@ -232,6 +240,18 @@ export const WorkflowServiceLive = Layer.effect(
           }),
       });
 
+    const getRunById = (runId: string): Effect.Effect<WorkflowRun, WorkflowRunNotFoundError | DbError> =>
+      Effect.tryPromise({
+        try: () => db.query.workflowRun.findFirst({
+          where: eq(schema.workflowRun.id, runId),
+        }),
+        catch: (cause) => new DbError({ cause, message: "Failed to get workflow run by id" }),
+      }).pipe(
+        Effect.flatMap((result) =>
+          requireRecord(result, new WorkflowRunNotFoundError({ runId }))
+        )
+      );
+
     const updateWorkflowRun = (
       id: string,
       data: UpdateWorkflowRunData
@@ -259,7 +279,13 @@ export const WorkflowServiceLive = Layer.effect(
             ...data,
             id: randomUUID(),
           };
-          return db.insert(schema.sourceItem).values(newItem).returning();
+          return db.insert(schema.sourceItem)
+            .values(newItem)
+            .onConflictDoUpdate({
+              target: [schema.sourceItem.workflowId, schema.sourceItem.data],
+              set: { processedAt: new Date() }
+            })
+            .returning();
         },
         catch: (cause) =>
           new DbError({ cause, message: "Failed to upsert source item" }),
@@ -290,14 +316,14 @@ export const WorkflowServiceLive = Layer.effect(
       });
 
     // Pipeline step methods
-    const createPipelineStep = (data: CreatePipelineStepData): Effect.Effect<PipelineStep, DbError> =>
+    const createPluginRun = (data: CreatePluginRunData): Effect.Effect<PluginRun, DbError> =>
       Effect.tryPromise({
         try: () => {
           const newStep = {
             ...data,
             id: randomUUID(),
           };
-          return db.insert(schema.pipelineStep).values(newStep).returning();
+          return db.insert(schema.pluginRun).values(newStep).returning();
         },
         catch: (cause) =>
           new DbError({
@@ -316,16 +342,16 @@ export const WorkflowServiceLive = Layer.effect(
         )
       );
 
-    const updatePipelineStep = (
+    const updatePluginRun = (
       id: string,
-      data: UpdatePipelineStepData
-    ): Effect.Effect<PipelineStep, PipelineStepNotFoundError | DbError> =>
+      data: UpdatePluginRunData
+    ): Effect.Effect<PluginRun, PluginRunNotFoundError | DbError> =>
       Effect.tryPromise({
         try: () =>
           db
-            .update(schema.pipelineStep)
+            .update(schema.pluginRun)
             .set(data)
-            .where(eq(schema.pipelineStep.id, id))
+            .where(eq(schema.pluginRun.id, id))
             .returning(),
         catch: (cause) =>
           new DbError({
@@ -336,24 +362,38 @@ export const WorkflowServiceLive = Layer.effect(
         Effect.flatMap((result) =>
           requireRecord(
             result[0],
-            new PipelineStepNotFoundError({ stepId: id })
+            new PluginRunNotFoundError({ stepId: id })
           )
         )
       );
 
-    const getStepsForRun = (runId: string): Effect.Effect<Array<PipelineStep>, DbError> =>
+    const getPluginRunsForRun = (runId: string): Effect.Effect<Array<PluginRun>, DbError> =>
       Effect.tryPromise({
         try: () =>
-          db.query.pipelineStep.findMany({
-            where: eq(schema.pipelineStep.runId, runId),
+          db.query.pluginRun.findMany({
+            where: eq(schema.pluginRun.workflowRunId, runId),
             orderBy: (steps, { asc }) => asc(steps.startedAt),
           }),
         catch: (cause) =>
           new DbError({
             cause,
-            message: "Failed to get pipeline steps for run",
+            message: "Failed to get plugin runs for run",
           }),
       });
+
+    const getPluginRunByStep = (runId: string, itemId: string, stepId: string) =>
+      Effect.tryPromise({
+        try: () => db.query.pluginRun.findFirst({
+          where: and(
+            eq(schema.pluginRun.workflowRunId, runId),
+            eq(schema.pluginRun.sourceItemId, itemId),
+            eq(schema.pluginRun.stepId, stepId)
+          )
+        }),
+        catch: (cause) => new DbError({ cause, message: "Failed to get plugin run by step" }),
+      }).pipe(
+        Effect.flatMap(result => requireRecord(result, new SourceItemNotFoundError({ itemId })))
+      );
 
     return {
       createWorkflow,
@@ -362,13 +402,15 @@ export const WorkflowServiceLive = Layer.effect(
       updateWorkflow,
       deleteWorkflow,
       createWorkflowRun,
+      getRunById,
       getRunsForWorkflow,
       updateWorkflowRun,
       upsertSourceItem,
       getItemsForWorkflow,
-      createPipelineStep,
-      updatePipelineStep,
-      getStepsForRun,
+      createPluginRun,
+      updatePluginRun,
+      getPluginRunsForRun,
+      getPluginRunByStep
     };
   })
 );

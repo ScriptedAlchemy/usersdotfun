@@ -51,7 +51,7 @@ export function PipelineViewer({ job, monitoringData }: PipelineViewerProps) {
                   startedAt: step.startedAt || undefined,
                   completedAt: step.completedAt || undefined,
                 }}
-                jobId={job.id}
+                workflowId={job.id}
               />
             ))}
           </div>
@@ -91,7 +91,7 @@ export function PipelineViewer({ job, monitoringData }: PipelineViewerProps) {
                   config: step.config,
                   status: "defined",
                 }}
-                jobId={job.id}
+                workflowId={job.id}
               />
             ))}
           </div>

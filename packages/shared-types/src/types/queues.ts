@@ -1,29 +1,30 @@
 import { z } from "zod";
 import {
-  jobStatusEnum,
-  queueStatusEnum,
+  executePipelineJobDataSchema,
+  jobDataSchema,
+  jobStatusSchema,
   jobTypeEnum,
+  queueStatusEnum,
   queueStatusSchema,
-  queueOverviewSchema,
-  queueItemSchema,
-  queueDetailsSchema,
-  queueActionResultSchema,
+  startWorkflowRunJobDataSchema,
 } from '../schemas/queues';
 
-// ============================================================================
-// QUEUE MANAGEMENT ENUMS
-// ============================================================================
-
-export type JobStatusType = z.infer<typeof jobStatusEnum>;
+// Enums
 export type QueueStatusType = z.infer<typeof queueStatusEnum>;
 export type JobType = z.infer<typeof jobTypeEnum>;
 
-// ============================================================================
-// QUEUE MANAGEMENT TYPES
-// ============================================================================
-
+// Queue Management Types
 export type QueueStatus = z.infer<typeof queueStatusSchema>;
-export type QueueOverview = z.infer<typeof queueOverviewSchema>;
-export type QueueItem = z.infer<typeof queueItemSchema>;
-export type QueueDetails = z.infer<typeof queueDetailsSchema>;
-export type QueueActionResult = z.infer<typeof queueActionResultSchema>;
+export type JobStatus = z.infer<typeof jobStatusSchema>;
+
+// Queue Job Payload Types
+export type StartWorkflowRunJobData = z.infer<typeof startWorkflowRunJobDataSchema>;
+export type ExecutePipelineJobData = z.infer<typeof executePipelineJobDataSchema>;
+export type JobData = z.infer<typeof jobDataSchema>;
+
+// Queue Names
+export const QUEUE_NAMES = {
+  WORKFLOW_RUN: 'workflow-run-jobs',
+  PIPELINE_EXECUTION: 'pipeline-execution-jobs',
+} as const;
+export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];

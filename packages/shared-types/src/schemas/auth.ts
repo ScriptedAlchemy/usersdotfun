@@ -18,15 +18,19 @@ export const jwtPayloadSchema = z.object({
   exp: z.number(),
 });
 
+export const userSchema = z.object({
+  id: z.string(),
+  name: z.string().nullable(),
+  email: z.string(),
+  role: z.enum(Object.values(UserRole) as [UserRole, ...UserRole[]]),
+  isAnonymous: z.boolean().optional(),
+  banned: z.boolean().optional(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
 export const authenticatedContextSchema = z.object({
-  user: z.object({
-    id: z.string(),
-    name: z.string().nullable(),
-    email: z.string(),
-    role: z.enum(UserRole),
-    isAnonymous: z.boolean().optional(),
-    banned: z.boolean().optional(),
-  }),
+  user: userSchema.omit({ createdAt: true, updatedAt: true }),
   session: z.object({
     id: z.string(),
     userId: z.string(),

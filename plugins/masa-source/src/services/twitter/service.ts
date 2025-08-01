@@ -53,20 +53,20 @@ export class TwitterSearchService implements IPlatformSearchService {
       currentAsyncJob.status !== "timeout"
     ) {
       console.log(
-        `TwitterSearchService: Checking status for existing job ${currentAsyncJob.jobId}`,
+        `TwitterSearchService: Checking status for existing job ${currentAsyncJob.workflowId}`,
       );
       const jobStatus = await this.masaClient.checkJobStatus(
         "twitter-scraper",
-        currentAsyncJob.jobId,
+        currentAsyncJob.workflowId,
       );
 
       if (jobStatus === "done") {
         console.log(
-          `TwitterSearchService: Job ${currentAsyncJob.jobId} is done. Fetching results.`,
+          `TwitterSearchService: Job ${currentAsyncJob.workflowId} is done. Fetching results.`,
         );
         const results = await this.masaClient.getJobResults(
           "twitter-scraper",
-          currentAsyncJob.jobId,
+          currentAsyncJob.workflowId,
         );
         const items = results || [];
 
@@ -98,7 +98,7 @@ export class TwitterSearchService implements IPlatformSearchService {
         jobStatus === null
       ) {
         console.error(
-          `TwitterSearchService: Job ${currentAsyncJob.jobId} failed or status check error.`,
+          `TwitterSearchService: Job ${currentAsyncJob.workflowId} failed or status check error.`,
         );
         // Clear the failed job so a new one can be submitted on the next polling cycle
         const nextStateData: MasaPlatformState = {
@@ -109,7 +109,7 @@ export class TwitterSearchService implements IPlatformSearchService {
       } else {
         // Still pending or processing
         console.log(
-          `TwitterSearchService: Job ${currentAsyncJob.jobId} status: ${jobStatus}.`,
+          `TwitterSearchService: Job ${currentAsyncJob.workflowId} status: ${jobStatus}.`,
         );
         const nextStateData: MasaPlatformState = {
           ...currentState?.data,
@@ -149,7 +149,7 @@ export class TwitterSearchService implements IPlatformSearchService {
         `TwitterSearchService: New job submitted with ID: ${newJobId}`,
       );
       const newAsyncJob: AsyncJobProgress = {
-        jobId: newJobId,
+        workflowId: newJobId,
         status: "submitted",
         submittedAt: new Date().toISOString(),
       };
@@ -163,7 +163,7 @@ export class TwitterSearchService implements IPlatformSearchService {
       console.error("TwitterSearchService: Failed to submit new search job.");
       // Create a job progress state reflecting the submission error
       const errorAsyncJob: AsyncJobProgress = {
-        jobId: "submission_failed_" + Date.now(), // Placeholder ID
+        workflowId: "submission_failed_" + Date.now(), // Placeholder ID
         status: "error",
         submittedAt: new Date().toISOString(),
         errorMessage: "Failed to submit job to Masa API",

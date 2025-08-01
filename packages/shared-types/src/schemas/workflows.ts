@@ -1,170 +1,121 @@
-import { z } from "zod";
 import { CronExpressionParser } from "cron-parser";
-import { queueStatusSchema } from './queues';
+import { z } from "zod";
+import { userSchema } from "./auth";
 
-// ============================================================================
-// PIPELINE & JOB SCHEMAS
-// ============================================================================
-
-// Pipeline step schema for database storage
-export const pipelineStepSchema = z.object({
-  id: z.string(),
-  jobId: z.string(),
-  stepId: z.string(),
-  pluginName: z.string(),
-  config: z.any().nullable(),
-  input: z.any().nullable(),
-  output: z.any().nullable(),
-  error: z.any().nullable(),
-  status: z.string(),
-  startedAt: z.preprocess(
-    (arg) => (arg instanceof Date ? arg.toISOString() : arg),
-    z.iso.datetime({ message: "Invalid datetime format" }).nullable()
-  ),
-  completedAt: z.preprocess(
-    (arg) => (arg instanceof Date ? arg.toISOString() : arg),
-    z.iso.datetime({ message: "Invalid datetime format" }).nullable()
-  ),
-});
-
-// Pipeline schema for Workflow
-export const workflowPipelineSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  steps: z.array(pipelineStepSchema),
-  env: z.object({
-    secrets: z.array(z.string()),
-  }).optional(),
-});
-
-// Source schema for Workflow
-export const workflowSourceSchema = z.object({
-  plugin: z.string(),
+// Reusable definition for steps that involve a plugin
+export const pluginConfigSchema = z.object({
+  pluginId: z.string().min(1, "Plugin ID cannot be empty"),
   config: z.any(),
-  search: z.any(),
 });
 
-// Workflow schema - the primary interface for API operations
+// Pipeline stpe adds a unique 'stepId' to base plugin config
+export const pipelineStepDefinitionSchema = pluginConfigSchema.extend({
+  stepId: z.string().min(1, "Step ID cannot be empty"),
+});
+
+// ============================================================================
+// WORKFLOW SCHEMAS
+// ============================================================================
+
+// Workflow schema
 export const workflowSchema = z.object({
-  id: z.string().optional(),
+  id: z.string(),
   name: z.string(),
-  schedule: z.string().refine(
-    (val) => {
-      try {
-        CronExpressionParser.parse(val);
-        return true;
-      } catch (e) {
-        return false;
-      }
-    },
-    { message: "Invalid cron expression" }
-  ).optional(),
-  source: workflowSourceSchema,
-  pipeline: workflowPipelineSchema,
-});
-
-// Create Workflow schema (without id)
-export const createWorkflowSchema = workflowSchema.omit({ id: true }).extend({
+  schedule: z.string().refine((val) => {
+    try {
+      CronExpressionParser.parse(val);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }, { message: "Invalid cron expression" }
+  ).nullable(),
+  source: pluginConfigSchema,
   pipeline: z.object({
-    id: z.string(),
-    name: z.string(),
-    steps: z.array(
-      pipelineStepSchema.omit({
-        id: true,
-        jobId: true,
-        status: true,
-        input: true,
-        output: true,
-        error: true,
-        startedAt: true,
-        completedAt: true,
-      })
-    ),
+    steps: z.array(pipelineStepDefinitionSchema),
     env: z.object({
       secrets: z.array(z.string()),
     }).optional(),
   }),
+  createdBy: z.string(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+  user: userSchema,
 });
 
-// Update Workflow schema (partial)
+// Base workflow schema without user for create/update operations
+export const baseWorkflowSchema = workflowSchema.omit({ user: true });
+
+// A single execution instance of a Workflow - includes triggeredBy user as it's always returned by the service
+export const workflowRunSchema = z.object({
+  id: z.string(),
+  workflowId: z.string(),
+  status: z.enum(['running', 'completed', 'failed', 'partially_completed']),
+  triggeredBy: userSchema.nullable(),
+  itemsProcessed: z.number().int(),
+  itemsTotal: z.number().int(),
+  startedAt: z.date(),
+  completedAt: z.date().nullable(),
+});
+
+// Base workflow run schema without user for create/update operations
+export const baseWorkflowRunSchema = workflowRunSchema.omit({ triggeredBy: true }).extend({
+  triggeredBy: z.string().nullable(),
+});
+
+// A canonical record of a unique piece of data from a source.
+export const sourceItemSchema = z.object({
+  id: z.string(),
+  workflowId: z.string(),
+  data: z.any(),
+  processedAt: z.date().nullable(),
+  createdAt: z.date(),
+});
+
+// A historical record of a single plugin execution.
+export const pluginRunSchema = z.object({
+  id: z.string(),
+  workflowRunId: z.string(),
+  sourceItemId: z.string().nullable(),
+  stepId: z.string(),
+  pluginId: z.string(),
+  status: z.enum(['processing', 'completed', 'failed', 'retried']),
+  input: z.any().nullable(),
+  output: z.any().nullable(),
+  error: z.any().nullable(),
+  startedAt: z.date().nullable(),
+  completedAt: z.date().nullable(),
+});
+
+
+// For creating a new workflow (ID and timestamps are generated).
+export const createWorkflowSchema = baseWorkflowSchema.omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// For updating an existing workflow.
 export const updateWorkflowSchema = createWorkflowSchema.partial();
 
-// Job schema for API operations (non-database specific)
-export const jobSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  schedule: z.string().nullable(),
-  status: z.string(),
-  sourcePlugin: z.string(),
-  sourceConfig: z.any().nullable(),
-  sourceSearch: z.any().nullable(),
-  pipeline: z.any().nullable(),
-  createdAt: z.preprocess(
-    (arg) => (arg instanceof Date ? arg.toISOString() : arg),
-    z.iso.datetime({ message: "Invalid datetime format" })
-  ),
-  updatedAt: z.preprocess(
-    (arg) => (arg instanceof Date ? arg.toISOString() : arg),
-    z.iso.datetime({ message: "Invalid datetime format" })
-  ),
+// The real-time summary object that lives in Redis.
+export const workflowRunInfoSchema = workflowRunSchema.extend({
+  currentStep: z.string().optional(),
+  errorCount: z.number().int().optional(),
 });
 
-export const jobRunInfoSchema = z.object({
-  runId: z.string(),
-  status: z.string(),
-  startedAt: z.preprocess(
-    (arg) => (arg instanceof Date ? arg.toISOString() : arg),
-    z.iso.datetime({ message: "Invalid datetime format" })
-  ),
-  completedAt: z.preprocess(
-    (arg) => (arg instanceof Date ? arg.toISOString() : arg),
-    z.iso.datetime({ message: "Invalid datetime format" }).optional()
-  ),
-  itemsProcessed: z.number(),
-  itemsTotal: z.number(),
-  state: z.any().optional(),
-});
-
-export const jobStatusSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  data: z.any(),
-  progress: z.number(),
+// A generic error type for workflows.
+export const workflowErrorSchema = z.object({
+  workflowId: z.string(),
+  error: z.string(),
+  timestamp: z.date(),
+  bullmqJobId: z.string().optional(),
   attemptsMade: z.number(),
-  timestamp: z.number(),
-  processedOn: z.number().optional(),
-  finishedOn: z.number().optional(),
-  failedReason: z.string().optional(),
-  returnvalue: z.any().optional(),
 });
 
-export const jobStatusSummarySchema = z.object({
-  status: z.string(),
-  queuePosition: z.number().optional(),
-  estimatedStartTime: z.date().optional(),
-  currentRun: jobRunInfoSchema.optional(),
-});
 
-export const jobRunDetailsSchema = z.object({
-  run: jobRunInfoSchema,
-  pipelineItems: z.array(pipelineStepSchema),
-});
-
-export const jobMonitoringDataSchema = z.object({
-  job: jobSchema,
-  currentState: z.any().optional(),
-  queueStatus: z.object({
-    sourceQueue: z.lazy(() => queueStatusSchema),
-    pipelineQueue: z.lazy(() => queueStatusSchema),
-  }),
-  activeJobs: z.object({
-    sourceJobs: z.array(jobStatusSchema),
-    pipelineJobs: z.array(jobStatusSchema),
-  }),
-  recentRuns: z.array(jobRunInfoSchema),
-  pipelineSteps: z.array(pipelineStepSchema),
-});
-
-export const jobWithStepsSchema = jobSchema.extend({
-  steps: z.array(pipelineStepSchema),
+// The full workflow object with all its relations for the detailed view.
+export const richWorkflowSchema = workflowSchema.extend({
+  runs: z.array(workflowRunSchema),
+  items: z.array(sourceItemSchema),
 });

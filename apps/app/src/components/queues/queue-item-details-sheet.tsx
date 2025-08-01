@@ -1,4 +1,4 @@
-import type { QueueItem, JobWithSteps, JobMonitoringData, JobRunInfo } from '@usersdotfun/shared-types/types';
+import type { QueueItem, JobWithSteps, JobMonitoringData, WorkflowRunInfo } from '@usersdotfun/shared-types/types';
 import { CommonSheet } from '~/components/common/common-sheet';
 import { JobMonitoring } from '~/components/workflows/job-monitoring';
 import { PipelineViewer } from '~/components/workflows/pipeline-viewer';
@@ -10,13 +10,13 @@ interface QueueItemDetailsSheetProps {
   queueItem: (QueueItem & { queueName: string; status: string }) | null;
   job?: JobWithSteps | null;
   monitoringData?: JobMonitoringData;
-  jobRuns?: JobRunInfo[];
+  jobRuns?: WorkflowRunInfo[];
   isOpen: boolean;
   isQueueItemLoading?: boolean;
   isJobLoading?: boolean;
   isMonitoringLoading?: boolean;
   isRunsLoading?: boolean;
-  jobError?: any;
+  workflowError?: any;
   monitoringError?: any;
   runsError?: any;
   onClose: () => void;
@@ -32,7 +32,7 @@ export function QueueItemDetailsSheet({
   isJobLoading = false,
   isMonitoringLoading = false,
   isRunsLoading = false,
-  jobError,
+  workflowError,
   monitoringError,
   runsError,
   onClose,
@@ -85,7 +85,7 @@ export function QueueItemDetailsSheet({
             </div>
             <div>
               <p className="text-sm font-medium text-gray-600">Job ID</p>
-              <p className="text-sm font-mono">{parsedId.jobId}</p>
+              <p className="text-sm font-mono">{parsedId.workflowId}</p>
             </div>
           </div>
           
@@ -194,19 +194,19 @@ export function QueueItemDetailsSheet({
         <div className="flex items-center justify-center h-16">
           <div className="animate-pulse text-sm">Loading job details...</div>
         </div>
-      ) : jobError?.isNotFound ? (
+      ) : workflowError?.isNotFound ? (
         <div className="bg-orange-50 border border-orange-200 rounded p-3">
           <p className="text-sm text-orange-800">
-            <strong>Job Not Found:</strong> The job associated with this queue item (ID: <span className="font-mono">{parsedId.jobId}</span>) has been deleted or is no longer available.
+            <strong>Job Not Found:</strong> The job associated with this queue item (ID: <span className="font-mono">{parsedId.workflowId}</span>) has been deleted or is no longer available.
           </p>
           <p className="text-xs text-orange-600 mt-1">
             This is normal if the job was recently deleted. The queue item will be processed based on its current state.
           </p>
         </div>
-      ) : jobError ? (
+      ) : workflowError ? (
         <div className="bg-red-50 border border-red-200 rounded p-3">
           <p className="text-sm text-red-800">
-            <strong>Error loading job details:</strong> {jobError.message}
+            <strong>Error loading job details:</strong> {workflowError.message}
           </p>
         </div>
       ) : job ? (
@@ -305,10 +305,10 @@ export function QueueItemDetailsSheet({
             monitoringData={monitoringData} 
           />
         </>
-      ) : parsedId.jobId !== queueItem.id ? (
+      ) : parsedId.workflowId !== queueItem.id ? (
         <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
           <p className="text-sm text-yellow-800">
-            Job details not available. This queue item references job ID: <span className="font-mono">{parsedId.jobId}</span>
+            Job details not available. This queue item references job ID: <span className="font-mono">{parsedId.workflowId}</span>
           </p>
         </div>
       ) : null}
