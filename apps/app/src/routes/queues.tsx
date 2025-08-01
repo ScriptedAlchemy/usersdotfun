@@ -4,10 +4,9 @@ import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { z } from "zod";
 import { getQueueDetails, getQueuesOverview } from "~/api/queues";
-import { AllJobsTable } from "~/components/queues/all-jobs-table";
 import { QueueActions } from "~/components/queues/queue-actions";
 import { QueueItemList } from "~/components/queues/queue-item-list";
-import { QueueOverviewComponent } from "~/components/queues/queue-overview";
+import { QueuesDashboard } from "~/components/queues/queues-dashboard";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { signIn } from "~/lib/auth-client";
@@ -16,6 +15,12 @@ import { useWebSocket, useWebSocketSubscription } from "~/lib/websocket";
 
 const queuesSearchSchema = z.object({
   queue: z.string().optional(),
+  tab: z
+    .enum(["dashboard", "overview", "all-jobs"])
+    .optional()
+    .default("dashboard"),
+  statusFilter: z.string().optional(),
+  queueFilter: z.string().optional(),
 });
 
 export const Route = createFileRoute("/queues")({
@@ -88,13 +93,18 @@ function AuthPrompt({ error }: { error: Error }) {
 }
 
 function QueuesComponent() {
-  const { queue: selectedQueue } = Route.useSearch();
+  const navigate = useNavigate({ from: "/queues" });
+  const {
+    queue: selectedQueue,
+    tab,
+    statusFilter,
+    queueFilter,
+  } = Route.useSearch();
   const [selectedQueueName, setSelectedQueueName] = useState<string | null>(
     selectedQueue || null
   );
   const { isConnected } = useWebSocket();
 
-  // Fetch queues overview with WebSocket-aware polling
   const {
     data: queuesData,
     isLoading: queuesLoading,
@@ -102,29 +112,24 @@ function QueuesComponent() {
   } = useQuery({
     queryKey: queryKeys.queues.overview(),
     queryFn: getQueuesOverview,
-    staleTime: 30000, // Consider data fresh for 30 seconds
-    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
-    // Minimal polling as fallback only when WebSocket is disconnected
+    staleTime: 30000,
+    gcTime: 5 * 60 * 1000,
     refetchInterval: isConnected ? false : 30000,
-    refetchIntervalInBackground: false, // Don't refetch when tab is not active
+    refetchIntervalInBackground: false,
   });
 
-  // Fetch detailed queue data when a queue is selected
   const { data: queueDetails, isLoading: detailsLoading } = useQuery({
     queryKey: queryKeys.queues.detail(selectedQueueName!),
     queryFn: () => getQueueDetails(selectedQueueName!),
     enabled: !!selectedQueueName,
-    staleTime: 20000, // Consider data fresh for 20 seconds
-    gcTime: 3 * 60 * 1000, // Keep in cache for 3 minutes
-    // Minimal polling as fallback only when WebSocket is disconnected
+    staleTime: 20000,
+    gcTime: 3 * 60 * 1000,
     refetchInterval: isConnected ? false : 20000,
     refetchIntervalInBackground: false,
   });
 
-  // WebSocket subscriptions for real-time updates
   useWebSocketSubscription("queue:status-changed", (data) => {
     console.log("Queue status changed:", data);
-    // Cache invalidation handled in WebSocket provider
   });
 
   useWebSocketSubscription("queue:item-added", (data) => {
@@ -157,7 +162,6 @@ function QueuesComponent() {
 
     return (
       <div className="p-6 space-y-6">
-        {/* Header with back button */}
         <div className="flex items-center gap-4">
           <Button
             variant="outline"
@@ -178,7 +182,6 @@ function QueuesComponent() {
           </div>
         </div>
 
-        {/* Queue Actions */}
         {selectedQueueOverview && (
           <Card>
             <CardHeader>
@@ -199,7 +202,6 @@ function QueuesComponent() {
           </Card>
         )}
 
-        {/* Queue Items */}
         <QueueItemList
           queueName={selectedQueueName}
           items={queueDetails.items}
@@ -209,55 +211,10 @@ function QueuesComponent() {
     );
   }
 
-  // Show overview of all queues
+  // Show tabbed interface
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold">Queue Monitoring</h1>
-        <p className="text-gray-600">
-          Monitor and manage job queues across the system
-        </p>
-      </div>
-
-      {/* Queue Overview Cards */}
-      <QueueOverviewComponent
-        queues={queuesData?.queues || {}}
-        isLoading={queuesLoading}
-        onQueueSelect={handleQueueSelect}
-      />
-
-      {/* Global Queue Stats */}
-      {queuesData && Object.keys(queuesData.queues).length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>System Overview</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {Object.entries(queuesData.queues).map(([queueName, queue]) => (
-                <div key={queueName} className="text-center">
-                  <div className="text-2xl font-bold text-blue-600">
-                    {queue.waiting + queue.active + queue.delayed}
-                  </div>
-                  <div className="text-sm text-gray-600 capitalize">
-                    {queueName.replace("-", " ")} Total
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-4 pt-4 border-t text-xs text-gray-500">
-              Last updated:{" "}
-              {queuesData.timestamp
-                ? new Date(queuesData.timestamp).toLocaleString()
-                : "Unknown"}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* All Jobs Table */}
-      <AllJobsTable />
+    <div className="p-6">
+      <QueuesDashboard onQueueSelect={handleQueueSelect} />
     </div>
   );
 }

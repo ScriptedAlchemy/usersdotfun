@@ -139,38 +139,6 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                 >
                   Queues
                 </Link>{" "}
-                <Link
-                  to="/projects"
-                  activeProps={{
-                    className: "font-bold",
-                  }}
-                >
-                  Projects
-                </Link>{" "}
-                <Link
-                  to="/users"
-                  activeProps={{
-                    className: "font-bold",
-                  }}
-                >
-                  Users
-                </Link>{" "}
-                <Link
-                  to="/route-a"
-                  activeProps={{
-                    className: "font-bold",
-                  }}
-                >
-                  Pathless Layout
-                </Link>{" "}
-                <Link
-                  to="/deferred"
-                  activeProps={{
-                    className: "font-bold",
-                  }}
-                >
-                  Deferred
-                </Link>{" "}
               </div>
               <WebSocketStatus />
             </div>

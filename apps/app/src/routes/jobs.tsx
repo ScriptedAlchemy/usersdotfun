@@ -1,11 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import type { Job } from "@usersdotfun/shared-types/types";
+import type {
+  Job
+} from "@usersdotfun/shared-types/types";
 import { useState } from "react";
 import { z } from "zod";
-import { getJob, getJobMonitoringData, getJobRuns, getJobs } from "~/api/jobs";
+import { getJob, getJobMonitoringData, getJobRuns } from "~/api/jobs";
+import { getQueuesOverview } from "~/api/queues";
 import { JobDetailsSheet } from "~/components/jobs/job-details-sheet";
-import { JobList } from "~/components/jobs/job-list";
+import { JobsDashboard } from "~/components/jobs/jobs-dashboard";
 import { Button } from "~/components/ui/button";
 import { signIn } from "~/lib/auth-client";
 import { queryKeys } from "~/lib/query-keys";
@@ -13,6 +16,12 @@ import { useWebSocket, useWebSocketSubscription } from "~/lib/websocket";
 
 const jobsSearchSchema = z.object({
   jobId: z.string().optional(),
+  tab: z
+    .enum(["dashboard", "queue-overview", "all-jobs"])
+    .optional()
+    .default("dashboard"),
+  queueFilter: z.string().optional(),
+  statusFilter: z.string().optional(),
 });
 
 export const Route = createFileRoute("/jobs")({
@@ -86,38 +95,23 @@ function AuthPrompt({ error }: { error: Error }) {
 
 function JobsComponent() {
   const navigate = useNavigate({ from: "/jobs" });
-  const { jobId } = Route.useSearch();
+  const { jobId, tab, queueFilter, statusFilter } = Route.useSearch();
   const { isConnected } = useWebSocket();
-
-  const {
-    data: jobs,
-    isLoading,
-    error,
-  } = useQuery({
-    queryKey: queryKeys.jobs.lists(),
-    queryFn: getJobs,
-    staleTime: 60000, // Consider data fresh for 1 minute
-    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
-    // Removed refetchInterval - WebSocket provides real-time updates
-    refetchIntervalInBackground: false,
-  });
 
   const { data: selectedJob, isLoading: jobLoading } = useQuery({
     queryKey: queryKeys.jobs.detail(jobId!),
     queryFn: () => getJob(jobId!),
     enabled: !!jobId,
-    staleTime: 30000, // Consider data fresh for 30 seconds
-    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
-    // No polling needed - WebSocket provides real-time updates
+    staleTime: 30000,
+    gcTime: 5 * 60 * 1000,
   });
 
   const { data: monitoringData, isLoading: monitoringLoading } = useQuery({
     queryKey: queryKeys.jobs.monitoring(jobId!),
     queryFn: () => getJobMonitoringData(jobId!),
     enabled: !!jobId,
-    staleTime: 15000, // Consider data fresh for 15 seconds
-    gcTime: 3 * 60 * 1000, // Keep in cache for 3 minutes
-    // Minimal polling as fallback only when WebSocket is disconnected
+    staleTime: 15000,
+    gcTime: 3 * 60 * 1000,
     refetchInterval: isConnected ? false : 30000,
     refetchIntervalInBackground: false,
   });
@@ -126,48 +120,48 @@ function JobsComponent() {
     queryKey: queryKeys.jobs.runs(jobId!),
     queryFn: () => getJobRuns(jobId!),
     enabled: !!jobId,
-    staleTime: 45000, // Consider data fresh for 45 seconds
-    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
-    // Minimal polling as fallback only when WebSocket is disconnected
+    staleTime: 45000,
+    gcTime: 5 * 60 * 1000,
     refetchInterval: isConnected ? false : 60000,
     refetchIntervalInBackground: false,
   });
 
-  // WebSocket subscriptions for real-time updates
+  const { data: queuesData } = useQuery({
+    queryKey: queryKeys.queues.overview(),
+    queryFn: getQueuesOverview,
+    staleTime: 30000,
+    gcTime: 5 * 60 * 1000,
+    refetchInterval: isConnected ? false : 30000,
+    refetchIntervalInBackground: false,
+  });
+
   useWebSocketSubscription("job:status-changed", (data) => {
     console.log("Job status changed:", data);
-    // Cache invalidation handled in WebSocket provider
   });
 
   useWebSocketSubscription("job:monitoring-update", (data) => {
     console.log("Job monitoring update:", data);
-    // Cache invalidation handled in WebSocket provider
+  });
+
+  useWebSocketSubscription("queue:status-changed", (data) => {
+    console.log("Queue status changed:", data);
   });
 
   const handleJobSelect = (job: Job) => {
     navigate({
-      search: { jobId: job.id },
+      search: (prev) => ({ ...prev, jobId: job.id }),
     });
   };
 
   const handleCloseSheet = () => {
     navigate({
-      search: {},
+      search: (prev) => ({ ...prev, jobId: undefined }),
     });
   };
 
-  if (error) {
-    return <AuthPrompt error={error} />;
-  }
-
   return (
-    <div className="p-2">
-      <JobList
-        jobs={jobs || []}
-        isLoading={isLoading}
-        error={error}
-        onJobSelect={handleJobSelect}
-      />
+    <div className="p-6">
+      <JobsDashboard onJobSelect={handleJobSelect} />
 
       <JobDetailsSheet
         job={selectedJob || null}
