@@ -16,10 +16,6 @@ import { useWebSocket, useWebSocketSubscription } from "~/lib/websocket";
 
 const jobsSearchSchema = z.object({
   jobId: z.string().optional(),
-  tab: z
-    .enum(["dashboard", "queue-overview", "all-jobs"])
-    .optional()
-    .default("dashboard"),
   queueFilter: z.string().optional(),
   statusFilter: z.string().optional(),
 });
@@ -95,7 +91,7 @@ function AuthPrompt({ error }: { error: Error }) {
 
 function JobsComponent() {
   const navigate = useNavigate({ from: "/jobs" });
-  const { jobId, tab, queueFilter, statusFilter } = Route.useSearch();
+  const { jobId, queueFilter, statusFilter } = Route.useSearch();
   const { isConnected } = useWebSocket();
 
   const { data: selectedJob, isLoading: jobLoading } = useQuery({

@@ -15,10 +15,6 @@ import { useWebSocket, useWebSocketSubscription } from "~/lib/websocket";
 
 const queuesSearchSchema = z.object({
   queue: z.string().optional(),
-  tab: z
-    .enum(["dashboard", "overview", "all-jobs"])
-    .optional()
-    .default("dashboard"),
   statusFilter: z.string().optional(),
   queueFilter: z.string().optional(),
 });
@@ -96,7 +92,6 @@ function QueuesComponent() {
   const navigate = useNavigate({ from: "/queues" });
   const {
     queue: selectedQueue,
-    tab,
     statusFilter,
     queueFilter,
   } = Route.useSearch();
