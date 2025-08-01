@@ -11,6 +11,12 @@ export interface QueueStatusService {
   readonly getFailedJobs: (queueName: QueueName, start?: number, end?: number) => Effect.Effect<JobStatus[], Error>;
   readonly getDelayedJobs: (queueName: QueueName, start?: number, end?: number) => Effect.Effect<JobStatus[], Error>;
   readonly getJobById: (queueName: QueueName, jobId: string) => Effect.Effect<JobStatus | null, Error>;
+  readonly getAllJobs: (filters?: {
+    status?: string;
+    queueName?: string;
+    limit?: number;
+    offset?: number;
+  }) => Effect.Effect<{ items: JobStatus[]; total: number }, Error>;
 }
 
 export const QueueStatusService = Context.GenericTag<QueueStatusService>('QueueStatusService');
@@ -120,6 +126,81 @@ export const QueueStatusServiceLive = Layer.scoped(
             catch: (error) => new Error(`Failed to get job ${jobId} from ${queueName}: ${error}`),
           })
         ),
+
+      getAllJobs: (filters = {}) =>
+        Effect.gen(function* () {
+          const { status, queueName, limit = 50, offset = 0 } = filters;
+          
+          // Determine which queues to query
+          const queuesToQuery = queueName 
+            ? [queueName as QueueName]
+            : Object.values(QUEUE_NAMES) as QueueName[];
+
+          let allJobs: JobStatus[] = [];
+          
+          for (const qName of queuesToQuery) {
+            const queue = yield* getQueue(qName);
+            
+            if (status) {
+              // Get jobs of specific status
+              const jobs = yield* Effect.tryPromise({
+                try: async () => {
+                  let queueJobs;
+                  switch (status) {
+                    case 'active': queueJobs = await queue.getActive(0, limit + offset); break;
+                    case 'waiting': queueJobs = await queue.getWaiting(0, limit + offset); break;
+                    case 'completed': queueJobs = await queue.getCompleted(0, limit + offset); break;
+                    case 'failed': queueJobs = await queue.getFailed(0, limit + offset); break;
+                    case 'delayed': queueJobs = await queue.getDelayed(0, limit + offset); break;
+                    default: queueJobs = [];
+                  }
+                  return queueJobs.map((job: any) => ({ ...mapBullJobToJobStatus(job), queueName: qName }));
+                },
+                catch: (error) => new Error(`Failed to get ${status} jobs from ${qName}: ${error}`),
+              });
+              allJobs.push(...jobs);
+            } else {
+              // Get all jobs from all statuses
+              const [active, waiting, completed, failed, delayed] = yield* Effect.all([
+                Effect.tryPromise({
+                  try: () => queue.getActive(0, Math.ceil((limit + offset) / 5)),
+                  catch: (error) => new Error(`Failed to get active jobs: ${error}`)
+                }).pipe(Effect.catchAll(() => Effect.succeed([]))),
+                Effect.tryPromise({
+                  try: () => queue.getWaiting(0, Math.ceil((limit + offset) / 5)),
+                  catch: (error) => new Error(`Failed to get waiting jobs: ${error}`)
+                }).pipe(Effect.catchAll(() => Effect.succeed([]))),
+                Effect.tryPromise({
+                  try: () => queue.getCompleted(0, Math.ceil((limit + offset) / 5)),
+                  catch: (error) => new Error(`Failed to get completed jobs: ${error}`)
+                }).pipe(Effect.catchAll(() => Effect.succeed([]))),
+                Effect.tryPromise({
+                  try: () => queue.getFailed(0, Math.ceil((limit + offset) / 5)),
+                  catch: (error) => new Error(`Failed to get failed jobs: ${error}`)
+                }).pipe(Effect.catchAll(() => Effect.succeed([]))),
+                Effect.tryPromise({
+                  try: () => queue.getDelayed(0, Math.ceil((limit + offset) / 5)),
+                  catch: (error) => new Error(`Failed to get delayed jobs: ${error}`)
+                }).pipe(Effect.catchAll(() => Effect.succeed([]))),
+              ]);
+              
+              const queueJobs = [...active, ...waiting, ...completed, ...failed, ...delayed]
+                .map((job: any) => ({ ...mapBullJobToJobStatus(job), queueName: qName }));
+              allJobs.push(...queueJobs);
+            }
+          }
+
+          // Sort by timestamp (most recent first)
+          allJobs.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+          
+          // Apply pagination
+          const paginatedJobs = allJobs.slice(offset, offset + limit);
+          
+          return {
+            items: paginatedJobs,
+            total: allJobs.length,
+          };
+        }),
     };
   })
 );

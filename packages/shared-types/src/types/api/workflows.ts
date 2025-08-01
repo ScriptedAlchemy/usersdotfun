@@ -2,6 +2,8 @@ import { z } from "zod";
 import {
   CreateWorkflowRequestSchema,
   CreateWorkflowResponseSchema,
+  DeleteWorkflowRequestSchema,
+  DeleteWorkflowResponseSchema,
   GetRunDetailsRequestSchema,
   GetRunDetailsResponseSchema,
   GetWorkflowItemsRequestSchema,
@@ -22,6 +24,7 @@ import {
 
 export type CreateWorkflowRequest = z.infer<typeof CreateWorkflowRequestSchema>;
 export type UpdateWorkflowRequest = z.infer<typeof UpdateWorkflowRequestSchema>;
+export type DeleteWorkflowRequest = z.infer<typeof DeleteWorkflowRequestSchema>;
 export type GetWorkflowRequest = z.infer<typeof GetWorkflowRequestSchema>;
 export type GetWorkflowRunsRequest = z.infer<typeof GetWorkflowRunsRequestSchema>;
 export type GetWorkflowItemsRequest = z.infer<typeof GetWorkflowItemsRequestSchema>;
@@ -34,6 +37,7 @@ export type GetWorkflowsResponse = z.infer<typeof GetWorkflowsResponseSchema>;
 export type CreateWorkflowResponse = z.infer<typeof CreateWorkflowResponseSchema>;
 export type GetWorkflowResponse = z.infer<typeof GetWorkflowResponseSchema>;
 export type UpdateWorkflowResponse = z.infer<typeof UpdateWorkflowResponseSchema>;
+export type DeleteWorkflowResponse = z.infer<typeof DeleteWorkflowResponseSchema>;
 export type GetWorkflowRunsResponse = z.infer<typeof GetWorkflowRunsResponseSchema>;
 export type GetWorkflowItemsResponse = z.infer<typeof GetWorkflowItemsResponseSchema>;
 export type GetRunDetailsResponse = z.infer<typeof GetRunDetailsResponseSchema>;

@@ -1,9 +1,11 @@
 import { zValidator } from '@hono/zod-validator';
 import { WorkflowService } from '@usersdotfun/shared-db';
-import { QUEUE_NAMES, QueueService } from '@usersdotfun/shared-queue';
+import { QueueService } from '@usersdotfun/shared-queue';
 import {
   CreateWorkflowRequestSchema,
   CreateWorkflowResponseSchema,
+  DeleteWorkflowRequestSchema,
+  DeleteWorkflowResponseSchema,
   GetRunDetailsRequestSchema,
   GetRunDetailsResponseSchema,
   GetWorkflowItemsRequestSchema,
@@ -18,6 +20,7 @@ import {
   UpdateWorkflowRequestSchema,
   UpdateWorkflowResponseSchema
 } from '@usersdotfun/shared-types/schemas';
+import { QUEUE_NAMES } from '@usersdotfun/shared-types/types';
 import { Effect } from 'effect';
 import { Hono } from 'hono';
 import { requireAdmin, requireAuth } from '../middleware/auth';
@@ -88,6 +91,23 @@ export const workflowsRouter = new Hono()
     try {
       const result = await AppRuntime.runPromise(program);
       return c.json(UpdateWorkflowResponseSchema.parse(result));
+    } catch (err) {
+      return honoErrorHandler(c, err);
+    }
+  })
+
+  .delete('/:id', zValidator('param', DeleteWorkflowRequestSchema.shape.params), requireAdmin, async (c) => {
+    const { id } = c.req.valid('param');
+
+    const program: Effect.Effect<any, Error, AppContext> = Effect.gen(function* () {
+      const workflowService = yield* WorkflowService;
+      yield* workflowService.deleteWorkflow(id);
+      return { success: true, data: { message: `Workflow ${id} has been deleted.` } };
+    });
+
+    try {
+      const result = await AppRuntime.runPromise(program);
+      return c.json(DeleteWorkflowResponseSchema.parse(result));
     } catch (err) {
       return honoErrorHandler(c, err);
     }

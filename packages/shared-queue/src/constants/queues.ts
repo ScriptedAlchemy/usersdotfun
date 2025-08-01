@@ -15,3 +15,5 @@ export interface JobDataMapping {
 }
 
 export type JobData = JobDataMapping[QueueName];
+
+export { QUEUE_NAMES };

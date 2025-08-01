@@ -1,11 +1,19 @@
 import { zValidator } from '@hono/zod-validator';
 import { QueueService, QueueStatusService, VALID_QUEUE_NAMES } from '@usersdotfun/shared-queue';
 import {
+  ClearQueueRequestSchema,
+  ClearQueueResponseSchema,
+  GetAllQueueJobsRequestSchema,
+  GetAllQueueJobsResponseSchema,
   GetQueueJobsRequestSchema,
   GetQueueJobsResponseSchema,
   GetQueuesStatusResponseSchema,
+  PauseQueueRequestSchema,
+  PauseQueueResponseSchema,
   RemoveQueueJobRequestSchema,
   RemoveQueueJobResponseSchema,
+  ResumeQueueRequestSchema,
+  ResumeQueueResponseSchema,
   RetryQueueJobRequestSchema,
   RetryQueueJobResponseSchema
 } from '@usersdotfun/shared-types/schemas';
@@ -112,6 +120,95 @@ export const queuesRouter = new Hono()
         success: true,
         data: { message },
       }));
+    } catch (err) {
+      return honoErrorHandler(c, err);
+    }
+  })
+
+  .post('/:queueName/pause', zValidator('param', PauseQueueRequestSchema.shape.params), requireAdmin, async (c) => {
+    const { queueName } = c.req.valid('param');
+
+    const program: Effect.Effect<string, Error, AppContext> = Effect.gen(function* () {
+      const queueService = yield* QueueService;
+      yield* queueService.pauseQueue(queueName as QueueName);
+      return `Queue ${queueName} has been paused.`;
+    });
+
+    try {
+      const message = await AppRuntime.runPromise(program);
+      return c.json(PauseQueueResponseSchema.parse({
+        success: true,
+        data: { message },
+      }));
+    } catch (err) {
+      return honoErrorHandler(c, err);
+    }
+  })
+
+  .post('/:queueName/resume', zValidator('param', ResumeQueueRequestSchema.shape.params), requireAdmin, async (c) => {
+    const { queueName } = c.req.valid('param');
+
+    const program: Effect.Effect<string, Error, AppContext> = Effect.gen(function* () {
+      const queueService = yield* QueueService;
+      yield* queueService.resumeQueue(queueName as QueueName);
+      return `Queue ${queueName} has been resumed.`;
+    });
+
+    try {
+      const message = await AppRuntime.runPromise(program);
+      return c.json(ResumeQueueResponseSchema.parse({
+        success: true,
+        data: { message },
+      }));
+    } catch (err) {
+      return honoErrorHandler(c, err);
+    }
+  })
+
+  .post('/:queueName/clear', zValidator('param', ClearQueueRequestSchema.shape.params), zValidator('json', ClearQueueRequestSchema.shape.body), requireAdmin, async (c) => {
+    const { queueName } = c.req.valid('param');
+    const { jobType } = c.req.valid('json');
+
+    const program: Effect.Effect<{ message: string; removed: number }, Error, AppContext> = Effect.gen(function* () {
+      const queueService = yield* QueueService;
+      const result = yield* queueService.clearQueue(queueName as QueueName, jobType);
+      return {
+        message: `Cleared ${result.removed} ${jobType} jobs from ${queueName}.`,
+        removed: result.removed,
+      };
+    });
+
+    try {
+      const result = await AppRuntime.runPromise(program);
+      return c.json(ClearQueueResponseSchema.parse({
+        success: true,
+        data: result,
+      }));
+    } catch (err) {
+      return honoErrorHandler(c, err);
+    }
+  })
+
+  .get('/jobs', zValidator('query', GetAllQueueJobsRequestSchema.shape.query), requireAdmin, async (c) => {
+    const query = c.req.valid('query');
+
+    const program: Effect.Effect<any, Error, AppContext> = Effect.gen(function* () {
+      const queueStatusService = yield* QueueStatusService;
+      const result = yield* queueStatusService.getAllJobs(query);
+      return {
+        success: true,
+        data: {
+          items: result.items,
+          total: result.total,
+          limit: query.limit,
+          offset: query.offset,
+        },
+      };
+    });
+
+    try {
+      const result = await AppRuntime.runPromise(program);
+      return c.json(GetAllQueueJobsResponseSchema.parse(result));
     } catch (err) {
       return honoErrorHandler(c, err);
     }

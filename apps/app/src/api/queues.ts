@@ -1,122 +1,92 @@
-import { z } from 'zod';
 import {
-  ApiSuccessResponseSchema,
-  QueuesOverviewDataSchema,
-  QueueDetailsDataSchema,
-  QueueActionResultDataSchema,
-  QueueClearResultDataSchema,
-  AllQueueJobsDataSchema,
-  SimpleMessageDataSchema,
+  ClearQueueResponseSchema,
+  GetAllQueueJobsResponseSchema,
+  GetQueueJobsResponseSchema,
+  GetQueuesStatusResponseSchema,
+  PauseQueueResponseSchema,
+  RemoveQueueJobResponseSchema,
+  ResumeQueueResponseSchema,
+  RetryQueueJobResponseSchema,
 } from '@usersdotfun/shared-types/schemas';
 
-import type {
-  QueueOverview,
-  QueueDetails,
-  QueueActionResult,
-  QueueItem,
-} from '@usersdotfun/shared-types/types';
+import { API_BASE_URL, extractData, handleResponse } from "./utils";
 
-const API_BASE_URL = '/api';
-
-async function handleResponse<T>(response: Response, schema: z.Schema<T>): Promise<T> {
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'API request failed');
-  }
-  const data = await response.json();
-  return schema.parse(data);
-}
-
-// Helper function to extract data from API success response
-function extractData<T>(apiResponse: { data?: T }): T {
-  if (!apiResponse.data) {
-    throw new Error('API response missing data field');
-  }
-  return apiResponse.data;
-}
-
-export async function getQueuesOverview(): Promise<{ queues: Record<string, QueueOverview>; timestamp: string }> {
-  const response = await fetch(`${API_BASE_URL}/queues/status`);
-  const apiResponse = await handleResponse(response, ApiSuccessResponseSchema(QueuesOverviewDataSchema));
+export const getQueuesStatus = async () => {
+  const res = await fetch(`${API_BASE_URL}/queues/status`);
+  const apiResponse = await handleResponse(res, GetQueuesStatusResponseSchema);
   return extractData(apiResponse);
-}
+};
 
-export async function getQueueDetails(queueName: string): Promise<QueueDetails> {
-  const response = await fetch(`${API_BASE_URL}/queues/${queueName}`);
-  const apiResponse = await handleResponse(response, ApiSuccessResponseSchema(QueueDetailsDataSchema));
+export const getQueueDetails = async (queueName: string) => {
+  // This function gets jobs for a specific queue with all statuses
+  const res = await fetch(`${API_BASE_URL}/queues/${queueName}/jobs?status=all`);
+  const apiResponse = await handleResponse(res, GetQueueJobsResponseSchema);
   return extractData(apiResponse);
-}
+};
 
-export async function pauseQueue(queueName: string): Promise<{ message: string }> {
-  const response = await fetch(`${API_BASE_URL}/queues/${queueName}/pause`, {
-    method: 'POST',
-  });
-  const apiResponse = await handleResponse(response, ApiSuccessResponseSchema(SimpleMessageDataSchema));
+export const getQueueJobs = async (queueName: string, status: string) => {
+  const res = await fetch(`${API_BASE_URL}/queues/${queueName}/jobs?status=${status}`);
+  const apiResponse = await handleResponse(res, GetQueueJobsResponseSchema);
   return extractData(apiResponse);
-}
+};
 
-export async function resumeQueue(queueName: string): Promise<{ message: string }> {
-  const response = await fetch(`${API_BASE_URL}/queues/${queueName}/resume`, {
-    method: 'POST',
-  });
-  const apiResponse = await handleResponse(response, ApiSuccessResponseSchema(SimpleMessageDataSchema));
-  return extractData(apiResponse);
-}
-
-export async function clearQueue(queueName: string): Promise<{ message: string; itemsRemoved: number }> {
-  const response = await fetch(`${API_BASE_URL}/queues/${queueName}/clear`, {
-    method: 'DELETE',
-  });
-  const apiResponse = await handleResponse(response, ApiSuccessResponseSchema(QueueClearResultDataSchema));
-  return extractData(apiResponse);
-}
-
-export async function purgeFailedJobs(queueName: string): Promise<{ message: string; itemsRemoved: number }> {
-  const response = await fetch(`${API_BASE_URL}/queues/${queueName}/purge`, {
-    method: 'DELETE',
-  });
-  const apiResponse = await handleResponse(response, ApiSuccessResponseSchema(QueueClearResultDataSchema));
-  return extractData(apiResponse);
-}
-
-export async function retryQueueItem(queueName: string, itemId: string): Promise<{ message: string }> {
-  const response = await fetch(`${API_BASE_URL}/queues/${queueName}/workflows/${itemId}/retry`, {
-    method: 'POST',
-  });
-  const apiResponse = await handleResponse(response, ApiSuccessResponseSchema(SimpleMessageDataSchema));
-  return extractData(apiResponse);
-}
-
-export async function removeQueueItem(queueName: string, itemId: string): Promise<{ message: string }> {
-  const response = await fetch(`${API_BASE_URL}/queues/${queueName}/workflows/${itemId}`, {
-    method: 'DELETE',
-  });
-  const apiResponse = await handleResponse(response, ApiSuccessResponseSchema(SimpleMessageDataSchema));
-  return extractData(apiResponse);
-}
-
-export async function getAllQueueJobs(filters?: {
+export const getAllQueueJobs = async (filters?: {
   status?: string;
   queueName?: string;
   limit?: number;
-}): Promise<{
-  jobs: Array<QueueItem & { queueName: string; status: string }>;
-  total: number;
-}> {
+  offset?: number;
+}) => {
   const params = new URLSearchParams();
   if (filters?.status) params.append('status', filters.status);
   if (filters?.queueName) params.append('queueName', filters.queueName);
   if (filters?.limit) params.append('limit', filters.limit.toString());
+  if (filters?.offset) params.append('offset', filters.offset.toString());
 
-  const response = await fetch(`${API_BASE_URL}/queues/workflows?${params}`);
-  const apiResponse = await handleResponse(response, ApiSuccessResponseSchema(AllQueueJobsDataSchema));
+  const res = await fetch(`${API_BASE_URL}/queues/jobs?${params}`);
+  const apiResponse = await handleResponse(res, GetAllQueueJobsResponseSchema);
   return extractData(apiResponse);
-}
+};
 
-// Backward compatibility function
-export async function getAllQueueJobsByStatus(status?: string, limit?: number): Promise<{
-  jobs: Array<QueueItem & { queueName: string; status: string }>;
-  total: number;
-}> {
-  return getAllQueueJobs({ status, limit });
-}
+export const retryQueueJob = async (queueName: string, jobId: string) => {
+  const res = await fetch(`${API_BASE_URL}/queues/${queueName}/jobs/${jobId}/retry`, {
+    method: 'POST',
+  });
+  const apiResponse = await handleResponse(res, RetryQueueJobResponseSchema);
+  return extractData(apiResponse);
+};
+
+export const removeQueueJob = async (queueName: string, jobId: string) => {
+  const res = await fetch(`${API_BASE_URL}/queues/${queueName}/jobs/${jobId}`, {
+    method: 'DELETE',
+  });
+  const apiResponse = await handleResponse(res, RemoveQueueJobResponseSchema);
+  return extractData(apiResponse);
+};
+
+export const pauseQueue = async (queueName: string) => {
+  const res = await fetch(`${API_BASE_URL}/queues/${queueName}/pause`, {
+    method: 'POST',
+  });
+  const apiResponse = await handleResponse(res, PauseQueueResponseSchema);
+  return extractData(apiResponse);
+};
+
+export const resumeQueue = async (queueName: string) => {
+  const res = await fetch(`${API_BASE_URL}/queues/${queueName}/resume`, {
+    method: 'POST',
+  });
+  const apiResponse = await handleResponse(res, ResumeQueueResponseSchema);
+  return extractData(apiResponse);
+};
+
+export const clearQueue = async (queueName: string, jobType: 'all' | 'completed' | 'failed' = 'all') => {
+  const res = await fetch(`${API_BASE_URL}/queues/${queueName}/clear`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ jobType }),
+  });
+  const apiResponse = await handleResponse(res, ClearQueueResponseSchema);
+  return extractData(apiResponse);
+};

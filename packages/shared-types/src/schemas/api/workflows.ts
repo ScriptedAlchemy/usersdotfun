@@ -34,6 +34,10 @@ export const UpdateWorkflowRequestSchema = z.object({
 });
 export const UpdateWorkflowResponseSchema = ApiSuccessResponseSchema(baseWorkflowSchema);
 
+// DELETE /workflows/:id
+export const DeleteWorkflowRequestSchema = z.object({ params: IdParamSchema });
+export const DeleteWorkflowResponseSchema = ApiSuccessResponseSchema(SimpleMessageDataSchema);
+
 // GET /workflows/:id/runs
 export const GetWorkflowRunsRequestSchema = z.object({ params: IdParamSchema });
 export const GetWorkflowRunsResponseSchema = ApiSuccessResponseSchema(z.array(workflowRunSchema));
