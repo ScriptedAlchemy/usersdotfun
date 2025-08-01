@@ -1,6 +1,6 @@
 import { BunTerminal } from "@effect/platform-bun";
 import { EnvironmentServiceLive, PluginLoaderLive, StateServiceTag, SecretsConfigLive } from '@usersdotfun/pipeline-runner';
-import { Database, DatabaseConfig, DatabaseLive, JobService, JobServiceLive } from '@usersdotfun/shared-db';
+import { Database, DatabaseConfig, DatabaseLive, WorkflowService, WorkflowServiceLive } from '@usersdotfun/shared-db';
 import { QueueService, QueueServiceLive, RedisAppConfig, RedisConfigLive, StateService, StateServiceLive } from '@usersdotfun/shared-queue';
 import { ConfigProvider, Effect, Layer, Logger, LogLevel, Redacted } from 'effect';
 import { runPromise } from "effect-errors";
@@ -60,7 +60,7 @@ const StateServiceLayer = StateServiceLive.pipe(
   Layer.provide(RedisLayer)
 );
 
-const JobServiceLayer = JobServiceLive.pipe(
+const WorkflowServiceLayer = WorkflowServiceLive.pipe(
   Layer.provide(DatabaseLayer)
 );
 
@@ -94,7 +94,7 @@ const AppLayer = Layer.mergeAll(
   RedisLayer,
   QueueServiceLayer,
   StateServiceLayer,
-  JobServiceLayer,
+  WorkflowServiceLayer,
   PluginServiceLayer,
   SecretsConfigLayer,
   EnvironmentServiceLayer,
@@ -103,7 +103,7 @@ const AppLayer = Layer.mergeAll(
 
 const program = Effect.gen(function* () {
   const queueService = yield* QueueService;
-  const jobService = yield* JobService;
+  const jobService = yield* WorkflowService;
 
   yield* Effect.log('Fetching jobs from database...');
   const dbJobs = yield* jobService.getJobs();

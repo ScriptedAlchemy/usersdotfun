@@ -1,15 +1,15 @@
 import { z } from "zod";
 import {
-  createJobDefinitionSchema,
-  jobDefinitionSchema,
+  createWorkflowSchema,
+  workflowSchema,
   jobMonitoringDataSchema,
   jobRunDetailsSchema,
   jobRunInfoSchema,
   jobSchema,
   jobStatusSummarySchema,
   jobWithStepsSchema,
-  updateJobDefinitionSchema
-} from "../jobs";
+  updateWorkflowSchema
+} from "../workflows";
 import {
   ApiErrorResponseSchema,
   ApiSuccessResponseSchema,
@@ -38,9 +38,9 @@ export const JobRunParamsSchema = z.object({
 export const JobsListQuerySchema = StatusQuerySchema.merge(LimitQuerySchema);
 
 // Request Bodies
-export const CreateJobRequestBodySchema = createJobDefinitionSchema;
-export const CreateJobDefinitionRequestBodySchema = createJobDefinitionSchema;
-export const UpdateJobRequestBodySchema = updateJobDefinitionSchema;
+export const CreateJobRequestBodySchema = createWorkflowSchema;
+export const CreateWorkflowRequestBodySchema = createWorkflowSchema;
+export const UpdateJobRequestBodySchema = updateWorkflowSchema;
 
 // ============================================================================
 // JOB API RESPONSE SCHEMAS
@@ -48,7 +48,7 @@ export const UpdateJobRequestBodySchema = updateJobDefinitionSchema;
 
 // Success Response Data Schemas
 export const JobDataSchema = jobSchema;
-export const JobDefinitionDataSchema = jobDefinitionSchema;
+export const WorkflowDataSchema = workflowSchema;
 export const JobWithStepsDataSchema = jobWithStepsSchema;
 export const JobRunInfoDataSchema = jobRunInfoSchema;
 export const JobStatusSummaryDataSchema = jobStatusSummarySchema;
@@ -71,38 +71,38 @@ export const CleanupOrphanedJobsDataSchema = z.object({
 // COMPLETE API CONTRACT SCHEMAS
 // ============================================================================
 
-// GET /jobs
+// GET /workflows
 export const GetJobsRequestSchema = z.object({
   query: JobsListQuerySchema,
 });
 export const GetJobsResponseSchema = ApiSuccessResponseSchema(JobsListDataSchema);
 
-// GET /jobs/:id
+// GET /workflows/:id
 export const GetJobRequestSchema = z.object({
   params: JobIdParamSchema,
 });
 export const GetJobResponseSchema = ApiSuccessResponseSchema(JobWithStepsDataSchema);
 
-// POST /jobs
+// POST /workflows
 export const CreateJobRequestSchema = z.object({
   body: CreateJobRequestBodySchema,
 });
 export const CreateJobResponseSchema = ApiSuccessResponseSchema(JobDataSchema);
 
-// POST /jobs/definition
-export const CreateJobDefinitionRequestSchema = z.object({
-  body: CreateJobDefinitionRequestBodySchema,
+// POST /workflows
+export const CreateWorkflowRequestSchema = z.object({
+  body: CreateWorkflowRequestBodySchema,
 });
-export const CreateJobDefinitionResponseSchema = ApiSuccessResponseSchema(JobDataSchema);
+export const CreateWorkflowResponseSchema = ApiSuccessResponseSchema(JobDataSchema);
 
-// PUT /jobs/:id
+// PUT /workflows/:id
 export const UpdateJobRequestSchema = z.object({
   params: JobIdParamSchema,
   body: UpdateJobRequestBodySchema,
 });
 export const UpdateJobResponseSchema = ApiSuccessResponseSchema(JobDataSchema);
 
-// DELETE /jobs/:id
+// DELETE /workflows/:id
 export const DeleteJobRequestSchema = z.object({
   params: JobIdParamSchema,
 });
@@ -111,43 +111,43 @@ export const DeleteJobResponseSchema = z.object({
   success: z.literal(true),
 });
 
-// GET /jobs/:id/status
+// GET /workflows/:id/status
 export const GetJobStatusRequestSchema = z.object({
   params: JobIdParamSchema,
 });
 export const GetJobStatusResponseSchema = ApiSuccessResponseSchema(JobStatusSummaryDataSchema);
 
-// GET /jobs/:id/monitoring
+// GET /workflows/:id/monitoring
 export const GetJobMonitoringRequestSchema = z.object({
   params: JobIdParamSchema,
 });
 export const GetJobMonitoringResponseSchema = ApiSuccessResponseSchema(JobMonitoringDataSchema);
 
-// GET /jobs/:id/runs
+// GET /workflows/:id/runs
 export const GetJobRunsRequestSchema = z.object({
   params: JobIdParamSchema,
 });
 export const GetJobRunsResponseSchema = ApiSuccessResponseSchema(JobRunsListDataSchema);
 
-// GET /jobs/:id/runs/:runId
+// GET /workflows/:id/runs/:runId
 export const GetJobRunDetailsRequestSchema = z.object({
   params: JobRunParamsSchema,
 });
 export const GetJobRunDetailsResponseSchema = ApiSuccessResponseSchema(JobRunDetailsDataSchema);
 
-// POST /jobs/:id/retry
+// POST /workflows/:id/retry
 export const RetryJobRequestSchema = z.object({
   params: JobIdParamSchema,
 });
 export const RetryJobResponseSchema = ApiSuccessResponseSchema(SimpleMessageDataSchema);
 
-// POST /jobs/:id/steps/:stepId/retry
+// POST /workflows/:id/steps/:stepId/retry
 export const RetryJobStepRequestSchema = z.object({
   params: JobStepParamsSchema,
 });
 export const RetryJobStepResponseSchema = ApiSuccessResponseSchema(SimpleMessageDataSchema);
 
-// POST /jobs/cleanup/orphaned
+// POST /workflows/cleanup/orphaned
 export const CleanupOrphanedJobsRequestSchema = z.object({});
 export const CleanupOrphanedJobsResponseSchema = ApiSuccessResponseSchema(CleanupOrphanedJobsDataSchema);
 

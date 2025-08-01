@@ -13,12 +13,12 @@ import {
 } from '@usersdotfun/shared-types/schemas';
 
 import type {
-  CreateJobDefinition,
+  CreateWorkflow,
   Job,
   JobMonitoringData,
   JobRunInfo,
   JobWithSteps,
-  UpdateJobDefinition,
+  UpdateWorkflow,
   JobStatusSummary,
   JobRunDetails,
 } from '@usersdotfun/shared-types/types';
@@ -50,19 +50,19 @@ function extractData<T>(apiResponse: { data?: T }): T {
 }
 
 export const getJobs = async (): Promise<Job[]> => {
-  const res = await fetch(`${API_BASE_URL}/jobs`);
+  const res = await fetch(`${API_BASE_URL}/workflows`);
   const apiResponse = await handleResponse(res, ApiSuccessResponseSchema(JobsListDataSchema));
   return extractData(apiResponse);
 };
 
 export const getJob = async (id: string): Promise<JobWithSteps> => {
-  const res = await fetch(`${API_BASE_URL}/jobs/${id}`);
+  const res = await fetch(`${API_BASE_URL}/workflows/${id}`);
   const apiResponse = await handleResponse(res, ApiSuccessResponseSchema(JobWithStepsDataSchema));
   return extractData(apiResponse);
 };
 
-export const createJob = async (job: CreateJobDefinition): Promise<Job> => {
-  const res = await fetch(`${API_BASE_URL}/jobs`, {
+export const createJob = async (job: CreateWorkflow): Promise<Job> => {
+  const res = await fetch(`${API_BASE_URL}/workflows`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(job),
@@ -71,18 +71,18 @@ export const createJob = async (job: CreateJobDefinition): Promise<Job> => {
   return extractData(apiResponse);
 };
 
-export const createJobDefinition = async (jobDefinition: CreateJobDefinition): Promise<Job> => {
-  const res = await fetch(`${API_BASE_URL}/jobs/definition`, {
+export const createWorkflow = async (workflow: CreateWorkflow): Promise<Job> => {
+  const res = await fetch(`${API_BASE_URL}/workflows`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(jobDefinition),
+    body: JSON.stringify(workflow),
   });
   const apiResponse = await handleResponse(res, ApiSuccessResponseSchema(JobDataSchema));
   return extractData(apiResponse);
 };
 
-export const updateJob = async (id: string, job: UpdateJobDefinition): Promise<Job> => {
-  const res = await fetch(`${API_BASE_URL}/jobs/${id}`, {
+export const updateJob = async (id: string, job: UpdateWorkflow): Promise<Job> => {
+  const res = await fetch(`${API_BASE_URL}/workflows/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(job),
@@ -92,7 +92,7 @@ export const updateJob = async (id: string, job: UpdateJobDefinition): Promise<J
 };
 
 export const deleteJob = async (id: string): Promise<void> => {
-  const res = await fetch(`${API_BASE_URL}/jobs/${id}`, {
+  const res = await fetch(`${API_BASE_URL}/workflows/${id}`, {
     method: 'DELETE',
   });
   if (!res.ok) {
@@ -102,31 +102,31 @@ export const deleteJob = async (id: string): Promise<void> => {
 };
 
 export const getJobMonitoringData = async (id: string): Promise<JobMonitoringData> => {
-  const res = await fetch(`${API_BASE_URL}/jobs/${id}/monitoring`);
+  const res = await fetch(`${API_BASE_URL}/workflows/${id}/monitoring`);
   const apiResponse = await handleResponse(res, ApiSuccessResponseSchema(JobMonitoringDataSchema));
   return extractData(apiResponse);
 };
 
 export const getJobStatus = async (id: string): Promise<JobStatusSummary> => {
-  const res = await fetch(`${API_BASE_URL}/jobs/${id}/status`);
+  const res = await fetch(`${API_BASE_URL}/workflows/${id}/status`);
   const apiResponse = await handleResponse(res, ApiSuccessResponseSchema(JobStatusSummaryDataSchema));
   return extractData(apiResponse);
 };
 
 export const getJobRuns = async (id: string): Promise<JobRunInfo[]> => {
-  const res = await fetch(`${API_BASE_URL}/jobs/${id}/runs`);
+  const res = await fetch(`${API_BASE_URL}/workflows/${id}/runs`);
   const apiResponse = await handleResponse(res, ApiSuccessResponseSchema(JobRunsListDataSchema));
   return extractData(apiResponse);
 };
 
 export const getJobRunDetails = async (id: string, runId: string): Promise<JobRunDetails> => {
-  const res = await fetch(`${API_BASE_URL}/jobs/${id}/runs/${runId}`);
+  const res = await fetch(`${API_BASE_URL}/workflows/${id}/runs/${runId}`);
   const apiResponse = await handleResponse(res, ApiSuccessResponseSchema(JobRunDetailsDataSchema));
   return extractData(apiResponse);
 };
 
 export const retryJob = async (id: string): Promise<{ message: string }> => {
-  const res = await fetch(`${API_BASE_URL}/jobs/${id}/retry`, {
+  const res = await fetch(`${API_BASE_URL}/workflows/${id}/retry`, {
     method: 'POST',
   });
   const apiResponse = await handleResponse(res, ApiSuccessResponseSchema(SimpleMessageDataSchema));
@@ -134,7 +134,7 @@ export const retryJob = async (id: string): Promise<{ message: string }> => {
 };
 
 export const retryPipelineStep = async (jobId: string, stepId: string): Promise<{ message: string }> => {
-  const res = await fetch(`${API_BASE_URL}/jobs/${jobId}/steps/${stepId}/retry`, {
+  const res = await fetch(`${API_BASE_URL}/workflows/${jobId}/steps/${stepId}/retry`, {
     method: 'POST',
   });
   const apiResponse = await handleResponse(res, ApiSuccessResponseSchema(SimpleMessageDataSchema));
@@ -149,7 +149,7 @@ export const cleanupOrphanedJobs = async (): Promise<{
     cleanupTime: string;
   };
 }> => {
-  const res = await fetch(`${API_BASE_URL}/jobs/cleanup/orphaned`, {
+  const res = await fetch(`${API_BASE_URL}/workflows/cleanup/orphaned`, {
     method: 'POST',
   });
   const apiResponse = await handleResponse(res, ApiSuccessResponseSchema(CleanupOrphanedJobsDataSchema));

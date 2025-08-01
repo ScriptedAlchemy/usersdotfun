@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Job } from "@usersdotfun/shared-types/types";
 import { toast } from "sonner";
-import { deleteJob, retryJob } from "~/api/jobs";
+import { deleteJob, retryJob } from "~/api/workflows";
 import { Button } from "~/components/ui/button";
 import { queryKeys } from "~/lib/query-keys";
 import { JobSheet } from "./job-sheet";

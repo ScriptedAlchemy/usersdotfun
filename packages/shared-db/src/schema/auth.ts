@@ -1,9 +1,8 @@
 import {
+  boolean,
   pgTable,
   text,
-  timestamp,
-  boolean,
-  integer,
+  timestamp
 } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
@@ -78,3 +77,5 @@ export const jwks = pgTable("jwks", {
   privateKey: text("private_key").notNull(),
   createdAt: timestamp("created_at").notNull(),
 });
+
+export type User = typeof user.$inferSelect;

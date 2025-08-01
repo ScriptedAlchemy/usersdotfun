@@ -4,12 +4,12 @@ import { Textarea } from "~/components/ui/textarea";
 import { Label } from "~/components/ui/label";
 import { Alert, AlertDescription } from "~/components/ui/alert";
 import { CheckCircle, XCircle, Copy, Eye, Edit } from "lucide-react";
-import type { CreateJobDefinition } from "@usersdotfun/shared-types/types";
-import { createJobDefinitionSchema } from "@usersdotfun/shared-types/schemas";
+import type { CreateWorkflow } from "@usersdotfun/shared-types/types";
+import { createWorkflowSchema } from "@usersdotfun/shared-types/schemas";
 
 interface JsonEditorProps {
-  value: CreateJobDefinition | null;
-  onChange: (value: CreateJobDefinition | null) => void;
+  value: CreateWorkflow | null;
+  onChange: (value: CreateWorkflow | null) => void;
   readOnly?: boolean;
   className?: string;
 }
@@ -49,7 +49,7 @@ export function JsonEditor({ value, onChange, readOnly = false, className }: Jso
 
     try {
       const parsed = JSON.parse(jsonStr);
-      const result = createJobDefinitionSchema.safeParse(parsed);
+      const result = createWorkflowSchema.safeParse(parsed);
       
       if (result.success) {
         setIsValid(true);

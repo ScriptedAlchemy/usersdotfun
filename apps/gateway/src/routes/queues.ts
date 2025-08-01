@@ -45,7 +45,7 @@ export const queuesRouter = new Hono()
     })
 
   // Get all jobs across queues
-  .get('/jobs',
+  .get('/workflows',
     zValidator('query', QueueJobsQuerySchema),
     requireAuth,
     async (c) => {
@@ -293,7 +293,7 @@ export const queuesRouter = new Hono()
     })
 
   // Individual job actions
-  .delete('/:queueName/jobs/:jobId',
+  .delete('/:queueName/workflows/:jobId',
     zValidator('param', QueueJobParamsSchema),
     requireAdmin,
     async (c) => {
@@ -335,7 +335,7 @@ export const queuesRouter = new Hono()
       }
     })
 
-  .post('/:queueName/jobs/:jobId/retry',
+  .post('/:queueName/workflows/:jobId/retry',
     zValidator('param', QueueJobParamsSchema),
     requireAdmin,
     async (c) => {

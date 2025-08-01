@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { jobMonitoringDataSchema, pipelineStepSchema, jobRunInfoSchema, jobSchema } from './jobs';
+import { jobMonitoringDataSchema, pipelineStepSchema, jobRunInfoSchema, jobSchema } from './workflows';
 import { queueStatusSchema, queueOverviewSchema, queueItemSchema } from './queues';
 
 // ============================================================================

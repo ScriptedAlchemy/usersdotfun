@@ -11,7 +11,7 @@ import {
 } from "@tanstack/react-table";
 import type { Job } from "@usersdotfun/shared-types/types";
 import { useState } from "react";
-import { getJobs } from "~/api/jobs";
+import { getJobs } from "~/api/workflows";
 import { JobActions } from "./job-actions";
 import { JobSheet } from "./job-sheet";
 import { StatusBadge } from "./status-badge";

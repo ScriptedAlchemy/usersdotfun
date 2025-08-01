@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { retryPipelineStep } from '~/api/jobs';
+import { retryPipelineStep } from '~/api/workflows';
 import { Button } from '~/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs';
 import { StatusBadge } from './status-badge';

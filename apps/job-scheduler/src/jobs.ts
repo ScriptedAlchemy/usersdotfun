@@ -1,6 +1,6 @@
-import type { JobDefinition } from "@usersdotfun/shared-types/types";
+import type { Workflow } from "@usersdotfun/shared-types/types";
 
-export const jobs: JobDefinition[] = [
+export const jobs: Workflow[] = [
   {
     "name": "open_crosspost",
     "source": {

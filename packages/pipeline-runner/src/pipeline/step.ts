@@ -1,4 +1,4 @@
-import { JobService } from "@usersdotfun/shared-db";
+import { WorkflowService } from "@usersdotfun/shared-db";
 import { RedisKeys } from "@usersdotfun/shared-queue";
 import type { PipelineStep } from "@usersdotfun/shared-types/types";
 import { Effect } from "effect";
@@ -13,9 +13,9 @@ export const executeStep = (
   step: PipelineStep,
   input: Record<string, unknown>,
   context: PipelineExecutionContext,
-): Effect.Effect<Record<string, unknown>, StepError, PluginLoaderTag | JobService | StateService | EnvironmentService> =>
+): Effect.Effect<Record<string, unknown>, StepError, PluginLoaderTag | WorkflowService | StateService | EnvironmentService> =>
   Effect.gen(function* () {
-    const jobService = yield* JobService;
+    const jobService = yield* WorkflowService;
     const stateService = yield* StateServiceTag;
     const environmentService = yield* EnvironmentServiceTag;
     const startTime = new Date();

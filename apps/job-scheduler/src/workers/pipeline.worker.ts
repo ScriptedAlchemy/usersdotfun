@@ -1,5 +1,5 @@
 import { executePipeline } from '@usersdotfun/pipeline-runner';
-import { JobService } from '@usersdotfun/shared-db';
+import { WorkflowService } from '@usersdotfun/shared-db';
 import { QueueService, StateService, RedisKeys, QUEUE_NAMES } from '@usersdotfun/shared-queue';
 import { type Job } from 'bullmq';
 import { Effect } from 'effect';
@@ -7,9 +7,9 @@ import type { PipelineJobData } from '@usersdotfun/shared-types/types';
 
 const processPipelineJob = (job: Job<PipelineJobData>) =>
   Effect.gen(function* () {
-    const { jobDefinition, item, runId, itemIndex, sourceJobId } = job.data;
+    const { workflow, item, runId, itemIndex, sourceJobId } = job.data;
     const stateService = yield* StateService;
-    const jobService = yield* JobService;
+    const jobService = yield* WorkflowService;
 
     yield* Effect.log(`Processing pipeline for item ${itemIndex} (run: ${runId}): ${JSON.stringify(item)}`);
 
@@ -30,14 +30,14 @@ const processPipelineJob = (job: Job<PipelineJobData>) =>
 
     try {
       const result = yield* executePipeline(
-        jobDefinition.pipeline,
+        workflow.pipeline,
         item,
         {
           runId,
           itemIndex,
           sourceJobId,
           jobId: sourceJobId,
-          env: jobDefinition.pipeline.env || { secrets: [] },
+          env: workflow.pipeline.env || { secrets: [] },
         }
       );
 

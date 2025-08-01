@@ -5,10 +5,10 @@ import type {
 } from "@usersdotfun/shared-types/types";
 import { useState } from "react";
 import { z } from "zod";
-import { getJob, getJobMonitoringData, getJobRuns } from "~/api/jobs";
+import { getJob, getJobMonitoringData, getJobRuns } from "~/api/workflows";
 import { getQueuesOverview } from "~/api/queues";
-import { JobDetailsSheet } from "~/components/jobs/job-details-sheet";
-import { JobsDashboard } from "~/components/jobs/jobs-dashboard";
+import { JobDetailsSheet } from "~/components/workflows/job-details-sheet";
+import { JobsDashboard } from "~/components/workflows/workflows-dashboard";
 import { Button } from "~/components/ui/button";
 import { signIn } from "~/lib/auth-client";
 import { queryKeys } from "~/lib/query-keys";
@@ -20,7 +20,7 @@ const jobsSearchSchema = z.object({
   statusFilter: z.string().optional(),
 });
 
-export const Route = createFileRoute("/jobs")({
+export const Route = createFileRoute("/workflows")({
   validateSearch: jobsSearchSchema,
   component: JobsComponent,
 });
@@ -90,7 +90,7 @@ function AuthPrompt({ error }: { error: Error }) {
 }
 
 function JobsComponent() {
-  const navigate = useNavigate({ from: "/jobs" });
+  const navigate = useNavigate({ from: "/workflows" });
   const { jobId, queueFilter, statusFilter } = Route.useSearch();
   const { isConnected } = useWebSocket();
 

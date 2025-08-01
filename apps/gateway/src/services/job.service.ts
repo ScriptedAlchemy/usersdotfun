@@ -1,5 +1,5 @@
 import {
-  JobService
+  WorkflowService
 } from '@usersdotfun/shared-db'
 import {
   type InsertJobData,
@@ -8,7 +8,7 @@ import {
   type UpdateJobData
 } from '@usersdotfun/shared-db/src/schema'
 import {
-  type CreateJobDefinition
+  type CreateWorkflow
 } from '@usersdotfun/shared-types/types'
 import { Effect } from 'effect'
 import { AppLayer } from '../runtime'
@@ -23,7 +23,7 @@ export interface JobAdapter {
   getJobById(id: string): Promise<SelectJob>
   getStepsForJob(jobId: string): Promise<SelectPipelineStep[]>
   createJob(data: InsertJobData): Promise<SelectJob>
-  createJobDefinition(data: CreateJobDefinition): Promise<SelectJob>
+  createWorkflow(data: CreateWorkflow): Promise<SelectJob>
   updateJob(id: string, data: UpdateJobData): Promise<SelectJob>
   deleteJob(id: string): Promise<void>
   retryJob(id: string): Promise<void>
@@ -34,7 +34,7 @@ export class JobAdapterImpl implements JobAdapter {
   async getJobs() {
     return Effect.runPromise(
       Effect.gen(function* () {
-        const jobService = yield* JobService;
+        const jobService = yield* WorkflowService;
         return yield* jobService.getJobs();
       }).pipe(
         Effect.provide(AppLayer),
@@ -46,7 +46,7 @@ export class JobAdapterImpl implements JobAdapter {
   async getJobById(id: string) {
     return Effect.runPromise(
       Effect.gen(function* () {
-        const jobService = yield* JobService;
+        const jobService = yield* WorkflowService;
         return yield* jobService.getJobById(id);
       }).pipe(
         Effect.provide(AppLayer),
@@ -58,7 +58,7 @@ export class JobAdapterImpl implements JobAdapter {
   async getStepsForJob(jobId: string) {
     return Effect.runPromise(
       Effect.gen(function* () {
-        const jobService = yield* JobService;
+        const jobService = yield* WorkflowService;
         return yield* jobService.getStepsForJob(jobId);
       }).pipe(
         Effect.provide(AppLayer),
@@ -70,7 +70,7 @@ export class JobAdapterImpl implements JobAdapter {
   async createJob(data: InsertJobData) {
     return Effect.runPromise(
       Effect.gen(function* () {
-        const jobService = yield* JobService;
+        const jobService = yield* WorkflowService;
         return yield* jobService.createJob(data);
       }).pipe(
         Effect.provide(AppLayer),
@@ -79,11 +79,11 @@ export class JobAdapterImpl implements JobAdapter {
     ).catch(handleEffectError);
   }
 
-  async createJobDefinition(data: CreateJobDefinition) {
+  async createWorkflow(data: CreateWorkflow) {
     return Effect.runPromise(
       Effect.gen(function* () {
-        const jobService = yield* JobService;
-        return yield* jobService.createJobDefinition(data);
+        const jobService = yield* WorkflowService;
+        return yield* jobService.createWorkflow(data);
       }).pipe(
         Effect.provide(AppLayer),
         Effect.scoped
@@ -94,7 +94,7 @@ export class JobAdapterImpl implements JobAdapter {
   async updateJob(id: string, data: UpdateJobData) {
     return Effect.runPromise(
       Effect.gen(function* () {
-        const jobService = yield* JobService;
+        const jobService = yield* WorkflowService;
         return yield* jobService.updateJob(id, data);
       }).pipe(
         Effect.provide(AppLayer),
@@ -106,7 +106,7 @@ export class JobAdapterImpl implements JobAdapter {
   async deleteJob(id: string) {
     return Effect.runPromise(
       Effect.gen(function* () {
-        const jobService = yield* JobService;
+        const jobService = yield* WorkflowService;
         return yield* jobService.deleteJob(id);
       }).pipe(
         Effect.provide(AppLayer),
@@ -118,7 +118,7 @@ export class JobAdapterImpl implements JobAdapter {
   async retryJob(id: string) {
     return Effect.runPromise(
       Effect.gen(function* () {
-        const jobService = yield* JobService;
+        const jobService = yield* WorkflowService;
         return yield* jobService.retryJob(id);
       }).pipe(
         Effect.provide(AppLayer),
@@ -130,7 +130,7 @@ export class JobAdapterImpl implements JobAdapter {
   async retryPipelineStep(id: string) {
     return Effect.runPromise(
       Effect.gen(function* () {
-        const jobService = yield* JobService;
+        const jobService = yield* WorkflowService;
         return yield* jobService.retryPipelineStep(id);
       }).pipe(
         Effect.provide(AppLayer),

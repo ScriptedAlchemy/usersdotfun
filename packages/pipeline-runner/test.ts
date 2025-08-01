@@ -1065,7 +1065,7 @@ export interface PipelineExecutionContext {
 `usersdotfun/packages/pipeline-runner/src/pipeline/runner.ts`:
 
 ```ts
-import { JobService } from "@usersdotfun/shared-db";
+import { WorkflowService } from "@usersdotfun/shared-db";
 import { Effect } from "effect";
 import { type PipelineExecutionError } from "./errors";
 import { PluginLoaderTag } from "./services";
@@ -1073,13 +1073,13 @@ import { executeStep } from "./step";
 import type { StateService } from "@usersdotfun/shared-queue";
 import { type EnvironmentService } from "../services/environment.service";
 import type { PipelineExecutionContext } from "./interfaces";
-import type { JobDefinitionPipeline } from "@usersdotfun/shared-types/types";
+import type { WorkflowPipeline } from "@usersdotfun/shared-types/types";
 
 export const executePipeline = (
-  pipeline: JobDefinitionPipeline,
+  pipeline: WorkflowPipeline,
   initialInput: Record<string, unknown>,
   context: PipelineExecutionContext,
-): Effect.Effect<unknown, PipelineExecutionError, PluginLoaderTag | JobService | StateService | EnvironmentService> =>
+): Effect.Effect<unknown, PipelineExecutionError, PluginLoaderTag | WorkflowService | StateService | EnvironmentService> =>
   Effect.gen(function* () {
     let currentInput: Record<string, unknown> = initialInput;
 
@@ -1094,10 +1094,10 @@ export const executePipeline = (
 
 // Parallel execution variant
 export const executePipelineParallel = (
-  pipeline: JobDefinitionPipeline,
+  pipeline: WorkflowPipeline,
   initialInput: Record<string, unknown>,
   context: PipelineExecutionContext,
-): Effect.Effect<unknown[], PipelineExecutionError, PluginLoaderTag | JobService | StateService | EnvironmentService> =>
+): Effect.Effect<unknown[], PipelineExecutionError, PluginLoaderTag | WorkflowService | StateService | EnvironmentService> =>
   Effect.all(
     pipeline.steps.map((step) => executeStep(step, initialInput, context)),
     { concurrency: "unbounded" }
@@ -1150,7 +1150,7 @@ export const getPlugin = (pluginName: string): Effect.Effect<PluginMetadata, Plu
 `usersdotfun/packages/pipeline-runner/src/pipeline/step.ts`:
 
 ```ts
-import { JobService } from "@usersdotfun/shared-db";
+import { WorkflowService } from "@usersdotfun/shared-db";
 import { RedisKeys } from "@usersdotfun/shared-queue";
 import type { PipelineStep } from "@usersdotfun/shared-types/types";
 import { Effect } from "effect";
@@ -1165,9 +1165,9 @@ export const executeStep = (
   step: PipelineStep,
   input: Record<string, unknown>,
   context: PipelineExecutionContext,
-): Effect.Effect<Record<string, unknown>, StepError, PluginLoaderTag | JobService | StateService | EnvironmentService> =>
+): Effect.Effect<Record<string, unknown>, StepError, PluginLoaderTag | WorkflowService | StateService | EnvironmentService> =>
   Effect.gen(function* () {
-    const jobService = yield* JobService;
+    const jobService = yield* WorkflowService;
     const stateService = yield* StateServiceTag;
     const environmentService = yield* EnvironmentServiceTag;
     const startTime = new Date();
@@ -2330,7 +2330,7 @@ export class ValidationError extends Data.TaggedError("ValidationError")<{
 
 ```ts
 export { DbError, ValidationError } from "./errors";
-export { Database, DatabaseConfig, DatabaseLive, JobService, JobServiceLive } from "./services";
+export { Database, DatabaseConfig, DatabaseLive, WorkflowService, WorkflowServiceLive } from "./services";
 export {
   JobNotFoundError,
   PipelineStepNotFoundError
@@ -2430,7 +2430,7 @@ export const jwks = pgTable("jwks", {
 
 ```ts
 export * from "./auth";
-export * from "./jobs";
+export * from "./workflows";
 export * from "./pipeline-steps";
 
 export {
@@ -2440,7 +2440,7 @@ export {
   type SelectJob,
   type InsertJobData,
   type UpdateJobData,
-} from "./jobs";
+} from "./workflows";
 
 export {
   selectPipelineStepSchema,
@@ -2452,7 +2452,7 @@ export {
 } from "./pipeline-steps";
 
 import * as auth from "./auth";
-import * as jobs from "./jobs";
+import * as jobs from "./workflows";
 import * as pipelineSteps from "./pipeline-steps";
 
 export const schema = { ...auth, ...jobs, ...pipelineSteps };
@@ -2462,7 +2462,7 @@ export type DB = typeof schema;
 
 ```
 
-`usersdotfun/packages/shared-db/src/schema/jobs.ts`:
+`usersdotfun/packages/shared-db/src/schema/workflows.ts`:
 
 ```ts
 import { relations } from "drizzle-orm";
@@ -2528,7 +2528,7 @@ export type UpdateJobData = z.infer<typeof updateJobSchema>;
 import { relations } from "drizzle-orm";
 import { json, pgTable, timestamp, varchar } from "drizzle-orm/pg-core";
 import { z } from "zod";
-import { jobs } from "./jobs";
+import { jobs } from "./workflows";
 
 export const pipelineSteps = pgTable("pipeline_steps", {
   id: varchar("id", { length: 255 }).primaryKey(),
@@ -2656,12 +2656,12 @@ import { Context, Data, Effect, Layer } from "effect";
 import * as Zod from "zod";
 
 import {
-  createJobDefinitionSchema
+  createWorkflowSchema
 } from "@usersdotfun/shared-types/schemas";
 import {
-  type CreateJobDefinition,
-  type JobDefinition,
-  type UpdateJobDefinition,
+  type CreateWorkflow,
+  type Workflow,
+  type UpdateWorkflow,
 } from "@usersdotfun/shared-types/types";
 import { DbError, ValidationError } from "../errors";
 import { schema } from "../schema";
@@ -2672,7 +2672,7 @@ import {
   insertJobSchema,
   selectJobSchema,
   updateJobSchema,
-} from "../schema/jobs";
+} from "../schema/workflows";
 import {
   type InsertPipelineStepData,
   type SelectPipelineStep,
@@ -2741,8 +2741,8 @@ const requireNonEmptyArray = <T, E>(
 ): Effect.Effect<void, E> =>
   records.length > 0 ? Effect.void : Effect.fail(notFoundError);
 
-// Mapping functions between JobDefinition and database format
-const mapDbJobToJobDefinition = (dbJob: SelectJob): JobDefinition => ({
+// Mapping functions between Workflow and database format
+const mapDbJobToWorkflow = (dbJob: SelectJob): Workflow => ({
   id: dbJob.id,
   name: dbJob.name,
   schedule: dbJob.schedule ?? undefined,
@@ -2754,7 +2754,7 @@ const mapDbJobToJobDefinition = (dbJob: SelectJob): JobDefinition => ({
   pipeline: dbJob.pipeline,
 });
 
-const mapJobDefinitionToDbJob = (jobDef: CreateJobDefinition): InsertJobData => ({
+const mapWorkflowToDbJob = (jobDef: CreateWorkflow): InsertJobData => ({
   name: jobDef.name,
   schedule: jobDef.schedule,
   sourcePlugin: jobDef.source.plugin,
@@ -2764,7 +2764,7 @@ const mapJobDefinitionToDbJob = (jobDef: CreateJobDefinition): InsertJobData => 
   status: 'pending',
 });
 
-const mapUpdateJobDefinitionToDbJob = (jobDef: UpdateJobDefinition): UpdateJobData => {
+const mapUpdateWorkflowToDbJob = (jobDef: UpdateWorkflow): UpdateJobData => {
   const result: UpdateJobData = {};
 
   if (jobDef.name !== undefined) result.name = jobDef.name;
@@ -2779,7 +2779,7 @@ const mapUpdateJobDefinitionToDbJob = (jobDef: UpdateJobDefinition): UpdateJobDa
   return result;
 };
 
-export interface JobService {
+export interface WorkflowService {
   readonly getJobById: (
     id: string
   ) => Effect.Effect<SelectJob, JobNotFoundError | DbError>;
@@ -2787,8 +2787,8 @@ export interface JobService {
   readonly createJob: (
     data: InsertJobData
   ) => Effect.Effect<SelectJob, ValidationError | DbError>;
-  readonly createJobDefinition: (
-    data: CreateJobDefinition
+  readonly createWorkflow: (
+    data: CreateWorkflow
   ) => Effect.Effect<SelectJob, ValidationError | DbError>;
   readonly updateJob: (
     id: string,
@@ -2827,10 +2827,10 @@ export interface JobService {
   ) => Effect.Effect<void, PipelineStepNotFoundError | DbError>;
 }
 
-export const JobService = Context.GenericTag<JobService>("JobService");
+export const WorkflowService = Context.GenericTag<WorkflowService>("WorkflowService");
 
-export const JobServiceLive = Layer.effect(
-  JobService,
+export const WorkflowServiceLive = Layer.effect(
+  WorkflowService,
   Effect.gen(function* () {
     const { db } = yield* Database;
 
@@ -2956,10 +2956,10 @@ export const JobServiceLive = Layer.effect(
     const createJob = (data: InsertJobData): Effect.Effect<SelectJob, ValidationError | DbError> =>
       createDbJob(data);
 
-    const createJobDefinition = (data: CreateJobDefinition): Effect.Effect<SelectJob, ValidationError | DbError> =>
-      validateData(createJobDefinitionSchema, data).pipe(
+    const createWorkflow = (data: CreateWorkflow): Effect.Effect<SelectJob, ValidationError | DbError> =>
+      validateData(createWorkflowSchema, data).pipe(
         Effect.flatMap((validatedData) => {
-          const dbJobData = mapJobDefinitionToDbJob(validatedData);
+          const dbJobData = mapWorkflowToDbJob(validatedData);
           return createDbJob(dbJobData);
         })
       );
@@ -3154,7 +3154,7 @@ export const JobServiceLive = Layer.effect(
       getJobById,
       getJobs,
       createJob,
-      createJobDefinition,
+      createWorkflow,
       updateJob,
       deleteJob,
       retryJob,
@@ -4458,27 +4458,27 @@ export const LimitQuerySchema = z.object({
 
 ```ts
 export * from './common';
-export * from './jobs';
+export * from './workflows';
 export * from './queues';
 export * from './websocket';
 
 ```
 
-`usersdotfun/packages/shared-types/src/schemas/api/jobs.ts`:
+`usersdotfun/packages/shared-types/src/schemas/api/workflows.ts`:
 
 ```ts
 import { z } from "zod";
 import {
-  createJobDefinitionSchema,
-  jobDefinitionSchema,
+  createWorkflowSchema,
+  workflowSchema,
   jobMonitoringDataSchema,
   jobRunDetailsSchema,
   jobRunInfoSchema,
   jobSchema,
   jobStatusSummarySchema,
   jobWithStepsSchema,
-  updateJobDefinitionSchema
-} from "../jobs";
+  updateWorkflowSchema
+} from "../workflows";
 import {
   ApiErrorResponseSchema,
   ApiSuccessResponseSchema,
@@ -4507,9 +4507,9 @@ export const JobRunParamsSchema = z.object({
 export const JobsListQuerySchema = StatusQuerySchema.merge(LimitQuerySchema);
 
 // Request Bodies
-export const CreateJobRequestBodySchema = createJobDefinitionSchema;
-export const CreateJobDefinitionRequestBodySchema = createJobDefinitionSchema;
-export const UpdateJobRequestBodySchema = updateJobDefinitionSchema;
+export const CreateJobRequestBodySchema = createWorkflowSchema;
+export const CreateWorkflowRequestBodySchema = createWorkflowSchema;
+export const UpdateJobRequestBodySchema = updateWorkflowSchema;
 
 // ============================================================================
 // JOB API RESPONSE SCHEMAS
@@ -4517,7 +4517,7 @@ export const UpdateJobRequestBodySchema = updateJobDefinitionSchema;
 
 // Success Response Data Schemas
 export const JobDataSchema = jobSchema;
-export const JobDefinitionDataSchema = jobDefinitionSchema;
+export const WorkflowDataSchema = workflowSchema;
 export const JobWithStepsDataSchema = jobWithStepsSchema;
 export const JobRunInfoDataSchema = jobRunInfoSchema;
 export const JobStatusSummaryDataSchema = jobStatusSummarySchema;
@@ -4540,38 +4540,38 @@ export const CleanupOrphanedJobsDataSchema = z.object({
 // COMPLETE API CONTRACT SCHEMAS
 // ============================================================================
 
-// GET /jobs
+// GET /workflows
 export const GetJobsRequestSchema = z.object({
   query: JobsListQuerySchema,
 });
 export const GetJobsResponseSchema = ApiSuccessResponseSchema(JobsListDataSchema);
 
-// GET /jobs/:id
+// GET /workflows/:id
 export const GetJobRequestSchema = z.object({
   params: JobIdParamSchema,
 });
 export const GetJobResponseSchema = ApiSuccessResponseSchema(JobWithStepsDataSchema);
 
-// POST /jobs
+// POST /workflows
 export const CreateJobRequestSchema = z.object({
   body: CreateJobRequestBodySchema,
 });
 export const CreateJobResponseSchema = ApiSuccessResponseSchema(JobDataSchema);
 
-// POST /jobs/definition
-export const CreateJobDefinitionRequestSchema = z.object({
-  body: CreateJobDefinitionRequestBodySchema,
+// POST /workflows
+export const CreateWorkflowRequestSchema = z.object({
+  body: CreateWorkflowRequestBodySchema,
 });
-export const CreateJobDefinitionResponseSchema = ApiSuccessResponseSchema(JobDataSchema);
+export const CreateWorkflowResponseSchema = ApiSuccessResponseSchema(JobDataSchema);
 
-// PUT /jobs/:id
+// PUT /workflows/:id
 export const UpdateJobRequestSchema = z.object({
   params: JobIdParamSchema,
   body: UpdateJobRequestBodySchema,
 });
 export const UpdateJobResponseSchema = ApiSuccessResponseSchema(JobDataSchema);
 
-// DELETE /jobs/:id
+// DELETE /workflows/:id
 export const DeleteJobRequestSchema = z.object({
   params: JobIdParamSchema,
 });
@@ -4580,43 +4580,43 @@ export const DeleteJobResponseSchema = z.object({
   success: z.literal(true),
 });
 
-// GET /jobs/:id/status
+// GET /workflows/:id/status
 export const GetJobStatusRequestSchema = z.object({
   params: JobIdParamSchema,
 });
 export const GetJobStatusResponseSchema = ApiSuccessResponseSchema(JobStatusSummaryDataSchema);
 
-// GET /jobs/:id/monitoring
+// GET /workflows/:id/monitoring
 export const GetJobMonitoringRequestSchema = z.object({
   params: JobIdParamSchema,
 });
 export const GetJobMonitoringResponseSchema = ApiSuccessResponseSchema(JobMonitoringDataSchema);
 
-// GET /jobs/:id/runs
+// GET /workflows/:id/runs
 export const GetJobRunsRequestSchema = z.object({
   params: JobIdParamSchema,
 });
 export const GetJobRunsResponseSchema = ApiSuccessResponseSchema(JobRunsListDataSchema);
 
-// GET /jobs/:id/runs/:runId
+// GET /workflows/:id/runs/:runId
 export const GetJobRunDetailsRequestSchema = z.object({
   params: JobRunParamsSchema,
 });
 export const GetJobRunDetailsResponseSchema = ApiSuccessResponseSchema(JobRunDetailsDataSchema);
 
-// POST /jobs/:id/retry
+// POST /workflows/:id/retry
 export const RetryJobRequestSchema = z.object({
   params: JobIdParamSchema,
 });
 export const RetryJobResponseSchema = ApiSuccessResponseSchema(SimpleMessageDataSchema);
 
-// POST /jobs/:id/steps/:stepId/retry
+// POST /workflows/:id/steps/:stepId/retry
 export const RetryJobStepRequestSchema = z.object({
   params: JobStepParamsSchema,
 });
 export const RetryJobStepResponseSchema = ApiSuccessResponseSchema(SimpleMessageDataSchema);
 
-// POST /jobs/cleanup/orphaned
+// POST /workflows/cleanup/orphaned
 export const CleanupOrphanedJobsRequestSchema = z.object({});
 export const CleanupOrphanedJobsResponseSchema = ApiSuccessResponseSchema(CleanupOrphanedJobsDataSchema);
 
@@ -4734,7 +4734,7 @@ export const GetQueuesStatusRequestSchema = z.object({
 });
 export const GetQueuesStatusResponseSchema = ApiSuccessResponseSchema(QueuesOverviewDataSchema);
 
-// GET /queues/jobs
+// GET /queues/workflows
 export const GetAllQueueJobsRequestSchema = z.object({
   query: QueueJobsQuerySchema,
 });
@@ -4778,13 +4778,13 @@ export const PurgeQueueRequestSchema = z.object({
 });
 export const PurgeQueueResponseSchema = ApiSuccessResponseSchema(QueueClearResultDataSchema);
 
-// DELETE /queues/:queueName/jobs/:jobId
+// DELETE /queues/:queueName/workflows/:jobId
 export const RemoveQueueJobRequestSchema = z.object({
   params: QueueJobParamsSchema,
 });
 export const RemoveQueueJobResponseSchema = ApiSuccessResponseSchema(SimpleMessageDataSchema);
 
-// POST /queues/:queueName/jobs/:jobId/retry
+// POST /queues/:queueName/workflows/:jobId/retry
 export const RetryQueueJobRequestSchema = z.object({
   params: QueueJobParamsSchema,
 });
@@ -4921,7 +4921,7 @@ export const authenticatedContextSchema = z.object({
 `usersdotfun/packages/shared-types/src/schemas/index.ts`:
 
 ```ts
-export * from './jobs';
+export * from './workflows';
 export * from './queues';
 export * from './auth';
 export * from './websocket';
@@ -4929,7 +4929,7 @@ export * from './api';
 
 ```
 
-`usersdotfun/packages/shared-types/src/schemas/jobs.ts`:
+`usersdotfun/packages/shared-types/src/schemas/workflows.ts`:
 
 ```ts
 import { z } from "zod";
@@ -4961,8 +4961,8 @@ export const pipelineStepSchema = z.object({
   ),
 });
 
-// Pipeline schema for JobDefinition
-export const jobDefinitionPipelineSchema = z.object({
+// Pipeline schema for Workflow
+export const workflowPipelineSchema = z.object({
   id: z.string(),
   name: z.string(),
   steps: z.array(pipelineStepSchema),
@@ -4971,15 +4971,15 @@ export const jobDefinitionPipelineSchema = z.object({
   }).optional(),
 });
 
-// Source schema for JobDefinition
-export const jobDefinitionSourceSchema = z.object({
+// Source schema for Workflow
+export const workflowSourceSchema = z.object({
   plugin: z.string(),
   config: z.any(),
   search: z.any(),
 });
 
-// JobDefinition schema - the primary interface for API operations
-export const jobDefinitionSchema = z.object({
+// Workflow schema - the primary interface for API operations
+export const workflowSchema = z.object({
   id: z.string().optional(),
   name: z.string(),
   schedule: z.string().refine(
@@ -4993,12 +4993,12 @@ export const jobDefinitionSchema = z.object({
     },
     { message: "Invalid cron expression" }
   ).optional(),
-  source: jobDefinitionSourceSchema,
-  pipeline: jobDefinitionPipelineSchema,
+  source: workflowSourceSchema,
+  pipeline: workflowPipelineSchema,
 });
 
-// Create JobDefinition schema (without id)
-export const createJobDefinitionSchema = jobDefinitionSchema.omit({ id: true }).extend({
+// Create Workflow schema (without id)
+export const createWorkflowSchema = workflowSchema.omit({ id: true }).extend({
   pipeline: z.object({
     id: z.string(),
     name: z.string(),
@@ -5020,8 +5020,8 @@ export const createJobDefinitionSchema = jobDefinitionSchema.omit({ id: true }).
   }),
 });
 
-// Update JobDefinition schema (partial)
-export const updateJobDefinitionSchema = createJobDefinitionSchema.partial();
+// Update Workflow schema (partial)
+export const updateWorkflowSchema = createWorkflowSchema.partial();
 
 // Job schema for API operations (non-database specific)
 export const jobSchema = z.object({
@@ -5195,7 +5195,7 @@ export const queueActionResultSchema = z.object({
 
 ```ts
 import { z } from "zod";
-import { jobMonitoringDataSchema, pipelineStepSchema, jobRunInfoSchema, jobSchema } from './jobs';
+import { jobMonitoringDataSchema, pipelineStepSchema, jobRunInfoSchema, jobSchema } from './workflows';
 import { queueStatusSchema, queueOverviewSchema, queueItemSchema } from './queues';
 
 // ============================================================================
@@ -5412,20 +5412,20 @@ export type PaginatedData<T> = z.infer<
 // ============================================================================
 
 export * from './common';
-export * from './jobs';
+export * from './workflows';
 export * from './queues';
 export * from './websocket';
 
 ```
 
-`usersdotfun/packages/shared-types/src/types/api/jobs.ts`:
+`usersdotfun/packages/shared-types/src/types/api/workflows.ts`:
 
 ```ts
 import { z } from "zod";
 import {
   CleanupOrphanedJobsResponseSchema,
-  CreateJobDefinitionRequestSchema,
-  CreateJobDefinitionResponseSchema,
+  CreateWorkflowRequestSchema,
+  CreateWorkflowResponseSchema,
   CreateJobRequestSchema,
   CreateJobResponseSchema,
   DeleteJobResponseSchema,
@@ -5444,7 +5444,7 @@ import {
   RetryJobStepResponseSchema,
   UpdateJobRequestSchema,
   UpdateJobResponseSchema
-} from '../../schemas/api/jobs';
+} from '../../schemas/api/workflows';
 
 // ============================================================================
 // API PARAMETER TYPES
@@ -5460,7 +5460,7 @@ export type JobsListQuery = z.infer<typeof JobsListQuerySchema>;
 // ============================================================================
 
 export type CreateJobRequest = z.infer<typeof CreateJobRequestSchema>;
-export type CreateJobDefinitionRequest = z.infer<typeof CreateJobDefinitionRequestSchema>;
+export type CreateWorkflowRequest = z.infer<typeof CreateWorkflowRequestSchema>;
 export type UpdateJobRequest = z.infer<typeof UpdateJobRequestSchema>;
 
 // ============================================================================
@@ -5470,7 +5470,7 @@ export type UpdateJobRequest = z.infer<typeof UpdateJobRequestSchema>;
 export type GetJobsResponse = z.infer<typeof GetJobsResponseSchema>;
 export type GetJobResponse = z.infer<typeof GetJobResponseSchema>;
 export type CreateJobResponse = z.infer<typeof CreateJobResponseSchema>;
-export type CreateJobDefinitionResponse = z.infer<typeof CreateJobDefinitionResponseSchema>;
+export type CreateWorkflowResponse = z.infer<typeof CreateWorkflowResponseSchema>;
 export type UpdateJobResponse = z.infer<typeof UpdateJobResponseSchema>;
 export type DeleteJobResponse = z.infer<typeof DeleteJobResponseSchema>;
 export type GetJobStatusResponse = z.infer<typeof GetJobStatusResponseSchema>;
@@ -5632,14 +5632,14 @@ export type AuthenticatedContext = z.infer<typeof authenticatedContextSchema>;
 
 // Re-export all types from individual type files
 export * from './auth';
-export * from './jobs';
+export * from './workflows';
 export * from './queues';
 export * from './websocket';
 export * from './api';
 
 ```
 
-`usersdotfun/packages/shared-types/src/types/jobs.ts`:
+`usersdotfun/packages/shared-types/src/types/workflows.ts`:
 
 ```ts
 import { z } from "zod";
@@ -5650,14 +5650,14 @@ import {
   jobStatusSchema,
   jobMonitoringDataSchema,
   jobWithStepsSchema,
-  jobDefinitionPipelineSchema,
-  jobDefinitionSourceSchema,
-  jobDefinitionSchema,
-  createJobDefinitionSchema,
-  updateJobDefinitionSchema,
+  workflowPipelineSchema,
+  workflowSourceSchema,
+  workflowSchema,
+  createWorkflowSchema,
+  updateWorkflowSchema,
   jobStatusSummarySchema,
   jobRunDetailsSchema,
-} from '../schemas/jobs';
+} from '../schemas/workflows';
 
 // ============================================================================
 // PIPELINE & JOB TYPES
@@ -5668,7 +5668,7 @@ export interface SourceJobData {
 }
 
 export interface PipelineJobData {
-  jobDefinition: any;
+  workflow: any;
   item: Record<string, unknown>;
   runId: string;
   jobId: string;
@@ -5685,11 +5685,11 @@ export interface JobError {
   shouldRemoveFromQueue?: boolean;
 }
 
-export type JobDefinitionPipeline = z.infer<typeof jobDefinitionPipelineSchema>;
-export type JobDefinitionSource = z.infer<typeof jobDefinitionSourceSchema>;
-export type JobDefinition = z.infer<typeof jobDefinitionSchema>;
-export type CreateJobDefinition = z.infer<typeof createJobDefinitionSchema>;
-export type UpdateJobDefinition = z.infer<typeof updateJobDefinitionSchema>;
+export type WorkflowPipeline = z.infer<typeof workflowPipelineSchema>;
+export type WorkflowSource = z.infer<typeof workflowSourceSchema>;
+export type Workflow = z.infer<typeof workflowSchema>;
+export type CreateWorkflow = z.infer<typeof createWorkflowSchema>;
+export type UpdateWorkflow = z.infer<typeof updateWorkflowSchema>;
 export type PipelineStep = z.infer<typeof pipelineStepSchema>;
 export type JobRunInfo = z.infer<typeof jobRunInfoSchema>;
 export type JobStatus = z.infer<typeof jobStatusSchema>;

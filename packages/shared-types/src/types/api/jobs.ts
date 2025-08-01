@@ -1,8 +1,8 @@
 import { z } from "zod";
 import {
   CleanupOrphanedJobsResponseSchema,
-  CreateJobDefinitionRequestSchema,
-  CreateJobDefinitionResponseSchema,
+  CreateWorkflowRequestSchema,
+  CreateWorkflowResponseSchema,
   CreateJobRequestSchema,
   CreateJobResponseSchema,
   DeleteJobResponseSchema,
@@ -21,7 +21,7 @@ import {
   RetryJobStepResponseSchema,
   UpdateJobRequestSchema,
   UpdateJobResponseSchema
-} from '../../schemas/api/jobs';
+} from '../../schemas/api/workflows';
 
 // ============================================================================
 // API PARAMETER TYPES
@@ -37,7 +37,7 @@ export type JobsListQuery = z.infer<typeof JobsListQuerySchema>;
 // ============================================================================
 
 export type CreateJobRequest = z.infer<typeof CreateJobRequestSchema>;
-export type CreateJobDefinitionRequest = z.infer<typeof CreateJobDefinitionRequestSchema>;
+export type CreateWorkflowRequest = z.infer<typeof CreateWorkflowRequestSchema>;
 export type UpdateJobRequest = z.infer<typeof UpdateJobRequestSchema>;
 
 // ============================================================================
@@ -47,7 +47,7 @@ export type UpdateJobRequest = z.infer<typeof UpdateJobRequestSchema>;
 export type GetJobsResponse = z.infer<typeof GetJobsResponseSchema>;
 export type GetJobResponse = z.infer<typeof GetJobResponseSchema>;
 export type CreateJobResponse = z.infer<typeof CreateJobResponseSchema>;
-export type CreateJobDefinitionResponse = z.infer<typeof CreateJobDefinitionResponseSchema>;
+export type CreateWorkflowResponse = z.infer<typeof CreateWorkflowResponseSchema>;
 export type UpdateJobResponse = z.infer<typeof UpdateJobResponseSchema>;
 export type DeleteJobResponse = z.infer<typeof DeleteJobResponseSchema>;
 export type GetJobStatusResponse = z.infer<typeof GetJobStatusResponseSchema>;

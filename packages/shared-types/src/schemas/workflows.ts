@@ -27,8 +27,8 @@ export const pipelineStepSchema = z.object({
   ),
 });
 
-// Pipeline schema for JobDefinition
-export const jobDefinitionPipelineSchema = z.object({
+// Pipeline schema for Workflow
+export const workflowPipelineSchema = z.object({
   id: z.string(),
   name: z.string(),
   steps: z.array(pipelineStepSchema),
@@ -37,15 +37,15 @@ export const jobDefinitionPipelineSchema = z.object({
   }).optional(),
 });
 
-// Source schema for JobDefinition
-export const jobDefinitionSourceSchema = z.object({
+// Source schema for Workflow
+export const workflowSourceSchema = z.object({
   plugin: z.string(),
   config: z.any(),
   search: z.any(),
 });
 
-// JobDefinition schema - the primary interface for API operations
-export const jobDefinitionSchema = z.object({
+// Workflow schema - the primary interface for API operations
+export const workflowSchema = z.object({
   id: z.string().optional(),
   name: z.string(),
   schedule: z.string().refine(
@@ -59,12 +59,12 @@ export const jobDefinitionSchema = z.object({
     },
     { message: "Invalid cron expression" }
   ).optional(),
-  source: jobDefinitionSourceSchema,
-  pipeline: jobDefinitionPipelineSchema,
+  source: workflowSourceSchema,
+  pipeline: workflowPipelineSchema,
 });
 
-// Create JobDefinition schema (without id)
-export const createJobDefinitionSchema = jobDefinitionSchema.omit({ id: true }).extend({
+// Create Workflow schema (without id)
+export const createWorkflowSchema = workflowSchema.omit({ id: true }).extend({
   pipeline: z.object({
     id: z.string(),
     name: z.string(),
@@ -86,8 +86,8 @@ export const createJobDefinitionSchema = jobDefinitionSchema.omit({ id: true }).
   }),
 });
 
-// Update JobDefinition schema (partial)
-export const updateJobDefinitionSchema = createJobDefinitionSchema.partial();
+// Update Workflow schema (partial)
+export const updateWorkflowSchema = createWorkflowSchema.partial();
 
 // Job schema for API operations (non-database specific)
 export const jobSchema = z.object({

@@ -101,7 +101,7 @@ export const GetQueuesStatusRequestSchema = z.object({
 });
 export const GetQueuesStatusResponseSchema = ApiSuccessResponseSchema(QueuesOverviewDataSchema);
 
-// GET /queues/jobs
+// GET /queues/workflows
 export const GetAllQueueJobsRequestSchema = z.object({
   query: QueueJobsQuerySchema,
 });
@@ -145,13 +145,13 @@ export const PurgeQueueRequestSchema = z.object({
 });
 export const PurgeQueueResponseSchema = ApiSuccessResponseSchema(QueueClearResultDataSchema);
 
-// DELETE /queues/:queueName/jobs/:jobId
+// DELETE /queues/:queueName/workflows/:jobId
 export const RemoveQueueJobRequestSchema = z.object({
   params: QueueJobParamsSchema,
 });
 export const RemoveQueueJobResponseSchema = ApiSuccessResponseSchema(SimpleMessageDataSchema);
 
-// POST /queues/:queueName/jobs/:jobId/retry
+// POST /queues/:queueName/workflows/:jobId/retry
 export const RetryQueueJobRequestSchema = z.object({
   params: QueueJobParamsSchema,
 });

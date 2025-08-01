@@ -80,7 +80,7 @@ export async function purgeFailedJobs(queueName: string): Promise<{ message: str
 }
 
 export async function retryQueueItem(queueName: string, itemId: string): Promise<{ message: string }> {
-  const response = await fetch(`${API_BASE_URL}/queues/${queueName}/jobs/${itemId}/retry`, {
+  const response = await fetch(`${API_BASE_URL}/queues/${queueName}/workflows/${itemId}/retry`, {
     method: 'POST',
   });
   const apiResponse = await handleResponse(response, ApiSuccessResponseSchema(SimpleMessageDataSchema));
@@ -88,7 +88,7 @@ export async function retryQueueItem(queueName: string, itemId: string): Promise
 }
 
 export async function removeQueueItem(queueName: string, itemId: string): Promise<{ message: string }> {
-  const response = await fetch(`${API_BASE_URL}/queues/${queueName}/jobs/${itemId}`, {
+  const response = await fetch(`${API_BASE_URL}/queues/${queueName}/workflows/${itemId}`, {
     method: 'DELETE',
   });
   const apiResponse = await handleResponse(response, ApiSuccessResponseSchema(SimpleMessageDataSchema));
@@ -108,7 +108,7 @@ export async function getAllQueueJobs(filters?: {
   if (filters?.queueName) params.append('queueName', filters.queueName);
   if (filters?.limit) params.append('limit', filters.limit.toString());
 
-  const response = await fetch(`${API_BASE_URL}/queues/jobs?${params}`);
+  const response = await fetch(`${API_BASE_URL}/queues/workflows?${params}`);
   const apiResponse = await handleResponse(response, ApiSuccessResponseSchema(AllQueueJobsDataSchema));
   return extractData(apiResponse);
 }

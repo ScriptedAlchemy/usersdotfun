@@ -124,7 +124,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                   Home
                 </Link>{" "}
                 <Link
-                  to="/jobs"
+                  to="/workflows"
                   activeProps={{
                     className: "font-bold",
                   }}

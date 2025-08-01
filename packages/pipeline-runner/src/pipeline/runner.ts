@@ -1,4 +1,4 @@
-import { JobService } from "@usersdotfun/shared-db";
+import { WorkflowService } from "@usersdotfun/shared-db";
 import { Effect } from "effect";
 import { type PipelineExecutionError } from "./errors";
 import { PluginLoaderTag } from "./services";
@@ -6,13 +6,13 @@ import { executeStep } from "./step";
 import type { StateService } from "@usersdotfun/shared-queue";
 import { type EnvironmentService } from "../services/environment.service";
 import type { PipelineExecutionContext } from "./interfaces";
-import type { JobDefinitionPipeline } from "@usersdotfun/shared-types/types";
+import type { WorkflowPipeline } from "@usersdotfun/shared-types/types";
 
 export const executePipeline = (
-  pipeline: JobDefinitionPipeline,
+  pipeline: WorkflowPipeline,
   initialInput: Record<string, unknown>,
   context: PipelineExecutionContext,
-): Effect.Effect<unknown, PipelineExecutionError, PluginLoaderTag | JobService | StateService | EnvironmentService> =>
+): Effect.Effect<unknown, PipelineExecutionError, PluginLoaderTag | WorkflowService | StateService | EnvironmentService> =>
   Effect.gen(function* () {
     let currentInput: Record<string, unknown> = initialInput;
 
@@ -27,10 +27,10 @@ export const executePipeline = (
 
 // Parallel execution variant
 export const executePipelineParallel = (
-  pipeline: JobDefinitionPipeline,
+  pipeline: WorkflowPipeline,
   initialInput: Record<string, unknown>,
   context: PipelineExecutionContext,
-): Effect.Effect<unknown[], PipelineExecutionError, PluginLoaderTag | JobService | StateService | EnvironmentService> =>
+): Effect.Effect<unknown[], PipelineExecutionError, PluginLoaderTag | WorkflowService | StateService | EnvironmentService> =>
   Effect.all(
     pipeline.steps.map((step) => executeStep(step, initialInput, context)),
     { concurrency: "unbounded" }

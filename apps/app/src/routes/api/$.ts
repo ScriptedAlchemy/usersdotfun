@@ -16,7 +16,7 @@ const pendingRequests = new Map<string, Promise<Response>>()
 // Cache TTL configurations (in milliseconds)
 const CACHE_CONFIG = {
   'queues/status': 10000,      // 10 seconds for queue status
-  'queues/jobs': 15000,        // 15 seconds for all jobs
+  'queues/workflows': 15000,        // 15 seconds for all jobs
   'jobs': 30000,               // 30 seconds for jobs list
   'default': 5000              // 5 seconds default
 }
@@ -44,7 +44,7 @@ function shouldCache(method: string, path: string): boolean {
   
   const cachablePatterns = [
     'queues/status',
-    'queues/jobs',
+    'queues/workflows',
     'jobs',
     'queues/'
   ]

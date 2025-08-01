@@ -1,8 +1,8 @@
 import type { QueueItem, JobWithSteps, JobMonitoringData, JobRunInfo } from '@usersdotfun/shared-types/types';
 import { CommonSheet } from '~/components/common/common-sheet';
-import { JobMonitoring } from '~/components/jobs/job-monitoring';
-import { PipelineViewer } from '~/components/jobs/pipeline-viewer';
-import { JobRuns } from '~/components/jobs/job-runs';
+import { JobMonitoring } from '~/components/workflows/job-monitoring';
+import { PipelineViewer } from '~/components/workflows/pipeline-viewer';
+import { JobRuns } from '~/components/workflows/job-runs';
 import { Badge } from '~/components/ui/badge';
 import { parseQueueJobId, formatQueueJobId } from '~/lib/queue-utils';
 

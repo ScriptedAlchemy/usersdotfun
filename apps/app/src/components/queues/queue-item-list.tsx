@@ -137,7 +137,7 @@ export function QueueItemList({ queueName, items, isLoading }: QueueItemListProp
   };
 
   const handleViewJob = (jobId: string) => {
-    navigate({ to: '/jobs', search: { jobId } });
+    navigate({ to: '/workflows', search: { jobId } });
   };
 
   const getStatusBadge = (status: 'waiting' | 'active' | 'failed' | 'delayed') => {

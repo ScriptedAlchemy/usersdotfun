@@ -5,9 +5,9 @@ import type {
 } from '@usersdotfun/core-sdk';
 import { createSourceOutputSchema } from "@usersdotfun/core-sdk";
 import { EnvironmentServiceTag, getPlugin, PluginError, PluginLoaderTag, SchemaValidator } from '@usersdotfun/pipeline-runner';
-import { JobNotFoundError, JobService } from '@usersdotfun/shared-db';
+import { JobNotFoundError, WorkflowService } from '@usersdotfun/shared-db';
 import { QUEUE_NAMES, QueueService, RedisKeys, StateService } from '@usersdotfun/shared-queue';
-import type { JobDefinition, SourceJobData } from '@usersdotfun/shared-types/types';
+import type { Workflow, SourceJobData } from '@usersdotfun/shared-types/types';
 import { type Job } from 'bullmq';
 import { randomUUID } from 'crypto';
 import { Effect, Option } from 'effect';
@@ -153,9 +153,9 @@ const processSourceJob = (job: Job<SourceJobData>) =>
 
     const stateService = yield* StateService;
     const queueService = yield* QueueService;
-    const jobService = yield* JobService;
+    const jobService = yield* WorkflowService;
 
-    // Get job from database and map to JobDefinition
+    // Get job from database and map to Workflow
     const dbJob = yield* jobService.getJobById(jobId).pipe(
       Effect.catchTag('JobNotFoundError', (error) =>
         Effect.gen(function* () {
@@ -175,7 +175,7 @@ const processSourceJob = (job: Job<SourceJobData>) =>
         })
       )
     );
-    const jobDefinition: JobDefinition = {
+    const workflow: Workflow = {
       id: dbJob.id,
       name: dbJob.name,
       schedule: dbJob.schedule ?? undefined,
@@ -210,7 +210,7 @@ const processSourceJob = (job: Job<SourceJobData>) =>
     const stateValue = Option.isSome(lastProcessedState) ? lastProcessedState.value : null;
 
     const sourceResult = yield* runSourcePlugin(
-      jobDefinition.source,
+      workflow.source,
       stateValue,
       {
         jobId: dbJob.id,
@@ -235,7 +235,7 @@ const processSourceJob = (job: Job<SourceJobData>) =>
         sourceResult.items,
         (item, index) => queueService.add(QUEUE_NAMES.PIPELINE_JOBS, 'process-item',
           {
-            jobDefinition,
+            workflow,
             item,
             runId,
             itemIndex: index,
@@ -294,7 +294,7 @@ const processSourceJob = (job: Job<SourceJobData>) =>
       Effect.catchAll(error =>
         Effect.gen(function* () {
           const stateService = yield* StateService;
-          const jobService = yield* JobService;
+          const jobService = yield* WorkflowService;
 
           // Default to retryable
           let shouldRetry = true;

@@ -1,4 +1,4 @@
-import { JobService } from '@usersdotfun/shared-db';
+import { WorkflowService } from '@usersdotfun/shared-db';
 import { QueueStatusService, StateService, RedisKeys } from '@usersdotfun/shared-queue';
 import type { JobMonitoringData, JobRunInfo, PipelineStep, JobStatusSummary, JobRunDetails } from '@usersdotfun/shared-types/types';
 import { QUEUE_NAMES } from '@usersdotfun/shared-queue';
@@ -16,7 +16,7 @@ export const JobMonitoringService = Context.GenericTag<JobMonitoringService>('Jo
 export const JobMonitoringServiceLive = Layer.effect(
   JobMonitoringService,
   Effect.gen(function* () {
-    const jobService = yield* JobService;
+    const jobService = yield* WorkflowService;
     const stateService = yield* StateService;
     const queueStatusService = yield* QueueStatusService;
 

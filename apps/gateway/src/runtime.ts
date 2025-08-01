@@ -1,5 +1,5 @@
 import { BunTerminal } from "@effect/platform-bun";
-import { DatabaseLive, DatabaseConfig, JobServiceLive } from '@usersdotfun/shared-db';
+import { DatabaseLive, DatabaseConfig, WorkflowServiceLive } from '@usersdotfun/shared-db';
 import { QueueStatusServiceLive, QueueServiceLive, RedisConfigLive, RedisAppConfig, StateServiceLive } from "@usersdotfun/shared-queue";
 import { Layer, Logger, LogLevel, ConfigProvider, Effect, Redacted } from 'effect';
 import { AppConfig, AppConfigLive } from './services/config.service';
@@ -50,7 +50,7 @@ const RedisLayer = RedisConfigLive.pipe(
 );
 
 // Step 4: Service layers - these depend on infrastructure
-const JobServiceLayer = JobServiceLive.pipe(
+const WorkflowServiceLayer = WorkflowServiceLive.pipe(
   Layer.provide(DatabaseLayer)
 );
 
@@ -70,14 +70,14 @@ const QueueServiceLayer = QueueServiceLive.pipe(
 const MonitoringLayer = JobMonitoringServiceLive.pipe(
   Layer.provide(Layer.mergeAll(
     StateServiceLayer,
-    JobServiceLayer,
+    WorkflowServiceLayer,
     QueueStatusServiceLayer
   ))
 );
 
 const JobLifecycleLayer = JobLifecycleServiceLive.pipe(
   Layer.provide(Layer.mergeAll(
-    JobServiceLayer,
+    WorkflowServiceLayer,
     QueueServiceLayer,
     StateServiceLayer
   ))
@@ -89,7 +89,7 @@ export const AppLayer = Layer.mergeAll(
   LoggingLayer,
   DatabaseLayer,
   RedisLayer,
-  JobServiceLayer,
+  WorkflowServiceLayer,
   StateServiceLayer,
   QueueStatusServiceLayer,
   QueueServiceLayer,

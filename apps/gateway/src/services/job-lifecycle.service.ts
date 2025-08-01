@@ -1,10 +1,10 @@
-import { JobNotFoundError, JobService } from '@usersdotfun/shared-db';
+import { JobNotFoundError, WorkflowService } from '@usersdotfun/shared-db';
 import { QUEUE_NAMES, QueueService, RedisKeys, StateService } from '@usersdotfun/shared-queue';
-import type { Job, CreateJobDefinition, UpdateJobDefinition } from '@usersdotfun/shared-types/types';
+import type { Job, CreateWorkflow, UpdateWorkflow } from '@usersdotfun/shared-types/types';
 import { Context, Effect, Layer } from 'effect';
 
-export type CreateJobPayload = CreateJobDefinition | Job;
-export type UpdateJobPayload = UpdateJobDefinition | Partial<Job>;
+export type CreateJobPayload = CreateWorkflow | Job;
+export type UpdateJobPayload = UpdateWorkflow | Partial<Job>;
 
 export interface JobLifecycleService {
   readonly deleteJobWithCleanup: (jobId: string) => Effect.Effect<void, JobNotFoundError | Error>;
@@ -18,7 +18,7 @@ export const JobLifecycleService = Context.GenericTag<JobLifecycleService>('JobL
 export const JobLifecycleServiceLive = Layer.effect(
   JobLifecycleService,
   Effect.gen(function* () {
-    const jobService = yield* JobService;
+    const jobService = yield* WorkflowService;
     const queueService = yield* QueueService;
     const stateService = yield* StateService;
 
@@ -85,7 +85,7 @@ export const JobLifecycleServiceLive = Layer.effect(
       Effect.gen(function* () {
         // Auto-detect format and call appropriate service method
         const newJob = 'source' in jobData && jobData.source
-          ? yield* jobService.createJobDefinition(jobData as CreateJobDefinition)
+          ? yield* jobService.createWorkflow(jobData as CreateWorkflow)
           : yield* jobService.createJob(jobData as Job);
 
         const result: Job = {

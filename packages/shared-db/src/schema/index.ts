@@ -1,30 +1,21 @@
-export * from "./auth";
-export * from "./jobs";
-export * from "./pipeline-steps";
-
-export {
-  selectJobSchema,
-  insertJobSchema,
-  updateJobSchema,
-  type SelectJob,
-  type InsertJobData,
-  type UpdateJobData,
-} from "./jobs";
-
-export {
-  selectPipelineStepSchema,
-  insertPipelineStepSchema,
-  updatePipelineStepSchema,
-  type SelectPipelineStep,
-  type InsertPipelineStepData,
-  type UpdatePipelineStepData,
-} from "./pipeline-steps";
-
 import * as auth from "./auth";
-import * as jobs from "./jobs";
-import * as pipelineSteps from "./pipeline-steps";
+import * as workflow from "./workflow";
+import * as workflowRun from "./workflow-run";
+import * as sourceItem from "./source-item";
+import * as pipelineStep from "./pipeline-step";
 
-export const schema = { ...auth, ...jobs, ...pipelineSteps };
+export const schema = {
+  ...auth,
+  ...workflow,
+  ...workflowRun,
+  ...sourceItem,
+  ...pipelineStep,
+};
+
+export * from "./auth";
+export * from "./workflow";
+export * from "./workflow-run";
+export * from "./source-item";
+export * from "./pipeline-step";
 
 export type DB = typeof schema;
-

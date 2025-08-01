@@ -6,14 +6,14 @@ import {
   jobStatusSchema,
   jobMonitoringDataSchema,
   jobWithStepsSchema,
-  jobDefinitionPipelineSchema,
-  jobDefinitionSourceSchema,
-  jobDefinitionSchema,
-  createJobDefinitionSchema,
-  updateJobDefinitionSchema,
+  workflowPipelineSchema,
+  workflowSourceSchema,
+  workflowSchema,
+  createWorkflowSchema,
+  updateWorkflowSchema,
   jobStatusSummarySchema,
   jobRunDetailsSchema,
-} from '../schemas/jobs';
+} from '../schemas/workflows';
 
 // ============================================================================
 // PIPELINE & JOB TYPES
@@ -24,7 +24,7 @@ export interface SourceJobData {
 }
 
 export interface PipelineJobData {
-  jobDefinition: any;
+  workflow: any;
   item: Record<string, unknown>;
   runId: string;
   jobId: string;
@@ -41,11 +41,11 @@ export interface JobError {
   shouldRemoveFromQueue?: boolean;
 }
 
-export type JobDefinitionPipeline = z.infer<typeof jobDefinitionPipelineSchema>;
-export type JobDefinitionSource = z.infer<typeof jobDefinitionSourceSchema>;
-export type JobDefinition = z.infer<typeof jobDefinitionSchema>;
-export type CreateJobDefinition = z.infer<typeof createJobDefinitionSchema>;
-export type UpdateJobDefinition = z.infer<typeof updateJobDefinitionSchema>;
+export type WorkflowPipeline = z.infer<typeof workflowPipelineSchema>;
+export type WorkflowSource = z.infer<typeof workflowSourceSchema>;
+export type Workflow = z.infer<typeof workflowSchema>;
+export type CreateWorkflow = z.infer<typeof createWorkflowSchema>;
+export type UpdateWorkflow = z.infer<typeof updateWorkflowSchema>;
 export type PipelineStep = z.infer<typeof pipelineStepSchema>;
 export type JobRunInfo = z.infer<typeof jobRunInfoSchema>;
 export type JobStatus = z.infer<typeof jobStatusSchema>;

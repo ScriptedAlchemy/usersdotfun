@@ -12,7 +12,7 @@ import {
   type SortingState,
 } from '@tanstack/react-table';
 import { getAllQueueJobs, getQueuesOverview, retryQueueItem, removeQueueItem } from '~/api/queues';
-import { getJob, getJobMonitoringData, getJobRuns, cleanupOrphanedJobs } from '~/api/jobs';
+import { getJob, getJobMonitoringData, getJobRuns, cleanupOrphanedJobs } from '~/api/workflows';
 import { queueItemSchema } from '@usersdotfun/shared-types/schemas';
 import { z } from 'zod';
 
@@ -216,7 +216,7 @@ export function AllJobsTable({ className }: AllJobsTableProps) {
   const handleJobIdClick = (queueItem: AllJobsItem, e: React.MouseEvent) => {
     e.stopPropagation();
     const actualJobId = queueItem.originalJobId || parseQueueJobId(queueItem.id).jobId;
-    navigate({ to: '/jobs', search: { jobId: actualJobId } });
+    navigate({ to: '/workflows', search: { jobId: actualJobId } });
   };
 
   const handleRetry = (queueItem: AllJobsItem, e: React.MouseEvent) => {

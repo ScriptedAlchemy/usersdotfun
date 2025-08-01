@@ -1,15 +1,15 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type {
-  CreateJobDefinition,
+  CreateWorkflow,
   Job,
-  UpdateJobDefinition,
+  UpdateWorkflow,
 } from "@usersdotfun/shared-types/types";
 import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
-import { createJob, updateJob } from "~/api/jobs";
+import { createJob, updateJob } from "~/api/workflows";
 import { Button } from "~/components/ui/button";
 import {
   Dialog,
@@ -125,7 +125,7 @@ export function JobDialog({ job, children }: JobDialogProps) {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (updatedJob: UpdateJobDefinition) =>
+    mutationFn: (updatedJob: UpdateWorkflow) =>
       updateJob(job!.id, updatedJob),
     onSuccess: () => {
       toast.success("Job updated");
@@ -137,9 +137,9 @@ export function JobDialog({ job, children }: JobDialogProps) {
     },
   });
 
-  const transformFormDataToJobDefinition = (
+  const transformFormDataToWorkflow = (
     formData: JobFormData
-  ): CreateJobDefinition => {
+  ): CreateWorkflow => {
     try {
       return {
         name: formData.name,
@@ -158,11 +158,11 @@ export function JobDialog({ job, children }: JobDialogProps) {
 
   const onSubmit = (data: JobFormData) => {
     try {
-      const jobDefinition = transformFormDataToJobDefinition(data);
+      const workflow = transformFormDataToWorkflow(data);
       if (job) {
-        updateMutation.mutate(jobDefinition);
+        updateMutation.mutate(workflow);
       } else {
-        createMutation.mutate(jobDefinition);
+        createMutation.mutate(workflow);
       }
     } catch (error) {
       toast.error("Invalid JSON in form fields. Please check your input.");

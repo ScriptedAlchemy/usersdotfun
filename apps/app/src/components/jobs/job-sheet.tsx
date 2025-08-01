@@ -1,15 +1,15 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type {
-  CreateJobDefinition,
+  CreateWorkflow,
   Job,
-  UpdateJobDefinition,
+  UpdateWorkflow,
 } from "@usersdotfun/shared-types/types";
 import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
-import { createJob, createJobDefinition, updateJob } from "~/api/jobs";
+import { createJob, createWorkflow, updateJob } from "~/api/workflows";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
@@ -68,8 +68,8 @@ export function JobSheet({ job, children, open, onOpenChange }: JobSheetProps) {
   const [scheduleType, setScheduleType] = useState("preset");
   const [namePreview, setNamePreview] = useState("");
   const [activeTab, setActiveTab] = useState("form");
-  const [jsonJobDefinition, setJsonJobDefinition] =
-    useState<CreateJobDefinition | null>(null);
+  const [jsonWorkflow, setJsonWorkflow] =
+    useState<CreateWorkflow | null>(null);
 
   const {
     register,
@@ -114,8 +114,8 @@ export function JobSheet({ job, children, open, onOpenChange }: JobSheetProps) {
         pipeline: JSON.stringify(job.pipeline, null, 2),
       });
 
-      // Convert job to JobDefinition format for JSON editor
-      const jobDefinition: CreateJobDefinition = {
+      // Convert job to Workflow format for JSON editor
+      const workflow: CreateWorkflow = {
         name: job.name,
         schedule: job.schedule || undefined, // Convert null to undefined
         source: {
@@ -125,7 +125,7 @@ export function JobSheet({ job, children, open, onOpenChange }: JobSheetProps) {
         },
         pipeline: job.pipeline,
       };
-      setJsonJobDefinition(jobDefinition);
+      setJsonWorkflow(workflow);
     }
   }, [job, reset]);
 
@@ -141,8 +141,8 @@ export function JobSheet({ job, children, open, onOpenChange }: JobSheetProps) {
     },
   });
 
-  const createJobDefinitionMutation = useMutation({
-    mutationFn: createJobDefinition,
+  const createWorkflowMutation = useMutation({
+    mutationFn: createWorkflow,
     onSuccess: () => {
       toast.success("Job created");
       queryClient.invalidateQueries({ queryKey: queryKeys.jobs.lists() });
@@ -154,7 +154,7 @@ export function JobSheet({ job, children, open, onOpenChange }: JobSheetProps) {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (updatedJob: UpdateJobDefinition) =>
+    mutationFn: (updatedJob: UpdateWorkflow) =>
       updateJob(job!.id, updatedJob),
     onSuccess: () => {
       toast.success("Job updated");
@@ -169,9 +169,9 @@ export function JobSheet({ job, children, open, onOpenChange }: JobSheetProps) {
     },
   });
 
-  const transformFormDataToJobDefinition = (
+  const transformFormDataToWorkflow = (
     formData: JobFormData
-  ): CreateJobDefinition => {
+  ): CreateWorkflow => {
     try {
       return {
         name: formData.name,
@@ -190,11 +190,11 @@ export function JobSheet({ job, children, open, onOpenChange }: JobSheetProps) {
 
   const onSubmit = (data: JobFormData) => {
     try {
-      const jobDefinition = transformFormDataToJobDefinition(data);
+      const workflow = transformFormDataToWorkflow(data);
       if (job) {
-        updateMutation.mutate(jobDefinition);
+        updateMutation.mutate(workflow);
       } else {
-        createJobDefinitionMutation.mutate(jobDefinition);
+        createWorkflowMutation.mutate(workflow);
       }
     } catch (error) {
       toast.error("Invalid JSON in form fields. Please check your input.");
@@ -403,36 +403,36 @@ export function JobSheet({ job, children, open, onOpenChange }: JobSheetProps) {
           <TabsContent value="json">
             <div className="space-y-4">
               <JsonEditor
-                value={jsonJobDefinition}
-                onChange={setJsonJobDefinition}
+                value={jsonWorkflow}
+                onChange={setJsonWorkflow}
                 className="py-4"
               />
               <SheetFooter>
                 <Button
                   onClick={() => {
-                    if (jsonJobDefinition) {
+                    if (jsonWorkflow) {
                       if (job) {
-                        // For updates, convert to CreateJob format since we don't have updateJobDefinition yet
-                        const jobDefinition: UpdateJobDefinition = {
-                          name: jsonJobDefinition.name,
-                          schedule: jsonJobDefinition.schedule,
-                          source: jsonJobDefinition.source,
-                          pipeline: jsonJobDefinition.pipeline,
+                        // For updates, convert to CreateJob format since we don't have updateWorkflow yet
+                        const workflow: UpdateWorkflow = {
+                          name: jsonWorkflow.name,
+                          schedule: jsonWorkflow.schedule,
+                          source: jsonWorkflow.source,
+                          pipeline: jsonWorkflow.pipeline,
                         };
-                        updateMutation.mutate(jobDefinition);
+                        updateMutation.mutate(workflow);
                       } else {
-                        // For new jobs, use the JobDefinition format directly
-                        createJobDefinitionMutation.mutate(jsonJobDefinition);
+                        // For new jobs, use the Workflow format directly
+                        createWorkflowMutation.mutate(jsonWorkflow);
                       }
                     }
                   }}
                   disabled={
-                    !jsonJobDefinition ||
-                    createJobDefinitionMutation.isPending ||
+                    !jsonWorkflow ||
+                    createWorkflowMutation.isPending ||
                     updateMutation.isPending
                   }
                 >
-                  {createJobDefinitionMutation.isPending ||
+                  {createWorkflowMutation.isPending ||
                   updateMutation.isPending
                     ? "Saving..."
                     : "Save"}
