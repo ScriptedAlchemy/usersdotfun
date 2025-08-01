@@ -78,4 +78,4 @@ export const jwks = pgTable("jwks", {
   createdAt: timestamp("created_at").notNull(),
 });
 
-export type User = typeof user.$inferSelect;
+export type UserEntity = typeof user.$inferSelect;

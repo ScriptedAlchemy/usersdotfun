@@ -1,14 +1,14 @@
 import type { JSONSchemaType } from "ajv/dist/2020";
 import { Context, Effect, Layer, Redacted } from "effect";
 import Mustache from "mustache";
-import { PluginError } from "../pipeline/errors";
+import { EnvironmentError } from "../pipeline/errors";
 import { SecretsConfigTag } from "./secrets.config";
 
 export interface EnvironmentService {
   readonly hydrateSecrets: <T>(
     config: T,
     schema: JSONSchemaType<any>
-  ) => Effect.Effect<T, PluginError>;
+  ) => Effect.Effect<T, EnvironmentError>;
 }
 
 export const EnvironmentServiceTag = Context.GenericTag<EnvironmentService>(
@@ -32,7 +32,7 @@ export const createEnvironmentService = (
     hydrateSecrets: <T>(
       config: T,
       schema: JSONSchemaType<any>
-    ): Effect.Effect<T, PluginError> =>
+    ): Effect.Effect<T, EnvironmentError> =>
       Effect.gen(function* () {
         console.log("HYDRATING");
 
@@ -46,11 +46,9 @@ export const createEnvironmentService = (
         const stringifiedSecrets = yield* Effect.try({
           try: () => JSON.stringify(configObj.secrets),
           catch: (error) =>
-            new PluginError({
-              message: `Failed to hydrate secrets: ${error instanceof Error ? error.message : String(error)
-                }`,
-              operation: "hydrate-secrets",
-              pluginName: "environment-service",
+            new EnvironmentError({
+              message: `Failed to stringify secrets: ${error instanceof Error ? error.message : String(error)}`,
+              operation: "parse-template",
               cause: error instanceof Error ? error : new Error(String(error)),
             }),
         });
@@ -81,11 +79,9 @@ export const createEnvironmentService = (
         const hydratedSecrets = yield* Effect.try({
           try: () => JSON.parse(populatedSecretsString),
           catch: (error) =>
-            new PluginError({
-              message: `Failed to hydrate secrets: ${error instanceof Error ? error.message : String(error)
-                }`,
-              operation: "hydrate-secrets",
-              pluginName: "environment-service",
+            new EnvironmentError({
+              message: `Failed to parse hydrated secrets: ${error instanceof Error ? error.message : String(error)}`,
+              operation: "parse-template",
               cause: error instanceof Error ? error : new Error(String(error)),
             }),
         });
@@ -103,7 +99,7 @@ export const createEnvironmentService = (
 const validateRequiredSecrets = (
   templateVars: Set<string>,
   availableSecrets: string[]
-): Effect.Effect<void, PluginError> =>
+): Effect.Effect<void, EnvironmentError> =>
   Effect.gen(function* () {
     const missingRequiredSecrets: string[] = [];
 
@@ -115,10 +111,9 @@ const validateRequiredSecrets = (
     }
 
     if (missingRequiredSecrets.length > 0) {
-      return yield* Effect.fail(new PluginError({
+      return yield* Effect.fail(new EnvironmentError({
         message: `Missing required secrets: ${missingRequiredSecrets.join(', ')}`,
-        operation: "hydrate-secrets",
-        pluginName: "environment-service",
+        operation: "validate-secrets",
         context: {
           missingSecrets: missingRequiredSecrets,
           availableSecrets: availableSecrets,

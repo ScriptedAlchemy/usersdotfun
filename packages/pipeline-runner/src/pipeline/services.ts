@@ -5,8 +5,8 @@ import { PluginError } from "./errors";
 import registryData from "../../../registry-builder/registry.json" with { type: "json" };
 import type { PluginMetadata, PluginRegistry } from "@usersdotfun/core-sdk";
 
-const getPluginMetadata = (pluginName: string): PluginMetadata | undefined =>
-  (registryData as PluginRegistry)[pluginName];
+const getPluginMetadata = (pluginId: string): PluginMetadata | undefined =>
+  (registryData as PluginRegistry)[pluginId];
 
 export class PluginLoaderTag extends Context.Tag("PluginLoader")<
   PluginLoaderTag,
@@ -22,13 +22,13 @@ export const PluginLoaderLive = Layer.effect(
 ).pipe(Layer.provide(ModuleFederationLive));
 
 // Helper for getting plugin metadata
-export const getPlugin = (pluginName: string): Effect.Effect<PluginMetadata, PluginError> =>
+export const getPlugin = (pluginId: string): Effect.Effect<PluginMetadata, PluginError> =>
   Effect.gen(function* () {
-    const plugin = getPluginMetadata(pluginName);
+    const plugin = getPluginMetadata(pluginId);
     if (!plugin) {
       return yield* Effect.fail(new PluginError({
-        message: `Plugin ${pluginName} not found in registry`,
-        pluginName,
+        message: `Plugin ${pluginId} not found in registry`,
+        pluginId,
         operation: "load"
       }));
     }

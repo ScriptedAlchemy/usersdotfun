@@ -19,5 +19,5 @@ export const sourceItemRelations = relations(sourceItem, ({ one }) => ({
   }),
 }));
 
-export type SourceItem = typeof sourceItem.$inferSelect;
-export type NewSourceItem = typeof sourceItem.$inferInsert;
+export type SourceItemEntity = typeof sourceItem.$inferSelect;
+export type NewSourceItemEntity = typeof sourceItem.$inferInsert;

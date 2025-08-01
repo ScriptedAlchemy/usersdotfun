@@ -1,12 +1,14 @@
 import { BunTerminal } from "@effect/platform-bun";
-import { EnvironmentServiceLive, PluginLoaderLive, StateServiceTag, SecretsConfigLive } from '@usersdotfun/pipeline-runner';
-import { Database, DatabaseConfig, DatabaseLive, WorkflowService, WorkflowServiceLive } from '@usersdotfun/shared-db';
+import { EnvironmentServiceLive, ModuleFederationLive, PluginServiceLive, SecretsConfigLive, StateServiceTag } from '@usersdotfun/pipeline-runner';
+import { DatabaseConfig, DatabaseLive, WorkflowService, WorkflowServiceLive } from '@usersdotfun/shared-db';
 import { QueueService, QueueServiceLive, RedisAppConfig, RedisConfigLive, StateService, StateServiceLive } from '@usersdotfun/shared-queue';
+import { QUEUE_NAMES } from '@usersdotfun/shared-types/types';
 import { ConfigProvider, Effect, Layer, Logger, LogLevel, Redacted } from 'effect';
 import { runPromise } from "effect-errors";
 import { AppConfig, AppConfigLive } from './config';
 import { createPipelineWorker } from './workers/pipeline.worker';
 import { createSourceWorker } from './workers/source.worker';
+import { createWorkflowWorker } from './workers/workflow.worker';
 
 // Step 1: Base layers
 const ConfigLayer = AppConfigLive.pipe(
@@ -64,8 +66,6 @@ const WorkflowServiceLayer = WorkflowServiceLive.pipe(
   Layer.provide(DatabaseLayer)
 );
 
-const PluginServiceLayer = PluginLoaderLive;
-
 // Step 5: SecretsConfig layer - provides configuration for secrets
 const SecretsConfigLayer = SecretsConfigLive.pipe(
   Layer.provide(Layer.setConfigProvider(ConfigProvider.fromEnv()))
@@ -74,6 +74,14 @@ const SecretsConfigLayer = SecretsConfigLive.pipe(
 // Step 6: EnvironmentService layer - depends on SecretsConfig
 const EnvironmentServiceLayer = EnvironmentServiceLive.pipe(
   Layer.provide(SecretsConfigLayer)
+);
+
+// Step 7: ModuleFederation layer - standalone
+const ModuleFederationLayer = ModuleFederationLive;
+
+// Step 8: PluginService layer - depends on ModuleFederation and EnvironmentService
+const PluginServiceLayer = PluginServiceLive.pipe(
+  Layer.provide(Layer.mergeAll(ModuleFederationLayer, EnvironmentServiceLayer))
 );
 
 // Step 7: Pipeline bridge layer - depends on StateService
@@ -86,7 +94,7 @@ const PipelineStateServiceLayer = Layer.effect(
   Layer.provide(StateServiceLayer)
 );
 
-// Step 8: Final composition - merge all resolved layers
+// Step 9: Final composition - merge all resolved layers
 const AppLayer = Layer.mergeAll(
   ConfigLayer,
   LoggingLayer,
@@ -98,59 +106,42 @@ const AppLayer = Layer.mergeAll(
   PluginServiceLayer,
   SecretsConfigLayer,
   EnvironmentServiceLayer,
+  ModuleFederationLayer,
   PipelineStateServiceLayer
 );
 
 const program = Effect.gen(function* () {
   const queueService = yield* QueueService;
-  const jobService = yield* WorkflowService;
+  const workflowService = yield* WorkflowService;
 
-  yield* Effect.log('Fetching jobs from database...');
-  const dbJobs = yield* jobService.getJobs();
-  const pendingJobs = dbJobs.filter(job => job.status === 'pending');
-  const scheduledJobs = pendingJobs.filter(job => job.schedule && job.schedule.trim() !== '');
-  const immediateJobs = pendingJobs.filter(job => !job.schedule || job.schedule.trim() === '');
+  yield* Effect.log('Fetching workflows from database...');
+  const workflows = yield* workflowService.getWorkflows();
+  const activeWorkflows = workflows.filter(workflow => workflow.status === 'active');
+  const scheduledWorkflows = activeWorkflows.filter(workflow => workflow.schedule && workflow.schedule.trim() !== '');
 
-  yield* Effect.log(`Found ${scheduledJobs.length} scheduled jobs and ${immediateJobs.length} immediate jobs to process`);
-  
-  // Process scheduled jobs (repeatable)
+  yield* Effect.log(`Found ${activeWorkflows.length} active workflows, ${scheduledWorkflows.length} with schedules`);
+
+  // Upsert scheduled jobs for active workflows with schedules
   yield* Effect.forEach(
-    scheduledJobs,
-    (job) =>
+    scheduledWorkflows,
+    (workflow) =>
       Effect.gen(function* () {
-        const result = yield* queueService.addRepeatableIfNotExists(
-          'source-jobs',
-          'scheduled-source-run',
-          { workflowId: job.id },
-          { pattern: job.schedule! } // TODO: fix if undefined
+        yield* queueService.upsertScheduledJob(
+          QUEUE_NAMES.WORKFLOW_RUN,
+          workflow.id, // Use workflow ID as scheduler ID
+          { pattern: workflow.schedule! }, // Cron pattern
+          {
+            name: 'scheduled-workflow-run',
+            data: { workflowId: workflow.id, triggeredBy: workflow.createdBy },
+          }
         );
-
-        if (result.added) {
-          yield* Effect.log(`Added repeatable job for ${job.name} (${job.id})`);
-        } else {
-          yield* Effect.log(`Job ${job.name} (${job.id}) already scheduled - skipping`);
-        }
-      }),
-    { concurrency: 5, discard: true }
-  );
-
-  // Process immediate jobs (one-time execution)
-  yield* Effect.forEach(
-    immediateJobs,
-    (job) =>
-      Effect.gen(function* () {
-        yield* queueService.add(
-          'source-jobs',
-          'immediate-source-run',
-          { workflowId: job.id },
-          { delay: 1000 }
-        );
-        yield* Effect.log(`Added immediate job for ${job.name} (${job.id})`);
+        yield* Effect.log(`Upserted scheduled job for workflow "${workflow.name}" (${workflow.id})`);
       }),
     { concurrency: 5, discard: true }
   );
 
   yield* Effect.log('Starting workers...');
+  yield* Effect.fork(createWorkflowWorker);
   yield* Effect.fork(createSourceWorker);
   yield* Effect.fork(createPipelineWorker);
 

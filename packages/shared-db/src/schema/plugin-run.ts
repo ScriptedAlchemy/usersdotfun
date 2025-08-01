@@ -1,7 +1,10 @@
 import { relations } from "drizzle-orm";
-import { json, pgTable, timestamp, varchar } from "drizzle-orm/pg-core";
+import { json, pgEnum, pgTable, timestamp, varchar } from "drizzle-orm/pg-core";
 import { workflowRun } from "./workflow-run";
 import { sourceItem } from "./source-item";
+import { pluginRunStatusValues } from "@usersdotfun/shared-types/schemas";
+
+export const pluginRunStatusEnum = pgEnum("plugin_run_status", pluginRunStatusValues);
 
 export const pluginRun = pgTable("pipeline_step", {
   id: varchar("id", { length: 255 }).primaryKey(),
@@ -16,7 +19,7 @@ export const pluginRun = pgTable("pipeline_step", {
   input: json("input"),
   output: json("output"),
   error: json("error"),
-  status: varchar("status", { length: 50 }).notNull(),
+  status: pluginRunStatusEnum("status").notNull().default("processing"),
   startedAt: timestamp("started_at", { mode: "date", withTimezone: true }),
   completedAt: timestamp("completed_at", { mode: "date", withTimezone: true })
 });
@@ -32,5 +35,5 @@ export const pluginRunRelations = relations(pluginRun, ({ one }) => ({
   }),
 }));
 
-export type PluginRun = typeof pluginRun.$inferSelect;
-export type NewPluginRun = typeof pluginRun.$inferInsert;
+export type PluginRunEntity = typeof pluginRun.$inferSelect;
+export type NewPluginRunEntity = typeof pluginRun.$inferInsert;

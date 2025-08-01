@@ -10,7 +10,7 @@ import { queryKeys } from '~/lib/query-keys';
 interface StepDetailsProps {
   step: PluginRun | {
     stepId: string;
-    pluginName: string;
+    pluginId: string;
     status?: string;
     config?: any;
     input?: any;
@@ -68,7 +68,7 @@ export function StepDetails({ step, workflowId }: StepDetailsProps) {
       <div className="flex items-center justify-between">
         <div className="space-y-1">
           <h4 className="font-medium text-sm">{step.stepId}</h4>
-          <p className="text-xs text-gray-600">{step.pluginName}</p>
+          <p className="text-xs text-gray-600">{step.pluginId}</p>
         </div>
         <div className="flex items-center gap-2">
           {step.status && <StatusBadge status={step.status} />}

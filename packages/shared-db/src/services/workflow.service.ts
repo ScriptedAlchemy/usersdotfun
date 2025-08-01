@@ -1,9 +1,10 @@
 import { randomUUID } from "crypto";
 import { and, eq } from "drizzle-orm";
 import { Context, Data, Effect, Layer } from "effect";
-
+import { baseWorkflowSchema, pluginRunSchema, richWorkflowSchema, sourceItemSchema, workflowRunSchema, workflowSchema } from "@usersdotfun/shared-types/schemas";
+import type { PluginRun, SourceItem, User, Workflow, WorkflowRun } from "@usersdotfun/shared-types/types";
 import { DbError } from "../errors";
-import { schema, type NewPluginRun, type NewSourceItem, type NewWorkflow, type NewWorkflowRun, type PluginRun, type SourceItem, type User, type Workflow, type WorkflowRun } from "../schema";
+import { schema, type NewWorkflowEntity, type PluginRunEntity, type SourceItemEntity, type WorkflowEntity, type WorkflowRunEntity } from "../schema";
 import { Database } from "./db.service";
 
 export class WorkflowNotFoundError extends Data.TaggedError("WorkflowNotFoundError")<{
@@ -37,19 +38,19 @@ const requireNonEmptyArray = <T, E>(
 ): Effect.Effect<void, E> =>
   records.length > 0 ? Effect.void : Effect.fail(notFoundError);
 
-export interface CreateWorkflowData extends Omit<NewWorkflow, 'id' | 'createdAt' | 'updatedAt'> { }
+export interface CreateWorkflowData extends Omit<WorkflowEntity, 'id' | 'createdAt' | 'updatedAt'> { }
 
-export interface UpdateWorkflowData extends Partial<Omit<NewWorkflow, 'id' | 'createdBy' | 'createdAt' | 'updatedAt'>> { }
+export interface UpdateWorkflowData extends Partial<Omit<CreateWorkflowData, 'createdBy'>> { }
 
-export interface CreateWorkflowRunData extends Omit<NewWorkflowRun, 'id' | 'startedAt' | 'itemsProcessed' | 'itemsTotal'> { }
+export interface CreateWorkflowRunData extends Omit<WorkflowRunEntity, 'id' | 'startedAt' | 'itemsProcessed' | 'itemsTotal' | 'completedAt'> { }
 
-export interface UpdateWorkflowRunData extends Partial<Omit<NewWorkflowRun, 'id' | 'workflowId' | 'startedAt'>> { }
+export interface UpdateWorkflowRunData extends Partial<Pick<WorkflowRunEntity, 'status' | 'itemsProcessed' | 'itemsTotal' | 'completedAt'>> { }
 
-export interface CreateSourceItemData extends Omit<NewSourceItem, 'id' | 'createdAt'> { }
+export interface CreateSourceItemData extends Omit<SourceItemEntity, 'id' | 'createdAt'> { }
 
-export interface CreatePluginRunData extends Omit<NewPluginRun, 'id'> { }
+export interface CreatePluginRunData extends Omit<PluginRunEntity, 'id' | 'output' | 'error' | 'completedAt'> { }
 
-export interface UpdatePluginRunData extends Partial<Omit<NewPluginRun, 'id' | 'runId'>> { }
+export interface UpdatePluginRunData extends Partial<Pick<PluginRunEntity, 'status' | 'output' | 'error' | 'completedAt'>> { }
 
 export interface WorkflowService {
   // Workflow methods
@@ -116,15 +117,24 @@ export const WorkflowServiceLive = Layer.effect(
   Effect.gen(function* () {
     const { db } = yield* Database;
 
+    // Generic helper to parse database entities to public types
+    const parseEntity = <T>(entity: any, schema: any, entityType: string): Effect.Effect<T, DbError> =>
+      Effect.try({
+        try: () => schema.parse(entity),
+        catch: (cause) => new DbError({ cause, message: `Failed to parse ${entityType}` }),
+      });
+
     // Workflow methods
     const createWorkflow = (data: CreateWorkflowData): Effect.Effect<Workflow, DbError> =>
       Effect.tryPromise({
         try: () => {
-          const newWorkflow = {
+          const newWorkflowEntity: NewWorkflowEntity = {
             ...data,
             id: randomUUID(),
+            source: JSON.stringify(data.source),
+            pipeline: JSON.stringify(data.pipeline),
           };
-          return db.insert(schema.workflow).values(newWorkflow).returning();
+          return db.insert(schema.workflow).values(newWorkflowEntity).returning();
         },
         catch: (cause) =>
           new DbError({ cause, message: "Failed to create workflow" }),
@@ -137,7 +147,8 @@ export const WorkflowServiceLive = Layer.effect(
               message: "Failed to create workflow",
             })
           )
-        )
+        ),
+        Effect.flatMap(entity => parseEntity<Workflow>(entity, baseWorkflowSchema, 'workflow'))
       );
 
     const getWorkflowById = (id: string): Effect.Effect<Workflow & { user: User; runs: WorkflowRun[]; items: SourceItem[] }, WorkflowNotFoundError | DbError> =>
@@ -155,6 +166,17 @@ export const WorkflowServiceLive = Layer.effect(
       }).pipe(
         Effect.flatMap((result) =>
           requireRecord(result, new WorkflowNotFoundError({ workflowId: id }))
+        ),
+        Effect.flatMap((rawWorkflow) =>
+          Effect.try({
+            try: () => {
+              return richWorkflowSchema.parse(rawWorkflow);
+            },
+            catch: (cause) => new DbError({
+              cause,
+              message: `Failed to parse workflow data for workflow ${id}`
+            }),
+          })
         )
       );
 
@@ -166,7 +188,13 @@ export const WorkflowServiceLive = Layer.effect(
           }
         }),
         catch: (cause) => new DbError({ cause, message: "Failed to get workflows" }),
-      });
+      }).pipe(
+        Effect.flatMap(workflows =>
+          Effect.forEach(workflows, workflow =>
+            parseEntity<Workflow>(workflow, workflowSchema, 'workflow')
+          )
+        )
+      );
 
     const updateWorkflow = (
       id: string,
@@ -184,7 +212,8 @@ export const WorkflowServiceLive = Layer.effect(
       }).pipe(
         Effect.flatMap((result) =>
           requireRecord(result[0], new WorkflowNotFoundError({ workflowId: id }))
-        )
+        ),
+        Effect.flatMap(entity => parseEntity<Workflow>(entity, baseWorkflowSchema, 'workflow'))
       );
 
     const deleteWorkflow = (id: string): Effect.Effect<void, WorkflowNotFoundError | DbError> =>
@@ -206,6 +235,9 @@ export const WorkflowServiceLive = Layer.effect(
           const newRun = {
             ...data,
             id: randomUUID(),
+            startedAt: new Date(),
+            itemsProcessed: 0,
+            itemsTotal: 0,
           };
           return db.insert(schema.workflowRun).values(newRun).returning();
         },
@@ -220,7 +252,8 @@ export const WorkflowServiceLive = Layer.effect(
               message: "Failed to create workflow run",
             })
           )
-        )
+        ),
+        Effect.flatMap(entity => parseEntity<WorkflowRun>(entity, workflowRunSchema, 'workflow run'))
       );
 
     const getRunsForWorkflow = (workflowId: string): Effect.Effect<Array<WorkflowRun & { triggeredBy: User | null }>, DbError> =>
@@ -238,7 +271,13 @@ export const WorkflowServiceLive = Layer.effect(
             cause,
             message: "Failed to get runs for workflow",
           }),
-      });
+      }).pipe(
+        Effect.flatMap(runs =>
+          Effect.forEach(runs, run =>
+            parseEntity<WorkflowRun>(run, workflowRunSchema, 'workflow run')
+          )
+        )
+      );
 
     const getRunById = (runId: string): Effect.Effect<WorkflowRun, WorkflowRunNotFoundError | DbError> =>
       Effect.tryPromise({
@@ -249,7 +288,8 @@ export const WorkflowServiceLive = Layer.effect(
       }).pipe(
         Effect.flatMap((result) =>
           requireRecord(result, new WorkflowRunNotFoundError({ runId }))
-        )
+        ),
+        Effect.flatMap(entity => parseEntity<WorkflowRun>(entity, workflowRunSchema, 'workflow run'))
       );
 
     const updateWorkflowRun = (
@@ -268,7 +308,8 @@ export const WorkflowServiceLive = Layer.effect(
       }).pipe(
         Effect.flatMap((result) =>
           requireRecord(result[0], new WorkflowRunNotFoundError({ runId: id }))
-        )
+        ),
+        Effect.flatMap(entity => parseEntity<WorkflowRun>(entity, workflowRunSchema, 'workflow run'))
       );
 
     // Source item methods
@@ -278,6 +319,7 @@ export const WorkflowServiceLive = Layer.effect(
           const newItem = {
             ...data,
             id: randomUUID(),
+            createdAt: new Date(),
           };
           return db.insert(schema.sourceItem)
             .values(newItem)
@@ -298,7 +340,8 @@ export const WorkflowServiceLive = Layer.effect(
               message: "Failed to upsert source item",
             })
           )
-        )
+        ),
+        Effect.flatMap(entity => parseEntity<SourceItem>(entity, sourceItemSchema, 'source item'))
       );
 
     const getItemsForWorkflow = (workflowId: string): Effect.Effect<Array<SourceItem>, DbError> =>
@@ -313,7 +356,13 @@ export const WorkflowServiceLive = Layer.effect(
             cause,
             message: "Failed to get items for workflow",
           }),
-      });
+      }).pipe(
+        Effect.flatMap(items =>
+          Effect.forEach(items, item =>
+            parseEntity<SourceItem>(item, sourceItemSchema, 'source item')
+          )
+        )
+      );
 
     // Pipeline step methods
     const createPluginRun = (data: CreatePluginRunData): Effect.Effect<PluginRun, DbError> =>
@@ -339,7 +388,8 @@ export const WorkflowServiceLive = Layer.effect(
               message: "Failed to create pipeline step",
             })
           )
-        )
+        ),
+        Effect.flatMap(entity => parseEntity<PluginRun>(entity, pluginRunSchema, 'plugin run'))
       );
 
     const updatePluginRun = (
@@ -364,7 +414,8 @@ export const WorkflowServiceLive = Layer.effect(
             result[0],
             new PluginRunNotFoundError({ stepId: id })
           )
-        )
+        ),
+        Effect.flatMap(entity => parseEntity<PluginRun>(entity, pluginRunSchema, 'plugin run'))
       );
 
     const getPluginRunsForRun = (runId: string): Effect.Effect<Array<PluginRun>, DbError> =>
@@ -379,7 +430,13 @@ export const WorkflowServiceLive = Layer.effect(
             cause,
             message: "Failed to get plugin runs for run",
           }),
-      });
+      }).pipe(
+        Effect.flatMap(runs =>
+          Effect.forEach(runs, run =>
+            parseEntity<PluginRun>(run, pluginRunSchema, 'plugin run')
+          )
+        )
+      );
 
     const getPluginRunByStep = (runId: string, itemId: string, stepId: string) =>
       Effect.tryPromise({
@@ -392,7 +449,8 @@ export const WorkflowServiceLive = Layer.effect(
         }),
         catch: (cause) => new DbError({ cause, message: "Failed to get plugin run by step" }),
       }).pipe(
-        Effect.flatMap(result => requireRecord(result, new SourceItemNotFoundError({ itemId })))
+        Effect.flatMap(result => requireRecord(result, new SourceItemNotFoundError({ itemId }))),
+        Effect.flatMap(entity => parseEntity<PluginRun>(entity, pluginRunSchema, 'plugin run'))
       );
 
     return {

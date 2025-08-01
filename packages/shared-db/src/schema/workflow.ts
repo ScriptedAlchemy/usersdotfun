@@ -1,8 +1,11 @@
 import { relations } from "drizzle-orm";
-import { jsonb, pgTable, text, timestamp, varchar } from "drizzle-orm/pg-core";
+import { jsonb, pgEnum, pgTable, text, timestamp, varchar } from "drizzle-orm/pg-core";
+import { workflowStatusValues } from "@usersdotfun/shared-types/schemas";
 import { user } from "./auth";
 import { sourceItem } from "./source-item";
 import { workflowRun } from "./workflow-run";
+
+export const workflowStatusEnum = pgEnum("workflow_status", workflowStatusValues);
 
 // A workflow defines a source to query and a pipeline for the items
 export const workflow = pgTable("workflow", {
@@ -14,6 +17,7 @@ export const workflow = pgTable("workflow", {
   schedule: varchar("schedule", { length: 255 }), // if null, run immediately
   source: jsonb("source").notNull(),
   pipeline: jsonb("pipeline").notNull(),
+  status: workflowStatusEnum("status").notNull().default("active"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
@@ -27,5 +31,5 @@ export const workflowRelations = relations(workflow, ({ many, one }) => ({
   items: many(sourceItem),
 }));
 
-export type Workflow = typeof workflow.$inferSelect;
-export type NewWorkflow = typeof workflow.$inferInsert;
+export type WorkflowEntity = typeof workflow.$inferSelect;
+export type NewWorkflowEntity = typeof workflow.$inferInsert;

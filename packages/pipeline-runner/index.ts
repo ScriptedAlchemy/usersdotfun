@@ -11,17 +11,17 @@ const program = Effect.gen(function* () {
     name: "Simple Transform Pipeline",
     steps: [
       {
-        pluginName: "@curatedotfun/simple-transform",
+        pluginId: "@curatedotfun/simple-transform",
         config: { variables: { template: "hello {{content}}" } },
         stepId: "transform-1"
       },
       {
-        pluginName: "@curatedotfun/object-transform",
+        pluginId: "@curatedotfun/object-transform",
         config: { variables: { mappings: { "content": "goodbye {{content}}" } } },
         stepId: "transform-2"
       },
       {
-        pluginName: "@curatedotfun/simple-transform",
+        pluginId: "@curatedotfun/simple-transform",
         config: { variables: { template: "hello {{content}}" } },
         stepId: "transform-3"
       },

@@ -42,7 +42,7 @@ export function PipelineViewer({ job, monitoringData }: PipelineViewerProps) {
                 step={{
                   id: step.id,
                   stepId: step.stepId,
-                  pluginName: step.pluginName,
+                  pluginId: step.pluginId,
                   status: step.status,
                   config: step.config,
                   input: step.input,
@@ -87,7 +87,7 @@ export function PipelineViewer({ job, monitoringData }: PipelineViewerProps) {
                 key={`def-${index}`}
                 step={{
                   stepId: step.stepId || `step-${index}`,
-                  pluginName: step.pluginName || "Unknown",
+                  pluginId: step.pluginId || "Unknown",
                   config: step.config,
                   status: "defined",
                 }}

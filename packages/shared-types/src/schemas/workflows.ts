@@ -2,6 +2,10 @@ import { CronExpressionParser } from "cron-parser";
 import { z } from "zod";
 import { userSchema } from "./auth";
 
+export const workflowStatusValues = ['active', 'inactive'] as const;
+export const workflowRunStatusValues = ['started', 'running', 'completed', 'failed', 'partially_completed', 'polling'] as const;
+export const pluginRunStatusValues = ['processing', 'completed', 'failed', 'retried'] as const;
+
 // Reusable definition for steps that involve a plugin
 export const pluginConfigSchema = z.object({
   pluginId: z.string().min(1, "Plugin ID cannot be empty"),
@@ -13,6 +17,19 @@ export const pipelineStepDefinitionSchema = pluginConfigSchema.extend({
   stepId: z.string().min(1, "Step ID cannot be empty"),
 });
 
+// Source schema
+export const sourceSchema = pluginConfigSchema.extend({
+  search: z.any()
+});
+
+// Pipeline schema
+export const pipelineSchema = z.object({
+  steps: z.array(pipelineStepDefinitionSchema),
+  env: z.object({
+    secrets: z.array(z.string()),
+  }).optional(),
+});
+
 // ============================================================================
 // WORKFLOW SCHEMAS
 // ============================================================================
@@ -21,6 +38,7 @@ export const pipelineStepDefinitionSchema = pluginConfigSchema.extend({
 export const workflowSchema = z.object({
   id: z.string(),
   name: z.string(),
+  status: z.enum(workflowStatusValues),
   schedule: z.string().refine((val) => {
     try {
       CronExpressionParser.parse(val);
@@ -30,13 +48,8 @@ export const workflowSchema = z.object({
     }
   }, { message: "Invalid cron expression" }
   ).nullable(),
-  source: pluginConfigSchema,
-  pipeline: z.object({
-    steps: z.array(pipelineStepDefinitionSchema),
-    env: z.object({
-      secrets: z.array(z.string()),
-    }).optional(),
-  }),
+  source: sourceSchema,
+  pipeline: pipelineSchema,
   createdBy: z.string(),
   createdAt: z.date(),
   updatedAt: z.date(),
@@ -50,7 +63,7 @@ export const baseWorkflowSchema = workflowSchema.omit({ user: true });
 export const workflowRunSchema = z.object({
   id: z.string(),
   workflowId: z.string(),
-  status: z.enum(['running', 'completed', 'failed', 'partially_completed']),
+  status: z.enum(workflowRunStatusValues),
   triggeredBy: userSchema.nullable(),
   itemsProcessed: z.number().int(),
   itemsTotal: z.number().int(),
@@ -79,7 +92,7 @@ export const pluginRunSchema = z.object({
   sourceItemId: z.string().nullable(),
   stepId: z.string(),
   pluginId: z.string(),
-  status: z.enum(['processing', 'completed', 'failed', 'retried']),
+  status: z.enum(pluginRunStatusValues),
   input: z.any().nullable(),
   output: z.any().nullable(),
   error: z.any().nullable(),

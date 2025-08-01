@@ -53,6 +53,15 @@ export const startWorkflowRunJobDataSchema = z.object({
   triggeredBy: z.string().optional(),
 });
 
+// Payload for the queue that queries data from a source.
+export const sourceQueryJobDataSchema = z.object({
+  workflowId: z.string(),
+  workflowRunId: z.string(),
+  lastProcessedState: z.object({
+    data: z.record(z.string(), z.unknown()),
+  }).optional().nullable(),
+});
+
 // Payload for the queue that processes an item through the pipeline.
 export const executePipelineJobDataSchema = z.object({
   workflowRunId: z.string(),
@@ -64,5 +73,6 @@ export const executePipelineJobDataSchema = z.object({
 // A discriminated union of all possible job data payloads.
 export const jobDataSchema = z.union([
   startWorkflowRunJobDataSchema,
+  sourceQueryJobDataSchema,
   executePipelineJobDataSchema,
 ]);

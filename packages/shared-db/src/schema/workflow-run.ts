@@ -1,7 +1,10 @@
 import { relations } from "drizzle-orm";
-import { integer, pgTable, text, timestamp, varchar } from "drizzle-orm/pg-core";
+import { integer, pgEnum, pgTable, text, timestamp, varchar } from "drizzle-orm/pg-core";
 import { user } from "./auth";
 import { workflow } from "./workflow";
+import { workflowRunStatusValues } from "@usersdotfun/shared-types/schemas";
+
+export const workflowRunStatusEnum = pgEnum("workflow_run_status", workflowRunStatusValues);
 
 // This is a single execution instance of a workflow.
 export const workflowRun = pgTable("workflow_run", {
@@ -12,7 +15,7 @@ export const workflowRun = pgTable("workflow_run", {
   triggeredBy: text("triggered_by").references(() => user.id, {
     onDelete: "set null",
   }),
-  status: varchar("status", { length: 50 }).notNull(), // e.g., 'started', 'completed', 'failed'
+  status: workflowRunStatusEnum("status").notNull().default("started"),
   itemsProcessed: integer("items_processed").default(0),
   itemsTotal: integer("items_total").default(0),
   startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),
@@ -30,5 +33,5 @@ export const workflowRunRelations = relations(workflowRun, ({ one }) => ({
   }),
 }));
 
-export type WorkflowRun = typeof workflowRun.$inferSelect;
-export type NewWorkflowRun = typeof workflowRun.$inferInsert;
+export type WorkflowRunEntity = typeof workflowRun.$inferSelect;
+export type NewWorkflowRunEntity = typeof workflowRun.$inferInsert;

@@ -165,10 +165,10 @@ export interface SourceOutput extends Output<z.ZodAny> {
 
 // Source plugin interface that extends the base Plugin interface
 export interface SourcePlugin<
-  TInput extends PluginSourceInput | SourceInput = PluginSourceInput,
-  TOutput extends PluginSourceOutput = PluginSourceOutput,
-  TConfig extends SourceConfig = SourceConfig
-> extends Plugin<TInput, TOutput, TConfig> {
+  TInputSchema extends z.ZodTypeAny = z.ZodTypeAny,
+  TOutputSchema extends z.ZodTypeAny = z.ZodTypeAny,
+  TConfigSchema extends z.ZodTypeAny = z.ZodTypeAny
+> extends Plugin<TInputSchema, TOutputSchema, TConfigSchema> {
   readonly type: 'source';
 }
 

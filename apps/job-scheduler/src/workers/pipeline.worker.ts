@@ -1,113 +1,112 @@
-import { executePipeline } from '@usersdotfun/pipeline-runner';
+import { createOutputSchema } from '@usersdotfun/core-sdk';
+import { PluginService } from '@usersdotfun/pipeline-runner';
 import { WorkflowService } from '@usersdotfun/shared-db';
-import { QueueService, StateService, RedisKeys, QUEUE_NAMES } from '@usersdotfun/shared-queue';
+import { QueueService } from '@usersdotfun/shared-queue';
+import { type ExecutePipelineJobData, QUEUE_NAMES, type Pipeline } from '@usersdotfun/shared-types/types';
 import { type Job } from 'bullmq';
 import { Effect } from 'effect';
-import type { PipelineJobData } from '@usersdotfun/shared-types/types';
+import { z } from 'zod';
 
-const processPipelineJob = (job: Job<PipelineJobData>) =>
+// Create a generic output schema for parsing plugin outputs
+const GenericPluginOutputSchema = createOutputSchema(z.unknown());
+
+const processPipelineJob = (job: Job<ExecutePipelineJobData>) =>
   Effect.gen(function* () {
-    const { workflow, item, runId, itemIndex, sourceJobId: workflowId } = job.data;
-    const stateService = yield* StateService;
+    const { workflowRunId, sourceItemId, input } = job.data;
     const workflowService = yield* WorkflowService;
-    const startedAt = new Date();
+    const pluginService = yield* PluginService;
 
-    yield* Effect.log(`Processing pipeline for item ${itemIndex} (run: ${runId}): ${JSON.stringify(item)}`);
+    const run = yield* workflowService.getRunById(workflowRunId);
+    const workflow = yield* workflowService.getWorkflowById(run.workflowId);
 
-    // Store pipeline item state
-    yield* stateService.set(RedisKeys.pipelineItem(runId, itemIndex), {
-      id: `${runId}:${itemIndex}`,
-      runId,
-      stepId: `pipeline-${itemIndex}`,
-      pluginName: 'pipeline-processor',
-      config: null,
-      input: item,
-      output: null,
-      error: null,
-      status: 'processing',
-      startedAt: startedAt.toISOString(),
-      completedAt: null,
-    });
+    let currentInput: any = input;
 
-    try {
-      const result = yield* executePipeline(
-        workflow.pipeline,
-        item,
-        {
-          runId,
-          itemIndex,
-          env: workflow.pipeline.env || { secrets: [] },
+    // Sequentially execute each step in the pipeline
+    for (const stepDefinition of workflow.pipeline.steps) {
+      // 1. Create the historical record for this specific plugin run
+      const pluginRun = yield* workflowService.createPluginRun({
+        workflowRunId,
+        sourceItemId,
+        stepId: stepDefinition.stepId,
+        pluginId: stepDefinition.pluginId,
+        config: stepDefinition.config,
+        status: 'processing',
+        input: currentInput,
+        startedAt: new Date(),
+      });
+
+      try {
+        // 2. Initialize the plugin for this step
+        const plugin = yield* pluginService.initializePlugin(
+          stepDefinition,
+          `Run ${workflowRunId}, Item ${sourceItemId}, Step "${stepDefinition.stepId}"`
+        );
+
+        // 3. Execute the plugin
+        const rawOutput = yield* pluginService.executePlugin(
+          plugin,
+          currentInput,
+          `Run ${workflowRunId}, Item ${sourceItemId}, Step "${stepDefinition.stepId}"`
+        );
+
+        // 4. Parse the output using our generic schema for type safety
+        const parseResult = GenericPluginOutputSchema.safeParse(rawOutput);
+        if (!parseResult.success) {
+          const error = new Error(`Plugin output validation failed: ${parseResult.error.message}`);
+          const finalRun = yield* workflowService.updatePluginRun(pluginRun.id, {
+            status: 'failed',
+            error: { message: error.message },
+            completedAt: new Date(),
+          });
+          // PUBLISH `plugin:run-failed` event here with `finalRun` data
+          return yield* Effect.fail(error);
         }
-      );
 
-      yield* Effect.log(`Pipeline completed for item ${itemIndex} (run: ${runId}) with result: ${JSON.stringify(result)}`);
+        const output = parseResult.data;
 
-      yield* workflowService.createPluginRun({
-        runId,
-        stepId: `pipeline-${itemIndex}`,
-        pluginName: 'pipeline-processor',
-        input: item,
-        output: result,
-        status: 'completed',
-        startedAt,
-        completedAt: new Date(),
-      });
+        // 5. Validate that the plugin execution was successful
+        if (!output.success) {
+          const error = new Error(`Plugin ${stepDefinition.pluginId} execution failed: ${JSON.stringify(output.errors)}`);
+          const finalRun = yield* workflowService.updatePluginRun(pluginRun.id, {
+            status: 'failed',
+            error: { message: error.message },
+            completedAt: new Date(),
+          });
+          // PUBLISH `plugin:run-failed` event here with `finalRun` data
+          return yield* Effect.fail(error);
+        }
 
-      // Update pipeline item state with success
-      yield* stateService.set(RedisKeys.pipelineItem(runId, itemIndex), {
-        id: `${runId}:${itemIndex}`,
-        runId,
-        stepId: `pipeline-${itemIndex}`,
-        pluginName: 'pipeline-processor',
-        config: null,
-        input: item,
-        output: result,
-        error: null,
-        status: 'completed',
-        startedAt: startedAt.toISOString(),
-        completedAt: new Date().toISOString(),
-      });
+        // 6. On success, update the record and publish the event
+        const finalRun = yield* workflowService.updatePluginRun(pluginRun.id, {
+          status: 'completed',
+          output,
+          completedAt: new Date(),
+        });
+        // PUBLISH `plugin:run-completed` event here with `finalRun` data
 
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      yield* Effect.logError(`Pipeline failed for item ${itemIndex} (run: ${runId})`, error);
+        // 7. Pass the data field (not the entire output object) to the next step
+        currentInput = output.data as Record<string, unknown>;
+      } catch (error) {
+        // 5. On failure, update the record, publish the event, and stop processing this item
+        const finalRun = yield* workflowService.updatePluginRun(pluginRun.id, {
+          status: 'failed',
+          error: { message: error instanceof Error ? error.message : String(error) },
+          completedAt: new Date(),
+        });
+        // PUBLISH `plugin:run-failed` event here with `finalRun` data
 
-      yield* workflowService.createPluginRun({
-        runId,
-        stepId: `pipeline-${itemIndex}`,
-        pluginName: 'pipeline-processor',
-        input: item,
-        output: null,
-        error: errorMessage,
-        status: 'failed',
-        startedAt,
-        completedAt: new Date(),
-      });
+        // Update the main workflow run to indicate partial failure
+        yield* workflowService.updateWorkflowRun(workflowRunId, { status: 'partially_completed' });
 
-      // Update pipeline item state with failure
-      yield* stateService.set(RedisKeys.pipelineItem(runId, itemIndex), {
-        id: `${runId}:${itemIndex}`,
-        runId,
-        stepId: `pipeline-${itemIndex}`,
-        pluginName: 'pipeline-processor',
-        config: null,
-        input: item,
-        output: null,
-        error: errorMessage,
-        status: 'failed',
-        startedAt: startedAt.toISOString(),
-        completedAt: new Date().toISOString(),
-      });
-
-      yield* workflowService.updateWorkflow(workflowId, { status: 'failed' });
-      return yield* Effect.fail(error);
+        yield* Effect.logError(`Pipeline failed for Item ${sourceItemId} at Step "${stepDefinition.stepId}"`, error);
+        return yield* Effect.fail(error); // Stop this job, but don't necessarily retry the whole pipeline
+      }
     }
+
+    yield* Effect.log(`Pipeline completed for Item ${sourceItemId}`);
   });
 
 export const createPipelineWorker = Effect.gen(function* () {
   const queueService = yield* QueueService;
-
-  yield* queueService.createWorker(QUEUE_NAMES.PIPELINE_JOBS, (job: Job<PipelineJobData>) =>
-    processPipelineJob(job)
-  );
+  yield* queueService.createWorker(QUEUE_NAMES.PIPELINE_EXECUTION, processPipelineJob);
 });

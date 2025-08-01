@@ -69,13 +69,14 @@ export type Output<T extends z.ZodTypeAny> = z.infer<
 
 // Plugin interface
 export interface Plugin<
-  InputType extends Input<z.ZodAny>,
-  OutputType extends Output<z.ZodAny>,
-  ConfigType extends Config,
+  TInputSchema extends z.ZodTypeAny,
+  TOutputSchema extends z.ZodTypeAny,
+  TConfigSchema extends z.ZodTypeAny,
 > {
+  readonly id: string;
   readonly type: PluginType;
-  initialize(config?: ConfigType): Promise<void>;
-  execute(input: InputType): Promise<OutputType>;
+  initialize(config?: z.infer<TConfigSchema>): Promise<void>;
+  execute(input: z.infer<TInputSchema>): Promise<z.infer<TOutputSchema>>;
   shutdown(): Promise<void>;
 }
 
@@ -92,5 +93,5 @@ export interface PluginMetadata {
 }
 
 export interface PluginRegistry {
-  [pluginName: string]: PluginMetadata;
+  [pluginId: string]: PluginMetadata;
 }

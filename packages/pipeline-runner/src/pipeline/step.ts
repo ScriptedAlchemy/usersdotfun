@@ -28,7 +28,7 @@ export const executeStep = (
       id: stepId,
       workflowId: context.workflowId,
       stepId: step.stepId,
-      pluginName: step.pluginName,
+      pluginId: step.pluginId,
       config: step.config,
       input,
       output: null,
@@ -38,7 +38,7 @@ export const executeStep = (
       completedAt: null,
     }).pipe(
       Effect.mapError((error) => new PluginError({
-        pluginName: step.pluginName,
+        pluginId: step.pluginId,
         operation: "execute",
         message: `Failed to store step state in Redis: ${error.message}`,
         cause: error,
@@ -49,7 +49,7 @@ export const executeStep = (
       id: stepId,
       workflowId: context.workflowId,
       stepId: step.stepId,
-      pluginName: step.pluginName,
+      pluginId: step.pluginId,
       config: step.config,
       status: "processing",
       startedAt: startTime,
@@ -57,13 +57,13 @@ export const executeStep = (
     });
 
     const loadPlugin = yield* PluginLoaderTag;
-    const pluginMeta = yield* getPlugin(step.pluginName);
+    const pluginMeta = yield* getPlugin(step.pluginId);
 
     // 1. Initial Validation of Raw Config
     const validatedRawConfig = yield* SchemaValidator.validate(
       pluginMeta.configSchema,
       step.config,
-      `Step "${step.stepId}" raw config for plugin "${step.pluginName}"`
+      `Step "${step.stepId}" raw config for plugin "${step.pluginId}"`
     );
 
     // 2. Secret Hydration
@@ -72,9 +72,9 @@ export const executeStep = (
       pluginMeta.configSchema
     ).pipe(
       Effect.mapError((error) => new PluginError({
-        pluginName: step.pluginName,
+        pluginId: step.pluginId,
         operation: "hydrate-secrets",
-        message: `Failed to hydrate secrets for plugin ${step.pluginName} config: ${error.message}`,
+        message: `Failed to hydrate secrets for plugin ${step.pluginId} config: ${error.message}`,
         cause: error,
       }))
     );
@@ -83,24 +83,24 @@ export const executeStep = (
     const finalValidatedConfig = yield* SchemaValidator.validate(
       pluginMeta.configSchema,
       hydratedConfig,
-      `Step "${step.stepId}" hydrated config for plugin "${step.pluginName}"`
+      `Step "${step.stepId}" hydrated config for plugin "${step.pluginId}"`
     );
 
-    const plugin = yield* loadPlugin(step.pluginName, finalValidatedConfig, pluginMeta.version);
+    const plugin = yield* loadPlugin(step.pluginId, finalValidatedConfig, pluginMeta.version);
 
     const validatedInput = yield* SchemaValidator.validate(
       pluginMeta.inputSchema,
       input,
-      `Step "${step.stepId}" input for plugin "${step.pluginName}`
+      `Step "${step.stepId}" input for plugin "${step.pluginId}`
     );
 
     const output = yield* Effect.tryPromise({
       try: () => plugin.execute(validatedInput),
       catch: (error) => new PluginError({
-        pluginName: step.pluginName,
+        pluginId: step.pluginId,
         cause: error,
         operation: "execute",
-        message: `Failed to execute plugin ${step.pluginName}`,
+        message: `Failed to execute plugin ${step.pluginId}`,
       })
     }).pipe(
       Effect.mapError((error) => {
@@ -120,9 +120,9 @@ export const executeStep = (
         completedAt: new Date(),
       });
       return yield* Effect.fail(new PluginError({
-        pluginName: step.pluginName,
+        pluginId: step.pluginId,
         operation: "execute",
-        message: `Plugin ${step.pluginName} returned ${output === null ? 'null' : 'undefined'} output`,
+        message: `Plugin ${step.pluginId} returned ${output === null ? 'null' : 'undefined'} output`,
         // cause: new Error(`Expected object output, got ${output === null ? 'null' : 'undefined'}`)
       }));
     }
@@ -130,14 +130,14 @@ export const executeStep = (
     const validatedOutput = yield* SchemaValidator.validate(
       pluginMeta.outputSchema,
       output as Record<string, unknown>,
-      `Step "${step.stepId}" output for plugin "${step.pluginName}`
+      `Step "${step.stepId}" output for plugin "${step.pluginId}`
     );
 
     if (!validatedOutput.success) {
       const error = new PluginError({
-        pluginName: step.pluginName,
+        pluginId: step.pluginId,
         operation: "execute",
-        message: `Plugin ${step.pluginName} execution failed`,
+        message: `Plugin ${step.pluginId} execution failed`,
         context: {
           errors: validatedOutput.errors,
         }
@@ -163,7 +163,7 @@ export const executeStep = (
       id: stepId,
       workflowId: context.workflowId,
       stepId: step.stepId,
-      pluginName: step.pluginName,
+      pluginId: step.pluginId,
       config: step.config,
       input,
       output: validatedOutput,
@@ -173,7 +173,7 @@ export const executeStep = (
       completedAt: completedAt.toISOString(),
     }).pipe(
       Effect.mapError((error) => new PluginError({
-        pluginName: step.pluginName,
+        pluginId: step.pluginId,
         operation: "execute",
         message: `Failed to update step completion state in Redis: ${error.message}`,
         cause: error,
@@ -184,7 +184,7 @@ export const executeStep = (
   }).pipe(
     Effect.withSpan(`pipeline-step-${step.stepId}`, {
       attributes: {
-        pluginName: step.pluginName,
+        pluginId: step.pluginId,
         stepId: step.stepId,
       },
     })

@@ -12,12 +12,16 @@ import {
   workflowSchema,
   richWorkflowSchema,
   baseWorkflowSchema,
-  baseWorkflowRunSchema
+  baseWorkflowRunSchema,
+  sourceSchema,
+  pipelineSchema
 } from '../schemas/workflows';
 
 // Reusable Definition Types
 export type PluginConfig = z.infer<typeof pluginConfigSchema>;
 export type PipelineStepDefinition = z.infer<typeof pipelineStepDefinitionSchema>;
+export type Source = z.infer<typeof sourceSchema>;
+export type Pipeline = z.infer<typeof pipelineSchema>;
 
 // Core Domain Types
 export type Workflow = z.infer<typeof workflowSchema>;

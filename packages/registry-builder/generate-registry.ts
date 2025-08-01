@@ -36,10 +36,10 @@ const registry: Record<string, any> = {};
 
 console.log('Starting registry generation...');
 
-for (const [pluginName, schemaPrefix] of Object.entries(pluginsToRegister)) {
-  console.log(`Processing plugin: ${pluginName}`);
+for (const [pluginId, schemaPrefix] of Object.entries(pluginsToRegister)) {
+  console.log(`Processing plugin: ${pluginId}`);
   // Assumes the script is run from the root of the monorepo
-  const pluginPath = path.resolve(process.cwd(), `plugins/${pluginName}`);
+  const pluginPath = path.resolve(process.cwd(), `plugins/${pluginId}`);
   const packageJsonPath = path.join(pluginPath, 'package.json');
   const rspackConfigPath = path.join(pluginPath, 'rspack.config.cjs');
 
@@ -48,9 +48,9 @@ for (const [pluginName, schemaPrefix] of Object.entries(pluginsToRegister)) {
     const rspackConfig = await import(rspackConfigPath);
     const port = rspackConfig.default.devServer.port;
 
-    const schemas = pluginSchemas[pluginName as keyof typeof pluginSchemas];
+    const schemas = pluginSchemas[pluginId as keyof typeof pluginSchemas];
     if (!schemas) {
-      throw new Error(`Schema definition not found for plugin: ${pluginName}`);
+      throw new Error(`Schema definition not found for plugin: ${pluginId}`);
     }
 
     const { configSchema, inputSchema, outputSchema } = schemas;
@@ -63,10 +63,10 @@ for (const [pluginName, schemaPrefix] of Object.entries(pluginsToRegister)) {
       version: packageJson.version,
       description: packageJson.description
     };
-    console.log(`Successfully processed plugin: ${pluginName}`);
+    console.log(`Successfully processed plugin: ${pluginId}`);
 
   } catch (error) {
-    console.error(`Failed to process plugin: ${pluginName}`, error);
+    console.error(`Failed to process plugin: ${pluginId}`, error);
   }
 }
 

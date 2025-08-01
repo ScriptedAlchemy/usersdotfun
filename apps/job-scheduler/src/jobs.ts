@@ -24,7 +24,7 @@ export const jobs: Workflow[] = [
             }
           },
           "stepId": "transform-1",
-          "pluginName": "@curatedotfun/simple-transform"
+          "pluginId": "@curatedotfun/simple-transform"
         },
         {
           "config": {
@@ -35,7 +35,7 @@ export const jobs: Workflow[] = [
             }
           },
           "stepId": "transform-2",
-          "pluginName": "@curatedotfun/object-transform"
+          "pluginId": "@curatedotfun/object-transform"
         },
         {
           "config": {
@@ -44,7 +44,7 @@ export const jobs: Workflow[] = [
             }
           },
           "stepId": "transform-3",
-          "pluginName": "@curatedotfun/simple-transform"
+          "pluginId": "@curatedotfun/simple-transform"
         }
       ]
     }
@@ -73,7 +73,7 @@ export const jobs: Workflow[] = [
 //     "name": "Simple Transform Pipeline",
 //     "steps": [
 //       {
-//         "pluginName": "@curatedotfun/simple-transform",
+//         "pluginId": "@curatedotfun/simple-transform",
 //         "config": {
 //           "variables": {
 //             "template": "hello {{content}}"
@@ -82,7 +82,7 @@ export const jobs: Workflow[] = [
 //         "stepId": "transform-1"
 //       },
 //       {
-//         "pluginName": "@curatedotfun/object-transform",
+//         "pluginId": "@curatedotfun/object-transform",
 //         "config": {
 //           "variables": {
 //             "mappings": {
@@ -93,7 +93,7 @@ export const jobs: Workflow[] = [
 //         "stepId": "transform-2"
 //       },
 //       {
-//         "pluginName": "@curatedotfun/simple-transform",
+//         "pluginId": "@curatedotfun/simple-transform",
 //         "config": {
 //           "variables": {
 //             "template": "hello {{content}}"

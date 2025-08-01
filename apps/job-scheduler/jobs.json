@@ -24,7 +24,7 @@
         "id": "standard-tweet-processing",
         "steps": [
           {
-            "pluginName": "@curatedotfun/simple-transform",
+            "pluginId": "@curatedotfun/simple-transform",
             "config": { "variables": { "template": "New Tweet from {{Metadata.author}}: {{Content}}" } },
             "stepId": "format-tweet"
           }

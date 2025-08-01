@@ -119,6 +119,14 @@ export const QueueServiceLive = Layer.scoped(
           removeOnFail: 50,
         },
       },
+      [QUEUE_NAMES.SOURCE_QUERY]: {
+        defaultJobOptions: {
+          attempts: 3,
+          backoff: { type: 'exponential', delay: 5000 },
+          removeOnComplete: 50,
+          removeOnFail: 25,
+        },
+      },
       [QUEUE_NAMES.PIPELINE_EXECUTION]: {
         defaultJobOptions: {
           attempts: 5,
