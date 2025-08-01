@@ -10,8 +10,8 @@ import {
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { ThemeProvider } from "next-themes";
 import * as React from "react";
-import { DefaultCatchBoundary } from "~/components/DefaultCatchBoundary";
-import { NotFound } from "~/components/NotFound";
+import { DefaultCatchBoundary } from "~/components/default-catch-boundary";
+import { NotFound } from "~/components/not-found";
 import { Toaster } from "~/components/ui/sonner";
 import { WebSocketProvider, useWebSocket } from "~/lib/websocket";
 import appCss from "~/styles/app.css?url";

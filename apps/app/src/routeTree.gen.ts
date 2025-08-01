@@ -13,7 +13,6 @@ import { createServerRootRoute } from '@tanstack/react-start/server'
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as QueuesRouteImport } from './routes/queues'
 import { Route as JobsRouteImport } from './routes/jobs'
-import { Route as DeferredRouteImport } from './routes/deferred'
 import { Route as IndexRouteImport } from './routes/index'
 import { ServerRoute as ApiSplatServerRouteImport } from './routes/api/$'
 import { ServerRoute as ApiAuthSplatServerRouteImport } from './routes/api/auth/$'
@@ -28,11 +27,6 @@ const QueuesRoute = QueuesRouteImport.update({
 const JobsRoute = JobsRouteImport.update({
   id: '/jobs',
   path: '/jobs',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DeferredRoute = DeferredRouteImport.update({
-  id: '/deferred',
-  path: '/deferred',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -53,34 +47,30 @@ const ApiAuthSplatServerRoute = ApiAuthSplatServerRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/deferred': typeof DeferredRoute
   '/jobs': typeof JobsRoute
   '/queues': typeof QueuesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/deferred': typeof DeferredRoute
   '/jobs': typeof JobsRoute
   '/queues': typeof QueuesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/deferred': typeof DeferredRoute
   '/jobs': typeof JobsRoute
   '/queues': typeof QueuesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/deferred' | '/jobs' | '/queues'
+  fullPaths: '/' | '/jobs' | '/queues'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/deferred' | '/jobs' | '/queues'
-  id: '__root__' | '/' | '/deferred' | '/jobs' | '/queues'
+  to: '/' | '/jobs' | '/queues'
+  id: '__root__' | '/' | '/jobs' | '/queues'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  DeferredRoute: typeof DeferredRoute
   JobsRoute: typeof JobsRoute
   QueuesRoute: typeof QueuesRoute
 }
@@ -126,13 +116,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof JobsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/deferred': {
-      id: '/deferred'
-      path: '/deferred'
-      fullPath: '/deferred'
-      preLoaderRoute: typeof DeferredRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
@@ -163,7 +146,6 @@ declare module '@tanstack/react-start/server' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  DeferredRoute: DeferredRoute,
   JobsRoute: JobsRoute,
   QueuesRoute: QueuesRoute,
 }
