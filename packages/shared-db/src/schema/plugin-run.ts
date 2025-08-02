@@ -6,7 +6,7 @@ import { pluginRunStatusValues } from "@usersdotfun/shared-types/schemas";
 
 export const pluginRunStatusEnum = pgEnum("plugin_run_status", pluginRunStatusValues);
 
-export const pluginRun = pgTable("pipeline_step", {
+export const pluginRun = pgTable("plugin_run", {
   id: varchar("id", { length: 255 }).primaryKey(),
   workflowRunId: varchar("workflow_run_id", { length: 255 })
     .notNull()

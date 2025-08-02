@@ -81,7 +81,7 @@ export interface WorkflowService {
     },
     WorkflowNotFoundError | DbError
   >;
-  readonly getWorkflows: () => Effect.Effect<Array<Workflow & { user: User }>, DbError>;
+  readonly getWorkflows: () => Effect.Effect<Array<Workflow>, DbError>;
   readonly updateWorkflow: (
     id: string,
     data: UpdateWorkflowData
@@ -128,7 +128,7 @@ export interface WorkflowService {
     runId: string,
     itemId: string,
     stepId: string
-  ) => Effect.Effect<PluginRun, DbError | SourceItemNotFoundError>;
+  ) => Effect.Effect<PluginRun, DbError | PluginRunNotFoundError>;
 }
 
 export const WorkflowService = Context.GenericTag<WorkflowService>("WorkflowService");
@@ -482,7 +482,10 @@ export const WorkflowServiceLive = Layer.effect(
         }),
         catch: (cause) => new DbError({ cause, message: "Failed to get plugin run by step" }),
       }).pipe(
-        Effect.flatMap(result => requireRecord(result, new SourceItemNotFoundError({ itemId }))),
+        Effect.flatMap(result => requireRecord(
+          result,
+          new PluginRunNotFoundError({ stepId, runId: itemId }) // Use the correct error
+        )),
         Effect.flatMap(entity => parseEntity<PluginRun>(entity, pluginRunSchema, 'plugin run'))
       );
 
