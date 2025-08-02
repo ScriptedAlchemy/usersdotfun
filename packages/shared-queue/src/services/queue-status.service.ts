@@ -47,21 +47,21 @@ export const QueueStatusServiceLive = Layer.scoped(
       db: redisConfig.db,
     };
 
-    // Use the correct, imported queue names
-    const workflowRunQueue = yield* Effect.acquireRelease(
-      Effect.sync(() => new Queue(QUEUE_NAMES.WORKFLOW_RUN, { connection: connectionConfig })),
-      (q) => Effect.promise(() => q.close())
+    const queueEntries = yield* Effect.all(
+      Object.values(QUEUE_NAMES).map((name) =>
+        Effect.acquireRelease(
+          Effect.sync(
+            () =>
+              new Queue(name, {
+                connection: connectionConfig,
+              })
+          ),
+          (q) => Effect.promise(() => q.close())
+        ).pipe(Effect.map((queue) => [name, queue] as const))
+      )
     );
 
-    const pipelineQueue = yield* Effect.acquireRelease(
-      Effect.sync(() => new Queue(QUEUE_NAMES.PIPELINE_EXECUTION, { connection: connectionConfig })),
-      (q) => Effect.promise(() => q.close())
-    );
-
-    const queues = new Map<string, Queue>([
-      [QUEUE_NAMES.WORKFLOW_RUN, workflowRunQueue],
-      [QUEUE_NAMES.PIPELINE_EXECUTION, pipelineQueue],
-    ]);
+    const queues = new Map<string, Queue>(queueEntries);
 
     const getQueue = (name: string): Effect.Effect<Queue, Error> => {
       const queue = queues.get(name);

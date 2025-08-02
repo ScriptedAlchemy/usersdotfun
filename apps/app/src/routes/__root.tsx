@@ -92,10 +92,10 @@ export const Route = createRootRouteWithContext<{
       { rel: "icon", href: "/favicon.ico" },
     ],
     scripts: [
-      {
-        src: "/customScript.js",
-        type: "text/javascript",
-      },
+      // {
+      //   src: "/customScript.js",
+      //   type: "text/javascript",
+      // },
     ],
   }),
   errorComponent: DefaultCatchBoundary,

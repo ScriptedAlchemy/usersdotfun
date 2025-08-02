@@ -106,13 +106,13 @@ function QueuesPage() {
           <p>Loading queue statuses...</p>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {queuesStatus && Object.entries(queuesStatus).map(([name, stats]) => (
+            {queuesStatus?.map((status) => (
               <QueueStatusCard
-                key={name}
-                name={name}
-                stats={stats}
-                onClick={() => handleQueueSelect(name)}
-                isSelected={selectedQueue === name}
+                key={status.name}
+                name={status.name}
+                stats={status}
+                onClick={() => handleQueueSelect(status.name)}
+                isSelected={selectedQueue === status.name}
               />
             ))}
           </div>
