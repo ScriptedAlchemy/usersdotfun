@@ -25,7 +25,7 @@ export function ItemDetailsSheet({
       className="sm:max-w-2xl"
     >
       {item && (
-        <div>
+        <div className="space-y-6">
           <p>Item details and reprocessing options will be displayed here.</p>
           <pre className="mt-4 bg-muted p-3 rounded-md text-xs">
             {JSON.stringify(item, null, 2)}

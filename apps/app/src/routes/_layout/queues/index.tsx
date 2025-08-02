@@ -237,7 +237,7 @@ function QueuesPage() {
       <JobSheet
         job={selectedJob}
         isOpen={isSheetOpen}
-        onOpenChange={closeSheet}
+        onClose={closeSheet}
       />
       <div className="container mx-auto p-4 sm:p-6 lg:p-8">
         <div className="flex items-center justify-between mb-6">

@@ -33,7 +33,7 @@ export function CommonSheet({
       <SheetContent
         side="right"
         className={cn(
-          "sm:max-w-[600px] overflow-y-auto p-4 md:p-6",
+          "w-full sm:max-w-[600px] p-4 md:p-6",
           className,
         )}
       >
@@ -49,9 +49,7 @@ export function CommonSheet({
                 <SheetDescription>{description}</SheetDescription>
               )}
             </SheetHeader>
-            <div className="flex-grow overflow-y-auto space-y-6">
-              {children}
-            </div>
+            <div className="flex-grow overflow-y-auto">{children}</div>
           </div>
         )}
       </SheetContent>

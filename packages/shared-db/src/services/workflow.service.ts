@@ -1,8 +1,22 @@
+import {
+  baseWorkflowSchema,
+  pluginRunSchema,
+  richWorkflowSchema,
+  sourceItemSchema,
+  workflowRunSchema,
+  workflowSchema,
+  richWorkflowRunSchema,
+} from "@usersdotfun/shared-types/schemas";
+import type {
+  PluginRun,
+  SourceItem,
+  User,
+  Workflow,
+  WorkflowRun,
+} from "@usersdotfun/shared-types/types";
 import { randomUUID } from "crypto";
 import { and, eq } from "drizzle-orm";
 import { Context, Data, Effect, Layer } from "effect";
-import { baseWorkflowSchema, pluginRunSchema, richWorkflowSchema, sourceItemSchema, workflowRunSchema, workflowSchema } from "@usersdotfun/shared-types/schemas";
-import type { PluginRun, SourceItem, User, Workflow, WorkflowRun } from "@usersdotfun/shared-types/types";
 import { DbError } from "../errors";
 import { schema, type NewWorkflowEntity, type PluginRunEntity, type SourceItemEntity, type WorkflowEntity, type WorkflowRunEntity } from "../schema";
 import { Database } from "./db.service";
@@ -59,7 +73,14 @@ export interface WorkflowService {
   ) => Effect.Effect<Workflow, DbError>;
   readonly getWorkflowById: (
     id: string
-  ) => Effect.Effect<Workflow & { user: User; runs: WorkflowRun[]; items: SourceItem[] }, WorkflowNotFoundError | DbError>;
+  ) => Effect.Effect<
+    Workflow & {
+      user: User;
+      runs: (WorkflowRun & { triggeredBy: User | null })[];
+      items: SourceItem[];
+    },
+    WorkflowNotFoundError | DbError
+  >;
   readonly getWorkflows: () => Effect.Effect<Array<Workflow & { user: User }>, DbError>;
   readonly updateWorkflow: (
     id: string,
@@ -151,16 +172,30 @@ export const WorkflowServiceLive = Layer.effect(
         Effect.flatMap(entity => parseEntity<Workflow>(entity, baseWorkflowSchema, 'workflow'))
       );
 
-    const getWorkflowById = (id: string): Effect.Effect<Workflow & { user: User; runs: WorkflowRun[]; items: SourceItem[] }, WorkflowNotFoundError | DbError> =>
+    const getWorkflowById = (
+      id: string
+    ): Effect.Effect<
+      Workflow & {
+        user: User;
+        runs: (WorkflowRun & { triggeredBy: User | null })[];
+        items: SourceItem[];
+      },
+      WorkflowNotFoundError | DbError
+    > =>
       Effect.tryPromise({
-        try: () => db.query.workflow.findFirst({
-          where: eq(schema.workflow.id, id),
-          with: {
-            user: true,
-            runs: true,
-            items: true,
-          }
-        }),
+        try: () =>
+          db.query.workflow.findFirst({
+            where: eq(schema.workflow.id, id),
+            with: {
+              user: true,
+              runs: {
+                with: {
+                  triggeredBy: true,
+                },
+              },
+              items: true,
+            },
+          }),
         catch: (cause) =>
           new DbError({ cause, message: "Failed to get workflow by id" }),
       }).pipe(
@@ -168,15 +203,11 @@ export const WorkflowServiceLive = Layer.effect(
           requireRecord(result, new WorkflowNotFoundError({ workflowId: id }))
         ),
         Effect.flatMap((rawWorkflow) =>
-          Effect.try({
-            try: () => {
-              return richWorkflowSchema.parse(rawWorkflow);
-            },
-            catch: (cause) => new DbError({
-              cause,
-              message: `Failed to parse workflow data for workflow ${id}`
-            }),
-          })
+          parseEntity(
+            rawWorkflow,
+            richWorkflowSchema,
+            `workflow data for workflow ${id}`
+          )
         )
       );
 
@@ -256,7 +287,9 @@ export const WorkflowServiceLive = Layer.effect(
         Effect.flatMap(entity => parseEntity<WorkflowRun>(entity, workflowRunSchema, 'workflow run'))
       );
 
-    const getRunsForWorkflow = (workflowId: string): Effect.Effect<Array<WorkflowRun & { triggeredBy: User | null }>, DbError> =>
+    const getRunsForWorkflow = (
+      workflowId: string
+    ): Effect.Effect<Array<WorkflowRun & { triggeredBy: User | null }>, DbError> =>
       Effect.tryPromise({
         try: () =>
           db.query.workflowRun.findMany({
@@ -272,9 +305,9 @@ export const WorkflowServiceLive = Layer.effect(
             message: "Failed to get runs for workflow",
           }),
       }).pipe(
-        Effect.flatMap(runs =>
-          Effect.forEach(runs, run =>
-            parseEntity<WorkflowRun>(run, workflowRunSchema, 'workflow run')
+        Effect.flatMap((runs) =>
+          Effect.forEach(runs, (run) =>
+            parseEntity(run, richWorkflowRunSchema, "workflow run")
           )
         )
       );

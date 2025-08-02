@@ -1,9 +1,9 @@
 import { CronExpressionParser } from "cron-parser";
 import { z } from "zod";
 import { userSchema } from "./auth";
-import { workflowRunSchema, sourceItemSchema } from "./runs";
+import { richWorkflowRunSchema, sourceItemSchema } from "./runs";
 
-export const workflowStatusValues = ['active', 'inactive'] as const;
+export const workflowStatusValues = ["active", "inactive"] as const;
 
 // Reusable definition for steps that involve a plugin
 export const pluginConfigSchema = z.object({
@@ -81,6 +81,6 @@ export const updateWorkflowSchema = createWorkflowSchema.partial();
 
 // The full workflow object with all its relations for the detailed view.
 export const richWorkflowSchema = workflowSchema.extend({
-  runs: z.array(workflowRunSchema),
+  runs: z.array(richWorkflowRunSchema),
   items: z.array(sourceItemSchema),
 });

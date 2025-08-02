@@ -9,7 +9,7 @@ export const workflowRunSchema = z.object({
   id: z.string(),
   workflowId: z.string(),
   status: z.enum(workflowRunStatusValues),
-  triggeredBy: userSchema.nullable(),
+  triggeredBy: z.string().nullable(),
   itemsProcessed: z.number().int(),
   itemsTotal: z.number().int(),
   startedAt: z.coerce.date(),
@@ -19,6 +19,10 @@ export const workflowRunSchema = z.object({
 // Base workflow run schema without user for create/update operations
 export const baseWorkflowRunSchema = workflowRunSchema.omit({ triggeredBy: true }).extend({
   triggeredBy: z.string().nullable(),
+});
+
+export const richWorkflowRunSchema = workflowRunSchema.extend({
+  triggeredBy: userSchema.nullable(),
 });
 
 // A canonical record of a unique piece of data from a source.
