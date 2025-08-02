@@ -13,7 +13,7 @@ function EditWorkflowPage() {
 
   const handleClose = () => {
     navigate({
-      to: "/_layout/workflows/$workflowId",
+      to: "/workflows/$workflowId",
       params: { workflowId },
     });
   };

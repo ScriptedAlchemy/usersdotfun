@@ -1,33 +1,48 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, Controller } from "react-hook-form";
-import { z } from "zod";
 import { useRouteContext } from "@tanstack/react-router";
+import {
+  createWorkflowSchema
+} from "@usersdotfun/shared-types/schemas";
+import type { RichWorkflow } from "@usersdotfun/shared-types/types";
+import { useCallback, useEffect, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
+import { toast } from "sonner";
+import { z } from "zod";
+import { JsonEditor } from "~/components/common/json-editor";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
-import { toast } from "sonner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import {
   useCreateWorkflowMutation,
   useUpdateWorkflowMutation,
 } from "~/hooks/use-api";
-import {
-  createWorkflowSchema,
-  updateWorkflowSchema,
-} from "@usersdotfun/shared-types/schemas";
-import type { RichWorkflow } from "@usersdotfun/shared-types/types";
-import { useEffect, useState } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import { JsonEditor } from "~/components/common/json-editor";
 import { Textarea } from "../ui/textarea";
 
-// We can derive the form schema from the main Zod schema
-const workflowFormSchema = createWorkflowSchema.omit({ createdBy: true, status: true });
+const workflowFormSchema = createWorkflowSchema.omit({
+  createdBy: true,
+  status: true,
+});
 type WorkflowFormData = z.infer<typeof workflowFormSchema>;
 
 interface WorkflowFormProps {
   workflow?: RichWorkflow;
   onSuccess: () => void;
 }
+
+const schedulePresets = [
+  { value: "*/5 * * * *", label: "Every 5 minutes" },
+  { value: "0 * * * *", label: "Every hour" },
+  { value: "0 0 * * *", label: "Every day at midnight" },
+  { value: "0 0 * * 0", label: "Every Sunday at midnight" },
+];
 
 export function WorkflowForm({ workflow, onSuccess }: WorkflowFormProps) {
   const { user } = useRouteContext({ from: "__root__" });
@@ -36,12 +51,17 @@ export function WorkflowForm({ workflow, onSuccess }: WorkflowFormProps) {
 
   const [activeTab, setActiveTab] = useState("form");
   const [jsonState, setJsonState] = useState<WorkflowFormData | null>(null);
+  const [scheduleType, setScheduleType] = useState<
+    "none" | "preset" | "custom"
+  >("preset");
 
   const {
     register,
     handleSubmit,
     reset,
     control,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<WorkflowFormData>({
     resolver: zodResolver(workflowFormSchema),
@@ -90,6 +110,21 @@ export function WorkflowForm({ workflow, onSuccess }: WorkflowFormProps) {
     setJsonState(defaultValues);
   }, [workflow, reset]);
 
+  useEffect(() => {
+    const subscription = watch((value) => {
+      setJsonState(value as WorkflowFormData);
+    });
+    return () => subscription.unsubscribe();
+  }, [watch]);
+
+  useEffect(() => {
+    if (jsonState) {
+      for (const key in jsonState) {
+        setValue(key as keyof WorkflowFormData, jsonState[key as keyof WorkflowFormData]);
+      }
+    }
+  }, [jsonState, setValue]);
+
   const onSubmit = (data: WorkflowFormData) => {
     if (workflow) {
       updateMutation.mutate(
@@ -126,14 +161,14 @@ export function WorkflowForm({ workflow, onSuccess }: WorkflowFormProps) {
       });
     }
   };
-  
+
   const onJsonSubmit = () => {
     if (!jsonState) {
       toast.error("JSON data is invalid or empty.");
       return;
     }
     onSubmit(jsonState);
-  }
+  };
 
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
@@ -146,12 +181,71 @@ export function WorkflowForm({ workflow, onSuccess }: WorkflowFormProps) {
           <div className="space-y-2">
             <Label htmlFor="name">Workflow Name</Label>
             <Input id="name" {...register("name")} />
-            {errors.name && <p className="text-red-500 text-sm">{errors.name.message}</p>}
+            {errors.name && (
+              <p className="text-red-500 text-sm">{errors.name.message}</p>
+            )}
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="schedule">Schedule (Cron)</Label>
-            <Input id="schedule" {...register("schedule")} />
-            {errors.schedule && <p className="text-red-500 text-sm">{errors.schedule.message}</p>}
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="schedule" className="text-right">
+              Schedule
+              <span className="text-xs text-gray-500 block">Optional</span>
+            </Label>
+            <Controller
+              name="schedule"
+              control={control}
+              render={({ field }) => (
+                <div className="col-span-3">
+                  <Select
+                    onValueChange={(value) => {
+                      if (value === "none") {
+                        setScheduleType("none");
+                        field.onChange(undefined);
+                      } else if (value === "custom") {
+                        setScheduleType("custom");
+                        field.onChange("");
+                      } else {
+                        setScheduleType("preset");
+                        field.onChange(value);
+                      }
+                    }}
+                    defaultValue={field.value || "none"}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a schedule or run immediately" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">
+                        Run immediately (no schedule)
+                      </SelectItem>
+                      {schedulePresets.map((preset) => (
+                        <SelectItem key={preset.value} value={preset.value}>
+                          {preset.label}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="custom">Custom Cron</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {scheduleType === "custom" && (
+                    <Input
+                      {...field}
+                      value={field.value || ""}
+                      placeholder="* * * * * (cron expression)"
+                      className="mt-2"
+                    />
+                  )}
+                  {scheduleType === "none" && (
+                    <p className="text-xs text-gray-600 mt-1">
+                      Job will run immediately when created/activated
+                    </p>
+                  )}
+                </div>
+              )}
+            />
+            {errors.schedule && (
+              <p className="col-span-4 text-red-500">
+                {errors.schedule.message}
+              </p>
+            )}
           </div>
           {/* Simple JSON textareas for now, can be improved later */}
           <div className="space-y-2">
@@ -173,11 +267,17 @@ export function WorkflowForm({ workflow, onSuccess }: WorkflowFormProps) {
                 />
               )}
             />
-            {errors.source && <p className="text-red-500 text-sm">{typeof errors.source.message === 'string' ? errors.source.message : "Invalid Source JSON"}</p>}
+            {errors.source && (
+              <p className="text-red-500 text-sm">
+                {typeof errors.source.message === "string"
+                  ? errors.source.message
+                  : "Invalid Source JSON"}
+              </p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="pipeline">Pipeline</Label>
-             <Controller
+            <Controller
               name="pipeline"
               control={control}
               render={({ field }) => (
@@ -194,11 +294,22 @@ export function WorkflowForm({ workflow, onSuccess }: WorkflowFormProps) {
                 />
               )}
             />
-            {errors.pipeline && <p className="text-red-500 text-sm">{typeof errors.pipeline.message === 'string' ? errors.pipeline.message : "Invalid Pipeline JSON"}</p>}
+            {errors.pipeline && (
+              <p className="text-red-500 text-sm">
+                {typeof errors.pipeline.message === "string"
+                  ? errors.pipeline.message
+                  : "Invalid Pipeline JSON"}
+              </p>
+            )}
           </div>
           <div className="flex justify-end">
-            <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
-              {createMutation.isPending || updateMutation.isPending ? "Saving..." : "Save Workflow"}
+            <Button
+              type="submit"
+              disabled={createMutation.isPending || updateMutation.isPending}
+            >
+              {createMutation.isPending || updateMutation.isPending
+                ? "Saving..."
+                : "Save Workflow"}
             </Button>
           </div>
         </form>
@@ -212,8 +323,13 @@ export function WorkflowForm({ workflow, onSuccess }: WorkflowFormProps) {
             className="py-4"
           />
           <div className="flex justify-end">
-            <Button onClick={onJsonSubmit} disabled={createMutation.isPending || updateMutation.isPending}>
-               {createMutation.isPending || updateMutation.isPending ? "Saving..." : "Save from JSON"}
+            <Button
+              onClick={onJsonSubmit}
+              disabled={createMutation.isPending || updateMutation.isPending}
+            >
+              {createMutation.isPending || updateMutation.isPending
+                ? "Saving..."
+                : "Save from JSON"}
             </Button>
           </div>
         </div>

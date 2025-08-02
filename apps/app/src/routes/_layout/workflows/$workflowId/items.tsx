@@ -18,7 +18,7 @@ const columns: ColumnDef<SourceItem>[] = [
       const { workflowId } = useParams({ from: "/_layout/workflows/$workflowId/items" });
       return (
         <Link
-          to="/_layout/workflows/$workflowId/items/$itemId"
+          to="/workflows/$workflowId/items/$itemId"
           params={{ workflowId, itemId: item.id }}
           className="font-mono text-sm text-primary hover:underline"
         >

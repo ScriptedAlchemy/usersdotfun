@@ -15,7 +15,6 @@ import { API_BASE_URL, extractData, handleResponse } from "./utils";
 export const getWorkflows = async () => {
   const res = await fetch(`${API_BASE_URL}/workflows`);
   const apiResponse = await handleResponse(res, GetWorkflowsResponseSchema);
-  console.log("apiResponse", apiResponse);
   return extractData(apiResponse);
 };
 

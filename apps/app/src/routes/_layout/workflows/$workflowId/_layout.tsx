@@ -4,13 +4,10 @@ import {
   Outlet,
   useParams,
 } from "@tanstack/react-router";
-import { useWorkflowQuery } from "~/hooks/use-api";
-import { Button } from "~/components/ui/button";
 import { PageHeader } from "~/components/common/page-header";
+import { useWorkflowQuery } from "~/hooks/use-api";
 
-export const Route = createFileRoute(
-  "/_layout/workflows/$workflowId/_layout",
-)({
+export const Route = createFileRoute("/_layout/workflows/$workflowId/_layout")({
   component: WorkflowLayout,
 });
 

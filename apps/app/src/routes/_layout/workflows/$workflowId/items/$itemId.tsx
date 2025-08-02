@@ -17,7 +17,7 @@ function ItemDetailsPage() {
 
   const handleClose = () => {
     navigate({
-      to: "/_layout/workflows/$workflowId/items",
+      to: "/workflows/$workflowId/items",
       params: { workflowId },
     });
   };
