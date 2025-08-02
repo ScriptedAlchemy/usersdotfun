@@ -11,28 +11,45 @@
 import { createServerRootRoute } from '@tanstack/react-start/server'
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as WorkflowsRouteImport } from './routes/workflows'
-import { Route as QueuesRouteImport } from './routes/queues'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as LayoutRouteImport } from './routes/_layout'
+import { Route as authRouteRouteImport } from './routes/(auth)/route'
+import { Route as authLoginRouteImport } from './routes/(auth)/login'
+import { Route as LayoutDashboardIndexRouteImport } from './routes/_layout/dashboard/index'
+import { Route as LayoutDashboardWorkflowsRouteImport } from './routes/_layout/dashboard/workflows'
+import { Route as LayoutDashboardQueuesRouteImport } from './routes/_layout/dashboard/queues'
 import { ServerRoute as ApiSplatServerRouteImport } from './routes/api/$'
 import { ServerRoute as ApiAuthSplatServerRouteImport } from './routes/api/auth/$'
 
 const rootServerRouteImport = createServerRootRoute()
 
-const WorkflowsRoute = WorkflowsRouteImport.update({
-  id: '/workflows',
-  path: '/workflows',
+const LayoutRoute = LayoutRouteImport.update({
+  id: '/_layout',
   getParentRoute: () => rootRouteImport,
 } as any)
-const QueuesRoute = QueuesRouteImport.update({
-  id: '/queues',
-  path: '/queues',
+const authRouteRoute = authRouteRouteImport.update({
+  id: '/(auth)',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
+const authLoginRoute = authLoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => authRouteRoute,
+} as any)
+const LayoutDashboardIndexRoute = LayoutDashboardIndexRouteImport.update({
+  id: '/dashboard/',
+  path: '/dashboard/',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutDashboardWorkflowsRoute =
+  LayoutDashboardWorkflowsRouteImport.update({
+    id: '/dashboard/workflows',
+    path: '/dashboard/workflows',
+    getParentRoute: () => LayoutRoute,
+  } as any)
+const LayoutDashboardQueuesRoute = LayoutDashboardQueuesRouteImport.update({
+  id: '/dashboard/queues',
+  path: '/dashboard/queues',
+  getParentRoute: () => LayoutRoute,
 } as any)
 const ApiSplatServerRoute = ApiSplatServerRouteImport.update({
   id: '/api/$',
@@ -46,33 +63,56 @@ const ApiAuthSplatServerRoute = ApiAuthSplatServerRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/queues': typeof QueuesRoute
-  '/workflows': typeof WorkflowsRoute
+  '/': typeof authRouteRouteWithChildren
+  '/login': typeof authLoginRoute
+  '/dashboard/queues': typeof LayoutDashboardQueuesRoute
+  '/dashboard/workflows': typeof LayoutDashboardWorkflowsRoute
+  '/dashboard': typeof LayoutDashboardIndexRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/queues': typeof QueuesRoute
-  '/workflows': typeof WorkflowsRoute
+  '/': typeof authRouteRouteWithChildren
+  '/login': typeof authLoginRoute
+  '/dashboard/queues': typeof LayoutDashboardQueuesRoute
+  '/dashboard/workflows': typeof LayoutDashboardWorkflowsRoute
+  '/dashboard': typeof LayoutDashboardIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/queues': typeof QueuesRoute
-  '/workflows': typeof WorkflowsRoute
+  '/(auth)': typeof authRouteRouteWithChildren
+  '/_layout': typeof LayoutRouteWithChildren
+  '/(auth)/login': typeof authLoginRoute
+  '/_layout/dashboard/queues': typeof LayoutDashboardQueuesRoute
+  '/_layout/dashboard/workflows': typeof LayoutDashboardWorkflowsRoute
+  '/_layout/dashboard/': typeof LayoutDashboardIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/queues' | '/workflows'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/dashboard/queues'
+    | '/dashboard/workflows'
+    | '/dashboard'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/queues' | '/workflows'
-  id: '__root__' | '/' | '/queues' | '/workflows'
+  to:
+    | '/'
+    | '/login'
+    | '/dashboard/queues'
+    | '/dashboard/workflows'
+    | '/dashboard'
+  id:
+    | '__root__'
+    | '/(auth)'
+    | '/_layout'
+    | '/(auth)/login'
+    | '/_layout/dashboard/queues'
+    | '/_layout/dashboard/workflows'
+    | '/_layout/dashboard/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  QueuesRoute: typeof QueuesRoute
-  WorkflowsRoute: typeof WorkflowsRoute
+  authRouteRoute: typeof authRouteRouteWithChildren
+  LayoutRoute: typeof LayoutRouteWithChildren
 }
 export interface FileServerRoutesByFullPath {
   '/api/$': typeof ApiSplatServerRoute
@@ -102,26 +142,47 @@ export interface RootServerRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/workflows': {
-      id: '/workflows'
-      path: '/workflows'
-      fullPath: '/workflows'
-      preLoaderRoute: typeof WorkflowsRouteImport
+    '/_layout': {
+      id: '/_layout'
+      path: ''
+      fullPath: ''
+      preLoaderRoute: typeof LayoutRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/queues': {
-      id: '/queues'
-      path: '/queues'
-      fullPath: '/queues'
-      preLoaderRoute: typeof QueuesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/': {
-      id: '/'
+    '/(auth)': {
+      id: '/(auth)'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+      preLoaderRoute: typeof authRouteRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/(auth)/login': {
+      id: '/(auth)/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof authLoginRouteImport
+      parentRoute: typeof authRouteRoute
+    }
+    '/_layout/dashboard/': {
+      id: '/_layout/dashboard/'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof LayoutDashboardIndexRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/dashboard/workflows': {
+      id: '/_layout/dashboard/workflows'
+      path: '/dashboard/workflows'
+      fullPath: '/dashboard/workflows'
+      preLoaderRoute: typeof LayoutDashboardWorkflowsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/dashboard/queues': {
+      id: '/_layout/dashboard/queues'
+      path: '/dashboard/queues'
+      fullPath: '/dashboard/queues'
+      preLoaderRoute: typeof LayoutDashboardQueuesRouteImport
+      parentRoute: typeof LayoutRoute
     }
   }
 }
@@ -144,10 +205,36 @@ declare module '@tanstack/react-start/server' {
   }
 }
 
+interface authRouteRouteChildren {
+  authLoginRoute: typeof authLoginRoute
+}
+
+const authRouteRouteChildren: authRouteRouteChildren = {
+  authLoginRoute: authLoginRoute,
+}
+
+const authRouteRouteWithChildren = authRouteRoute._addFileChildren(
+  authRouteRouteChildren,
+)
+
+interface LayoutRouteChildren {
+  LayoutDashboardQueuesRoute: typeof LayoutDashboardQueuesRoute
+  LayoutDashboardWorkflowsRoute: typeof LayoutDashboardWorkflowsRoute
+  LayoutDashboardIndexRoute: typeof LayoutDashboardIndexRoute
+}
+
+const LayoutRouteChildren: LayoutRouteChildren = {
+  LayoutDashboardQueuesRoute: LayoutDashboardQueuesRoute,
+  LayoutDashboardWorkflowsRoute: LayoutDashboardWorkflowsRoute,
+  LayoutDashboardIndexRoute: LayoutDashboardIndexRoute,
+}
+
+const LayoutRouteWithChildren =
+  LayoutRoute._addFileChildren(LayoutRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  QueuesRoute: QueuesRoute,
-  WorkflowsRoute: WorkflowsRoute,
+  authRouteRoute: authRouteRouteWithChildren,
+  LayoutRoute: LayoutRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

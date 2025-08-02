@@ -2,44 +2,43 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   HeadContent,
-  Link,
   Outlet,
   Scripts,
   createRootRouteWithContext,
+  useRouteContext
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
+import { createServerFn } from "@tanstack/react-start";
+import { getWebRequest } from "@tanstack/react-start/server";
+import { Router } from "lucide-react";
 import { ThemeProvider } from "next-themes";
 import * as React from "react";
 import { DefaultCatchBoundary } from "~/components/default-catch-boundary";
 import { NotFound } from "~/components/not-found";
 import { Toaster } from "~/components/ui/sonner";
-import { WebSocketProvider, useWebSocket } from "~/lib/websocket";
+import { auth } from "~/lib/auth";
+import { WebSocketProvider } from "~/lib/websocket";
 import appCss from "~/styles/app.css?url";
 import { seo } from "~/utils/seo";
 
-const queryClient = new QueryClient();
+const getUser = createServerFn({ method: "GET" }).handler(async () => {
+  const { headers } = getWebRequest()!;
+  const session = await auth.api.getSession({ headers });
 
-function WebSocketStatus() {
-  const { isConnected } = useWebSocket();
-  
-  return (
-    <div className="flex items-center gap-2">
-      <div
-        className={`w-2 h-2 rounded-full ${
-          isConnected ? 'bg-green-500' : 'bg-red-500'
-        }`}
-        title={isConnected ? 'WebSocket Connected' : 'WebSocket Disconnected'}
-      />
-      <span className="text-sm text-muted-foreground">
-        {isConnected ? 'Connected' : 'Disconnected'}
-      </span>
-    </div>
-  );
-}
+  return session?.user || null;
+});
 
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient;
+  user: Awaited<ReturnType<typeof getUser>>;
 }>()({
+  beforeLoad: async ({ context }) => {
+    const user = await context.queryClient.fetchQuery({
+      queryKey: ["user"],
+      queryFn: ({ signal }) => getUser({ signal }),
+    });
+    return { user };
+  },
   component: () => (
     <>
       <ThemeProvider
@@ -65,8 +64,8 @@ export const Route = createRootRouteWithContext<{
       },
       ...seo({
         title:
-          "TanStack Start | Type-Safe, Client-First, Full-Stack React Framework",
-        description: `TanStack Start is a type-safe, client-first, full-stack React framework. `,
+          "usersdotfun | Type-Safe, Client-First, Full-Stack React Framework",
+        description: `usersdotfun is a type-safe, client-first, full-stack React framework. `,
       }),
     ],
     links: [
@@ -105,49 +104,16 @@ export const Route = createRootRouteWithContext<{
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
-    <QueryClientProvider client={queryClient}>
       <WebSocketProvider>
         <html>
           <head>
             <HeadContent />
           </head>
           <body>
-            <div className="p-2 flex justify-between items-center">
-              <div className="flex gap-2 text-lg">
-                <Link
-                  to="/"
-                  activeProps={{
-                    className: "font-bold",
-                  }}
-                  activeOptions={{ exact: true }}
-                >
-                  Home
-                </Link>{" "}
-                <Link
-                  to="/workflows"
-                  activeProps={{
-                    className: "font-bold",
-                  }}
-                >
-                  Jobs
-                </Link>{" "}
-                <Link
-                  to="/queues"
-                  activeProps={{
-                    className: "font-bold",
-                  }}
-                >
-                  Queues
-                </Link>{" "}
-              </div>
-              <WebSocketStatus />
-            </div>
-            <hr />
             {children}
             <Scripts />
           </body>
         </html>
       </WebSocketProvider>
-    </QueryClientProvider>
   );
 }

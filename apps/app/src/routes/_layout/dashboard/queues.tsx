@@ -19,74 +19,10 @@ const queuesSearchSchema = z.object({
   queueFilter: z.string().optional(),
 });
 
-export const Route = createFileRoute("/queues")({
+export const Route = createFileRoute("/_layout/dashboard/queues")({
   validateSearch: queuesSearchSchema,
   component: QueuesComponent,
 });
-
-function AuthPrompt({ error }: { error: Error }) {
-  const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate();
-
-  const handleAnonymousSignIn = async () => {
-    setIsLoading(true);
-    try {
-      await signIn.anonymous();
-    } catch (error) {
-      console.error("Anonymous sign in failed:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const isAuthError = error.message.includes("Authentication required");
-
-  if (!isAuthError) {
-    return (
-      <div className="text-center text-red-500 p-8">
-        Error loading queues: {error.message}
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col items-center justify-center p-8 space-y-4">
-      <div className="text-center">
-        <h2 className="text-xl font-semibold mb-2">Authentication Required</h2>
-        <p className="text-gray-600 mb-4">
-          To view queues, you need to sign in or continue as a guest.
-        </p>
-      </div>
-
-      <div className="space-y-3">
-        <Button
-          onClick={handleAnonymousSignIn}
-          disabled={isLoading}
-          className="w-full"
-        >
-          {isLoading ? "Signing in..." : "Continue as Guest"}
-        </Button>
-
-        <div className="text-center">
-          <span className="text-sm text-gray-500">or</span>
-        </div>
-
-        <Button
-          variant="outline"
-          onClick={() => navigate({ to: "/" })}
-          className="w-full"
-        >
-          Go to Sign In
-        </Button>
-      </div>
-
-      <p className="text-xs text-gray-500 text-center max-w-md">
-        As a guest, you can view queues but some features may be limited. Create
-        an account for full access.
-      </p>
-    </div>
-  );
-}
 
 function QueuesComponent() {
   const navigate = useNavigate({ from: "/queues" });

@@ -20,7 +20,7 @@ const jobsSearchSchema = z.object({
   statusFilter: z.string().optional(),
 });
 
-export const Route = createFileRoute("/workflows")({
+export const Route = createFileRoute("/_layout/dashboard/workflows")({
   validateSearch: jobsSearchSchema,
   component: JobsComponent,
 });
