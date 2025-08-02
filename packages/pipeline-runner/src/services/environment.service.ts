@@ -34,7 +34,6 @@ export const createEnvironmentService = (
       schema: JSONSchemaType<any>
     ): Effect.Effect<T, EnvironmentError> =>
       Effect.gen(function* () {
-        console.log("HYDRATING");
 
         // Check if config has a secrets property
         const configObj = config as any;

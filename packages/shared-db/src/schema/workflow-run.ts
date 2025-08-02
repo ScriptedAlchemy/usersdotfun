@@ -30,6 +30,7 @@ export const workflowRunRelations = relations(workflowRun, ({ one }) => ({
   triggeredBy: one(user, {
     fields: [workflowRun.triggeredBy],
     references: [user.id],
+    relationName: "triggeredBy",
   }),
 }));
 

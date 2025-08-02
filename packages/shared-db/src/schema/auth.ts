@@ -1,9 +1,12 @@
+import { relations } from "drizzle-orm";
 import {
   boolean,
   pgTable,
   text,
   timestamp
 } from "drizzle-orm/pg-core";
+import { workflow } from "./workflow";
+import { workflowRun } from "./workflow-run";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -25,6 +28,11 @@ export const user = pgTable("user", {
   banReason: text("ban_reason"),
   banExpires: timestamp("ban_expires"),
 });
+
+export const userRelations = relations(user, ({ many }) => ({
+  workflows: many(workflow, { relationName: "user" }),
+  workflowRuns: many(workflowRun, { relationName: "triggeredBy" }),
+}));
 
 export const session = pgTable("session", {
   id: text("id").primaryKey(),

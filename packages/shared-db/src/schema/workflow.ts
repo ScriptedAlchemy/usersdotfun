@@ -26,6 +26,7 @@ export const workflowRelations = relations(workflow, ({ many, one }) => ({
   user: one(user, {
     fields: [workflow.createdBy],
     references: [user.id],
+    relationName: "user",
   }),
   runs: many(workflowRun),
   items: many(sourceItem),
