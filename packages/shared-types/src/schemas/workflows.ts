@@ -69,6 +69,7 @@ export const createWorkflowSchema = baseWorkflowSchema.omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+  createdBy: true,
 });
 
 // For updating an existing workflow.

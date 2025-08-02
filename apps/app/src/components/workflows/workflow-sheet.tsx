@@ -1,7 +1,10 @@
 import { CommonSheet } from "~/components/common/common-sheet";
 import type { RichWorkflow } from "@usersdotfun/shared-types/types";
-import { WorkflowForm } from "./workflow-form";
 import { Workflow } from ".";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { useState, useEffect } from "react";
+import { useAtom } from "jotai";
+import { editableWorkflowAtom } from "~/atoms/workflow";
 
 interface WorkflowSheetProps {
   mode: "create" | "edit" | "view";
@@ -11,11 +14,24 @@ interface WorkflowSheetProps {
 }
 
 export function WorkflowSheet({
-  mode,
+  mode: initialMode,
   workflow,
   isOpen,
   onClose,
 }: WorkflowSheetProps) {
+  const [mode, setMode] = useState(initialMode);
+  const [, setEditableWorkflow] = useAtom(editableWorkflowAtom);
+
+  useEffect(() => {
+    setMode(initialMode);
+  }, [initialMode]);
+
+  useEffect(() => {
+    if (mode === "edit") {
+      setEditableWorkflow(workflow ?? null);
+    }
+  }, [mode, workflow, setEditableWorkflow]);
+
   const title =
     mode === "create"
       ? "Create New Workflow"
@@ -31,20 +47,29 @@ export function WorkflowSheet({
       : "Review the details of the workflow.";
 
   return (
+    
     <CommonSheet
       isOpen={isOpen}
       onClose={onClose}
       title={title}
       description={description}
     >
-      {/* We will conditionally render the view or form based on mode */}
-      {(mode === "create" || mode === "edit") && (
-        <WorkflowForm
-          workflow={mode === "edit" ? workflow : undefined}
-          onSuccess={onClose}
-        />
+      {initialMode === "create" ? (
+        <Workflow id={workflow?.id} mode="create" />
+      ) : (
+        <Tabs value={mode} onValueChange={(value) => setMode(value as "view" | "edit")} className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="view">View</TabsTrigger>
+            <TabsTrigger value="edit">Edit</TabsTrigger>
+          </TabsList>
+          <TabsContent value="view">
+            <Workflow id={workflow?.id} mode="view" />
+          </TabsContent>
+          <TabsContent value="edit">
+            <Workflow id={workflow?.id} mode="edit" />
+          </TabsContent>
+        </Tabs>
       )}
-      {mode === "view" && workflow && <Workflow id={workflow.id} />}
     </CommonSheet>
   );
 }
