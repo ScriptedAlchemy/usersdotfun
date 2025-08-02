@@ -65,12 +65,16 @@ export const workflowSchema = z.object({
 export const baseWorkflowSchema = workflowSchema.omit({ user: true });
 
 // For creating a new workflow (ID and timestamps are generated).
-export const createWorkflowSchema = baseWorkflowSchema.omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  createdBy: true,
-});
+export const createWorkflowSchema = baseWorkflowSchema
+  .omit({
+    id: true,
+    createdAt: true,
+    updatedAt: true,
+    createdBy: true,
+  })
+  .extend({
+    status: z.enum(workflowStatusValues).default("inactive"),
+  });
 
 // For updating an existing workflow.
 export const updateWorkflowSchema = createWorkflowSchema.partial();

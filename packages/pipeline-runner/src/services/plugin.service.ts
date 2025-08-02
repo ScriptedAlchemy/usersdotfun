@@ -7,12 +7,11 @@ import registryData from "../../../registry-builder/registry.json" with { type: 
 import {
   PluginError
 } from "../pipeline/errors";
-import type {
-  PipelinePlugin,
-} from "../pipeline/interfaces";
 import { SchemaValidator } from "../pipeline/validation";
 import { EnvironmentServiceTag } from "./environment.service";
 import { ModuleFederationTag } from "./mf.service";
+
+type PipelinePlugin = Plugin<z.ZodTypeAny, z.ZodTypeAny, z.ZodTypeAny>;
 
 export interface PluginService {
   readonly initializePlugin: <T extends Plugin<z.ZodTypeAny, z.ZodTypeAny, z.ZodTypeAny>>(
@@ -340,50 +339,50 @@ export const PluginServiceLive = Layer.effect(
       executePlugin: <TInputSchema extends z.ZodTypeAny,
         TOutputSchema extends z.ZodTypeAny,
         TConfigSchema extends z.ZodTypeAny>(
-        plugin: Plugin<TInputSchema, TOutputSchema, TConfigSchema>,
-        input: z.infer<TInputSchema>,
-        contextDescription: string
-      ): Effect.Effect<z.infer<TOutputSchema>, PluginError> => Effect.gen(function* () {
-        const pluginMetadata = yield* getPlugin(plugin.id);
+          plugin: Plugin<TInputSchema, TOutputSchema, TConfigSchema>,
+          input: z.infer<TInputSchema>,
+          contextDescription: string
+        ): Effect.Effect<z.infer<TOutputSchema>, PluginError> => Effect.gen(function* () {
+          const pluginMetadata = yield* getPlugin(plugin.id);
 
-        const validatedInput = yield* SchemaValidator.validate(
-          pluginMetadata.inputSchema,
-          input as Record<string, unknown>,
-          `${contextDescription} input`
-        ).pipe(
-          Effect.mapError((validationError) => new PluginError({
-            message: `Input validation failed: ${validationError.message}`,
-            pluginId: plugin.id,
-            operation: "validate",
-            cause: validationError,
-          }))
-        );
+          const validatedInput = yield* SchemaValidator.validate(
+            pluginMetadata.inputSchema,
+            input as Record<string, unknown>,
+            `${contextDescription} input`
+          ).pipe(
+            Effect.mapError((validationError) => new PluginError({
+              message: `Input validation failed: ${validationError.message}`,
+              pluginId: plugin.id,
+              operation: "validate",
+              cause: validationError,
+            }))
+          );
 
-        const output = yield* Effect.tryPromise({
-          try: () => plugin.execute(validatedInput as z.infer<TInputSchema>),
-          catch: (error) => new PluginError({
-            message: `Plugin execution failed: ${error instanceof Error ? error.message : String(error)}`,
-            pluginId: plugin.id,
-            operation: "execute",
-            cause: error instanceof Error ? error : new Error(String(error)),
-          }),
-        });
+          const output = yield* Effect.tryPromise({
+            try: () => plugin.execute(validatedInput as z.infer<TInputSchema>),
+            catch: (error) => new PluginError({
+              message: `Plugin execution failed: ${error instanceof Error ? error.message : String(error)}`,
+              pluginId: plugin.id,
+              operation: "execute",
+              cause: error instanceof Error ? error : new Error(String(error)),
+            }),
+          });
 
-        const validatedOutput = yield* SchemaValidator.validate(
-          pluginMetadata.outputSchema,
-          output as Record<string, unknown>,
-          `${contextDescription} output`
-        ).pipe(
-          Effect.mapError((validationError) => new PluginError({
-            message: `Output validation failed: ${validationError.message}`,
-            pluginId: plugin.id,
-            operation: "validate",
-            cause: validationError,
-          }))
-        );
+          const validatedOutput = yield* SchemaValidator.validate(
+            pluginMetadata.outputSchema,
+            output as Record<string, unknown>,
+            `${contextDescription} output`
+          ).pipe(
+            Effect.mapError((validationError) => new PluginError({
+              message: `Output validation failed: ${validationError.message}`,
+              pluginId: plugin.id,
+              operation: "validate",
+              cause: validationError,
+            }))
+          );
 
-        return validatedOutput as z.infer<TOutputSchema>;
-      }),
+          return validatedOutput as z.infer<TOutputSchema>;
+        }),
     };
   })
 );

@@ -77,20 +77,11 @@ function WorkflowFormWithAtom({ onSubmit }: { onSubmit: (data: any) => void }) {
 function JsonEditorWithAtom({ onSubmit }: { onSubmit: (data: any) => void }) {
   const [editableWorkflow, setEditableWorkflow] = useAtom(editableWorkflowAtom);
 
-  const editableData = editableWorkflow
-    ? editableWorkflowSchema.parse(editableWorkflow)
-    : {};
-
   return (
     <div>
       <JsonEditor
-        value={editableData}
-        onChange={(value) => {
-          setEditableWorkflow(
-            (prev) =>
-              ({ ...prev, ...value }) as z.infer<typeof richWorkflowSchema>
-          );
-        }}
+        value={editableWorkflow}
+        onChange={setEditableWorkflow}
         schema={editableWorkflowSchema}
       />
       <div className="flex justify-end mt-4">
