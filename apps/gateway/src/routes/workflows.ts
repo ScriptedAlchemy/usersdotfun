@@ -115,8 +115,23 @@ export const workflowsRouter = new Hono()
     const { id } = c.req.valid('param');
     const program = Effect.gen(function* () {
       const workflowService = yield* WorkflowService;
+      const queueService = yield* QueueService;
       const workflow = yield* workflowService.getWorkflowById(id);
       const newStatus = workflow.status === 'active' ? 'inactive' : 'active';
+
+      if (newStatus === 'inactive') {
+        yield* queueService.removeScheduledJob(QUEUE_NAMES.WORKFLOW_RUN, id);
+      } else {
+        if (workflow.schedule) {
+          yield* queueService.upsertScheduledJob(QUEUE_NAMES.WORKFLOW_RUN, id, {
+            pattern: workflow.schedule,
+          }, {
+            name: 'start-workflow-run',
+            data: { workflowId: id, triggeredBy: 'system' },
+          });
+        }
+      }
+
       const updatedWorkflow = yield* workflowService.updateWorkflow(id, { status: newStatus });
       return { success: true, data: updatedWorkflow };
     });

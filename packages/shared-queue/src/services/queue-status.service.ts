@@ -4,6 +4,7 @@ import { Context, Effect, Layer } from 'effect';
 import { RedisConfig } from './redis-config.service';
 
 export interface QueueStatusService {
+  readonly getQueuesStatus: () => Effect.Effect<QueueStatus[], Error>;
   readonly getQueueStatus: (queueName: QueueName) => Effect.Effect<QueueStatus, Error>;
   readonly getActiveJobs: (queueName: QueueName) => Effect.Effect<JobStatus[], Error>;
   readonly getWaitingJobs: (queueName: QueueName) => Effect.Effect<JobStatus[], Error>;
@@ -89,27 +90,32 @@ export const QueueStatusServiceLive = Layer.scoped(
       );
 
 
-    return {
-      getQueueStatus: (queueName) =>
-        Effect.flatMap(getQueue(queueName), (queue) =>
-          Effect.tryPromise({
-            try: async () => {
-              const counts = await queue.getJobCounts('active', 'waiting', 'completed', 'failed', 'delayed');
-              const isPaused = await queue.isPaused();
-              return {
-                name: queueName,
-                waiting: counts.waiting ?? 0,
-                active: counts.active ?? 0,
-                completed: counts.completed ?? 0,
-                failed: counts.failed ?? 0,
-                delayed: counts.delayed ?? 0,
-                paused: isPaused,
-              };
-            },
-            catch: (error) => new Error(`Failed to get queue status for ${queueName}: ${error}`),
-          })
-        ),
+    const getQueueStatus = (queueName: QueueName) =>
+      Effect.flatMap(getQueue(queueName), (queue) =>
+        Effect.tryPromise({
+          try: async () => {
+            const counts = await queue.getJobCounts('active', 'waiting', 'completed', 'failed', 'delayed');
+            const isPaused = await queue.isPaused();
+            return {
+              name: queueName,
+              waiting: counts.waiting ?? 0,
+              active: counts.active ?? 0,
+              completed: counts.completed ?? 0,
+              failed: counts.failed ?? 0,
+              delayed: counts.delayed ?? 0,
+              paused: isPaused,
+            };
+          },
+          catch: (error) => new Error(`Failed to get queue status for ${queueName}: ${error}`),
+        })
+      );
 
+    return {
+      getQueuesStatus: () =>
+        Effect.all(
+          Object.values(QUEUE_NAMES).map((name) => getQueueStatus(name as QueueName))
+        ),
+      getQueueStatus,
       getActiveJobs: (queueName) => getJobsByStatus(queueName, 'active'),
       getWaitingJobs: (queueName) => getJobsByStatus(queueName, 'waiting'),
       getCompletedJobs: (queueName, start, end) => getJobsByStatus(queueName, 'completed', start, end),

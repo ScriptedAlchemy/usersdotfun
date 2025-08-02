@@ -25,7 +25,7 @@ export async function handleResponse<T>(response: Response, schema: z.Schema<T>)
 
 // Helper function to extract data from API success response
 export function extractData<T>(apiResponse: { data?: T }): T {
-  if (!apiResponse.data) {
+  if (apiResponse.data === undefined) {
     throw new Error('API response missing data field');
   }
   return apiResponse.data;

@@ -12,9 +12,9 @@ const queryKeys = {
     detail: (runId: string) => ['runs', runId, 'details'] as const,
   },
   queues: {
-    status: () => ['queues', 'status'] as const,
+    all: () => ['queues'] as const,
     detail: (queueName: string) => ['queues', queueName] as const,
-    allJobs: () => ['queues', 'all-jobs'] as const,
+    jobs: (queueName?: string) => ['queues', queueName ?? 'all', 'jobs'] as const,
   },
 } as const;
 
@@ -52,7 +52,7 @@ export const useWorkflowItemsQuery = (workflowId: string) => useQuery({
 
 // --- Queue Queries ---
 export const useQueuesStatusQuery = () => useQuery({
-  queryKey: queryKeys.queues.status(),
+  queryKey: queryKeys.queues.all(),
   queryFn: api.getQueuesStatus,
 });
 
@@ -67,7 +67,7 @@ export const useAllQueueJobsQuery = (filters?: {
   queueName?: string;
   limit?: number;
 }) => useQuery({
-  queryKey: [...queryKeys.queues.allJobs(), filters] as const,
+  queryKey: queryKeys.queues.jobs(filters?.queueName),
   queryFn: () => api.getAllQueueJobs(filters),
 });
 
@@ -141,8 +141,8 @@ export const useRetryQueueJobMutation = () => {
   return useMutation({
     mutationFn: ({ queueName, jobId }: { queueName: string; jobId: string }) =>
       api.retryQueueJob(queueName, jobId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.queues.allJobs() });
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.queues.jobs(variables.queueName) });
     },
   });
 };
@@ -152,8 +152,9 @@ export const useRemoveQueueJobMutation = () => {
   return useMutation({
     mutationFn: ({ queueName, jobId }: { queueName: string; jobId: string }) =>
       api.removeQueueJob(queueName, jobId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.queues.allJobs() });
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.queues.jobs(variables.queueName) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.queues.all() });
     },
   });
 };
@@ -162,8 +163,9 @@ export const usePauseQueueMutation = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (queueName: string) => api.pauseQueue(queueName),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.queues.status() });
+    onSuccess: (_data, queueName) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.queues.all() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.queues.jobs(queueName) });
     },
   });
 };
@@ -172,8 +174,9 @@ export const useResumeQueueMutation = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (queueName: string) => api.resumeQueue(queueName),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.queues.status() });
+    onSuccess: (_data, queueName) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.queues.all() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.queues.jobs(queueName) });
     },
   });
 };
@@ -183,9 +186,9 @@ export const useClearQueueMutation = () => {
   return useMutation({
     mutationFn: ({ queueName, jobType }: { queueName: string; jobType?: 'all' | 'completed' | 'failed' }) =>
       api.clearQueue(queueName, jobType),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.queues.status() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.queues.allJobs() });
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.queues.all() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.queues.jobs(variables.queueName) });
     },
   });
 };

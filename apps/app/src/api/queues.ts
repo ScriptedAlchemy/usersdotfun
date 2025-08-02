@@ -12,7 +12,7 @@ import {
 import { API_BASE_URL, extractData, handleResponse } from "./utils";
 
 export const getQueuesStatus = async () => {
-  const res = await fetch(`${API_BASE_URL}/queues/status`);
+  const res = await fetch(`${API_BASE_URL}/queues`);
   const apiResponse = await handleResponse(res, GetQueuesStatusResponseSchema);
   return extractData(apiResponse);
 };

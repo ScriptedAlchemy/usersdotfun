@@ -79,12 +79,12 @@ export interface QueueService {
 
   readonly removeJob: (
     queueName: QueueName,
-    workflowId: string
+    jobId: string
   ) => Effect.Effect<{ removed: boolean; reason?: string }, Error>;
 
   readonly retryJob: (
     queueName: QueueName,
-    workflowId: string
+    jobId: string
   ) => Effect.Effect<{ retried: boolean; reason?: string }, Error>;
 
   readonly createWorker: <T extends JobData, E, R>(
@@ -294,15 +294,15 @@ export const QueueServiceLive = Layer.scoped(
           return { removed: totalRemoved };
         }),
 
-      removeJob: (queueName: QueueName, workflowId: string) =>
+      removeJob: (queueName: QueueName, jobId: string) =>
         Effect.gen(function* () {
           const queue = yield* getQueue(queueName);
 
           // Get the job first to check its state
           const job = yield* Effect.tryPromise({
-            try: () => queue.getJob(workflowId),
+            try: () => queue.getJob(jobId),
             catch: (error) =>
-              new Error(`Failed to get job ${workflowId}: ${error}`),
+              new Error(`Failed to get job ${jobId}: ${error}`),
           });
 
           if (!job) {
@@ -317,7 +317,7 @@ export const QueueServiceLive = Layer.scoped(
           });
 
           const isActive = activeJobs.some(
-            (activeJob) => activeJob.id === workflowId
+            (activeJob) => activeJob.id === jobId
           );
           if (isActive) {
             return { removed: false, reason: 'Cannot remove active job' };
@@ -327,21 +327,21 @@ export const QueueServiceLive = Layer.scoped(
           yield* Effect.tryPromise({
             try: () => job.remove(),
             catch: (error) =>
-              new Error(`Failed to remove job ${workflowId}: ${error}`),
+              new Error(`Failed to remove job ${jobId}: ${error}`),
           });
 
           return { removed: true };
         }),
 
-      retryJob: (queueName: QueueName, workflowId: string) =>
+      retryJob: (queueName: QueueName, jobId: string) =>
         Effect.gen(function* () {
           const queue = yield* getQueue(queueName);
 
           // Get the job first
           const job = yield* Effect.tryPromise({
-            try: () => queue.getJob(workflowId),
+            try: () => queue.getJob(jobId),
             catch: (error) =>
-              new Error(`Failed to get job ${workflowId}: ${error}`),
+              new Error(`Failed to get job ${jobId}: ${error}`),
           });
 
           if (!job) {
@@ -366,7 +366,7 @@ export const QueueServiceLive = Layer.scoped(
           yield* Effect.tryPromise({
             try: () => job.retry(),
             catch: (error) =>
-              new Error(`Failed to retry job ${workflowId}: ${error}`),
+              new Error(`Failed to retry job ${jobId}: ${error}`),
           });
 
           return { retried: true };

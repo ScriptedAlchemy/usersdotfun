@@ -234,7 +234,8 @@ function WorkflowsPage() {
         filterPlaceholder="Filter by name..."
         rowSelection={rowSelection}
         setRowSelection={setRowSelection}
-        onRowClick={(row) => openSheet("view", row)}
+        getRowId={(row) => row.id}
+        // onRowClick={(row) => openSheet("view", row)}
       />
 
       <WorkflowSheet

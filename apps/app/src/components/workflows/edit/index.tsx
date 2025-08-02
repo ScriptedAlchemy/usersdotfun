@@ -35,9 +35,9 @@ export function WorkflowEdit() {
   };
 
   const onSubmit = (data: EditableWorkflow) => {
-    if (workflow) {
+    if (workflow && 'id' in workflow) {
       updateMutation.mutate(
-        { id: workflow.id, workflow: data },
+        { id: workflow.id as string, workflow: data },
         { onSuccess: handleSuccess, onError: handleError }
       );
     } else {

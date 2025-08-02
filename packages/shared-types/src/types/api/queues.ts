@@ -9,7 +9,7 @@ import {
   GetQueuesStatusResponseSchema,
   PauseQueueRequestSchema,
   PauseQueueResponseSchema,
-  RemoveQueueJobRequestSchema,
+  DeleteJobRequestSchema,
   RemoveQueueJobResponseSchema,
   ResumeQueueRequestSchema,
   ResumeQueueResponseSchema,
@@ -22,7 +22,7 @@ import {
 export type GetQueueJobsRequest = z.infer<typeof GetQueueJobsRequestSchema>;
 export type GetAllQueueJobsRequest = z.infer<typeof GetAllQueueJobsRequestSchema>;
 export type RetryQueueJobRequest = z.infer<typeof RetryQueueJobRequestSchema>;
-export type RemoveQueueJobRequest = z.infer<typeof RemoveQueueJobRequestSchema>;
+export type DeleteJobRequest = z.infer<typeof DeleteJobRequestSchema>;
 export type PauseQueueRequest = z.infer<typeof PauseQueueRequestSchema>;
 export type ResumeQueueRequest = z.infer<typeof ResumeQueueRequestSchema>;
 export type ClearQueueRequest = z.infer<typeof ClearQueueRequestSchema>;
