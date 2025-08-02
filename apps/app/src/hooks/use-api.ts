@@ -104,6 +104,26 @@ export const useDeleteWorkflowMutation = () => {
   });
 };
 
+export const useToggleWorkflowStatusMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: api.toggleWorkflowStatus,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.workflows.all() });
+    },
+  });
+};
+
+export const useRunWorkflowNowMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: api.runWorkflowNow,
+    onSuccess: (_, workflowId) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.workflows.runs(workflowId) });
+    },
+  });
+};
+
 export const useRetryWorkflowMutation = () => {
   const queryClient = useQueryClient();
   return useMutation({

@@ -24,9 +24,9 @@ export const userSchema = z.object({
   email: z.string(),
   role: z.enum(Object.values(UserRole) as [UserRole, ...UserRole[]]),
   isAnonymous: z.boolean().optional(),
-  banned: z.boolean().optional(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
+  banned: z.boolean().nullable().optional(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
 });
 
 export const authenticatedContextSchema = z.object({
@@ -34,7 +34,7 @@ export const authenticatedContextSchema = z.object({
   session: z.object({
     id: z.string(),
     userId: z.string(),
-    expiresAt: z.date(),
+    expiresAt: z.coerce.date(),
     token: z.string(),
   }),
 });

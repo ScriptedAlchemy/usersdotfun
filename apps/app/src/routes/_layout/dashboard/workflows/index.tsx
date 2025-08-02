@@ -1,13 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useWorkflowsQuery } from "~/hooks/use-api";
+import { useWorkflowsQuery, useToggleWorkflowStatusMutation, useRunWorkflowNowMutation } from "~/hooks/use-api";
 import { DataTable } from "~/components/common/data-table";
 import { Button } from "~/components/ui/button";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, Play, Power } from "lucide-react";
 import { useState } from "react";
 import { WorkflowSheet } from "~/components/workflows/workflow-sheet";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { RichWorkflow } from "@usersdotfun/shared-types/types";
 import { Badge } from "~/components/ui/badge";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_layout/dashboard/workflows/")({
   component: WorkflowsPage,
@@ -52,11 +53,54 @@ const columns: ColumnDef<RichWorkflow>[] = [
     header: "Created At",
     cell: ({ row }) => new Date(row.original.createdAt).toLocaleDateString(),
   },
+  {
+    id: "actions",
+    cell: function Cell({ row }) {
+      const workflow = row.original;
+      const toggleMutation = useToggleWorkflowStatusMutation();
+      const runMutation = useRunWorkflowNowMutation();
+
+      return (
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              toast.promise(toggleMutation.mutateAsync(workflow.id), {
+                loading: "Toggling status...",
+                success: "Status toggled successfully!",
+                error: "Failed to toggle status.",
+              });
+            }}
+          >
+            <Power className="mr-2 h-4 w-4" />
+            Toggle
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              toast.promise(runMutation.mutateAsync(workflow.id), {
+                loading: "Triggering workflow...",
+                success: "Workflow triggered successfully!",
+                error: "Failed to trigger workflow.",
+              });
+            }}
+          >
+            <Play className="mr-2 h-4 w-4" />
+            Run Now
+          </Button>
+        </div>
+      );
+    },
+  },
 ];
 
 function WorkflowsPage() {
   const { data: workflows, isLoading } = useWorkflowsQuery();
   const [isSheetOpen, setSheetOpen] = useState(false);
+
+  console.log("workflows", workflows);
 
   return (
     <div className="container mx-auto p-4 sm:p-6 lg:p-8">
@@ -74,7 +118,7 @@ function WorkflowsPage() {
       </div>
 
       <DataTable
-        columns={columns}
+        columns={columns as ColumnDef<any>[]}
         data={workflows || []}
         isLoading={isLoading}
         filterColumnId="name"

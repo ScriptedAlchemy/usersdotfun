@@ -9,7 +9,7 @@ export const ApiResponseBaseSchema = z.object({
   message: z.string().optional(),
   code: z.string().optional(),
   timestamp: z
-    .string()
+    .iso
     .datetime()
     .default(() => new Date().toISOString()),
 });

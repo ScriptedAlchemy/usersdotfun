@@ -5,6 +5,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "~/components/ui/sheet";
+import { cn } from "~/lib/utils";
 
 interface CommonSheetProps {
   isOpen: boolean;
@@ -23,30 +24,35 @@ export function CommonSheet({
   title,
   description,
   children,
-  className = "sm:max-w-[600px] overflow-y-auto",
+  className,
   isLoading = false,
   loadingText = "Loading details...",
 }: CommonSheetProps) {
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent side="right" className={className}>
+      <SheetContent
+        side="right"
+        className={cn(
+          "sm:max-w-[600px] overflow-y-auto p-4 md:p-6",
+          className,
+        )}
+      >
         {isLoading ? (
-          <div className="flex items-center justify-center h-32">
+          <div className="flex items-center justify-center h-full">
             <div className="animate-pulse">{loadingText}</div>
           </div>
         ) : (
-          <>
-            <SheetHeader>
+          <div className="flex flex-col h-full">
+            <SheetHeader className="mb-4">
               <SheetTitle>{title}</SheetTitle>
               {description && (
                 <SheetDescription>{description}</SheetDescription>
               )}
             </SheetHeader>
-            
-            <div className="space-y-6 py-4">
+            <div className="flex-grow overflow-y-auto space-y-6">
               {children}
             </div>
-          </>
+          </div>
         )}
       </SheetContent>
     </Sheet>

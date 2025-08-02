@@ -17,6 +17,9 @@ import {
   GetWorkflowsResponseSchema,
   RetryFromStepRequestSchema,
   RetryFromStepResponseSchema,
+  RunWorkflowRequestSchema,
+  RunWorkflowResponseSchema,
+  ToggleWorkflowRequestSchema,
   UpdateWorkflowRequestSchema,
   UpdateWorkflowResponseSchema
 } from '@usersdotfun/shared-types/schemas';
@@ -49,7 +52,19 @@ export const workflowsRouter = new Hono()
 
     const program: Effect.Effect<any, Error, AppContext> = Effect.gen(function* () {
       const workflowService = yield* WorkflowService;
-      const newWorkflow = yield* workflowService.createWorkflow({ ...body, createdBy: user!.id });
+      const queueService = yield* QueueService;
+
+      const newWorkflow = yield* workflowService.createWorkflow({
+        ...body,
+        createdBy: user!.id,
+        schedule: body.schedule ?? null, // Ensure schedule is not undefined
+      });
+
+      yield* queueService.add(QUEUE_NAMES.WORKFLOW_RUN, 'start-workflow-run', {
+        workflowId: newWorkflow.id,
+        triggeredBy: user!.id,
+      });
+
       return { success: true, data: newWorkflow };
     });
 
@@ -91,6 +106,42 @@ export const workflowsRouter = new Hono()
     try {
       const result = await AppRuntime.runPromise(program);
       return c.json(UpdateWorkflowResponseSchema.parse(result));
+    } catch (err) {
+      return honoErrorHandler(c, err);
+    }
+  })
+
+  .post('/:id/toggle', zValidator('param', ToggleWorkflowRequestSchema.shape.params), requireAdmin, async (c) => {
+    const { id } = c.req.valid('param');
+    const program = Effect.gen(function* () {
+      const workflowService = yield* WorkflowService;
+      const workflow = yield* workflowService.getWorkflowById(id);
+      const newStatus = workflow.status === 'active' ? 'inactive' : 'active';
+      const updatedWorkflow = yield* workflowService.updateWorkflow(id, { status: newStatus });
+      return { success: true, data: updatedWorkflow };
+    });
+    try {
+      const result = await AppRuntime.runPromise(program);
+      return c.json(UpdateWorkflowResponseSchema.parse(result));
+    } catch (err) {
+      return honoErrorHandler(c, err);
+    }
+  })
+
+  .post('/:id/run', zValidator('param', RunWorkflowRequestSchema.shape.params), requireAdmin, async (c) => {
+    const { id } = c.req.valid('param');
+    const user = c.get('user');
+    const program = Effect.gen(function* () {
+      const queueService = yield* QueueService;
+      yield* queueService.add(QUEUE_NAMES.WORKFLOW_RUN, 'start-workflow-run', {
+        workflowId: id,
+        triggeredBy: user!.id,
+      });
+      return { success: true, data: { message: `Workflow ${id} has been queued to run.` } };
+    });
+    try {
+      const result = await AppRuntime.runPromise(program);
+      return c.json(result);
     } catch (err) {
       return honoErrorHandler(c, err);
     }

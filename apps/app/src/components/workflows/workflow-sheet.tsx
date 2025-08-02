@@ -36,7 +36,6 @@ export function WorkflowSheet({
       onClose={onClose}
       title={title}
       description={description}
-      className="sm:max-w-2xl"
     >
       {/* We will conditionally render the view or form based on mode */}
       {(mode === "create" || mode === "edit") && (

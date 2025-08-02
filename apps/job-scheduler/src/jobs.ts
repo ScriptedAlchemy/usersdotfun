@@ -1,55 +1,55 @@
 import type { Workflow } from "@usersdotfun/shared-types/types";
 
-export const jobs: Workflow[] = [
-  {
-    "name": "open_crosspost",
-    "source": {
-      "plugin": "@curatedotfun/masa-source",
-      "config": { "apiKey": "{{MASA_API_KEY}}" },
-      "search": "@open_crosspost #feature"
-    },
-    "pipeline": {
-      "id": "test-pipeline",
-      "name": "Simple Transform Pipeline",
-      "env": {
-        "secrets": [
-          "MASA_API_KEY"
-        ]
-      },
-      "steps": [
-        {
-          "config": {
-            "variables": {
-              "template": "hello {{content}}"
-            }
-          },
-          "stepId": "transform-1",
-          "pluginId": "@curatedotfun/simple-transform"
-        },
-        {
-          "config": {
-            "variables": {
-              "mappings": {
-                "content": "goodbye {{content}}"
-              }
-            }
-          },
-          "stepId": "transform-2",
-          "pluginId": "@curatedotfun/object-transform"
-        },
-        {
-          "config": {
-            "variables": {
-              "template": "hello {{content}}"
-            }
-          },
-          "stepId": "transform-3",
-          "pluginId": "@curatedotfun/simple-transform"
-        }
-      ]
-    }
-  }
-];
+// export const jobs: Workflow[] = [
+//   {
+//     "name": "open_crosspost",
+//     "source": {
+//       "plugin": "@curatedotfun/masa-source",
+//       "config": { "apiKey": "{{MASA_API_KEY}}" },
+//       "search": "@open_crosspost #feature"
+//     },
+//     "pipeline": {
+//       "id": "test-pipeline",
+//       "name": "Simple Transform Pipeline",
+//       "env": {
+//         "secrets": [
+//           "MASA_API_KEY"
+//         ]
+//       },
+//       "steps": [
+//         {
+//           "config": {
+//             "variables": {
+//               "template": "hello {{content}}"
+//             }
+//           },
+//           "stepId": "transform-1",
+//           "pluginId": "@curatedotfun/simple-transform"
+//         },
+//         {
+//           "config": {
+//             "variables": {
+//               "mappings": {
+//                 "content": "goodbye {{content}}"
+//               }
+//             }
+//           },
+//           "stepId": "transform-2",
+//           "pluginId": "@curatedotfun/object-transform"
+//         },
+//         {
+//           "config": {
+//             "variables": {
+//               "template": "hello {{content}}"
+//             }
+//           },
+//           "stepId": "transform-3",
+//           "pluginId": "@curatedotfun/simple-transform"
+//         }
+//       ]
+//     }
+//   }
+// ];
 
 
 

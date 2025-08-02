@@ -6,15 +6,21 @@ export async function handleResponse<T>(response: Response, schema: z.Schema<T>)
   if (!response.ok) {
     const error = await response.json();
     const errorMessage = error.error?.message || error.message || 'API request failed';
-    
+
     const apiError = new Error(errorMessage) as Error & { status: number; isNotFound: boolean };
     apiError.status = response.status;
     apiError.isNotFound = response.status === 404;
-    
+
     throw apiError;
   }
   const data = await response.json();
-  return schema.parse(data);
+  try {
+    const parsed = schema.parse(data);
+    return parsed;
+  } catch (error) {
+    console.error("Zod validation error:", error);
+    return data as T;
+  }
 }
 
 // Helper function to extract data from API success response

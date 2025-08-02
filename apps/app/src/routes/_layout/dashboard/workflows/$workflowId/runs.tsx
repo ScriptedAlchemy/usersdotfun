@@ -4,10 +4,27 @@ import { DataTable } from "~/components/common/data-table";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { WorkflowRun } from "@usersdotfun/shared-types/types";
 import { Badge } from "~/components/ui/badge";
+import { workflowRunStatusValues } from "@usersdotfun/shared-types/schemas";
+import type { VariantProps } from "class-variance-authority";
+import { cn } from "~/lib/utils";
 
-export const Route = createFileRoute("/_layout/dashboard/workflows/$workflowId/runs")({
+export const Route = createFileRoute(
+  "/_layout/dashboard/workflows/$workflowId/runs",
+)({
   component: WorkflowRunsPage,
 });
+
+const statusColors: Record<
+  (typeof workflowRunStatusValues)[number],
+  VariantProps<typeof Badge>["variant"]
+> = {
+  started: "default",
+  running: "secondary",
+  completed: "success",
+  failed: "destructive",
+  partially_completed: "warning",
+  polling: "outline",
+};
 
 const columns: ColumnDef<WorkflowRun>[] = [
   {
@@ -15,10 +32,12 @@ const columns: ColumnDef<WorkflowRun>[] = [
     header: "Run ID",
     cell: ({ row }) => {
       const run = row.original;
-      const { workflowId } = useParams({ from: "/_layout/dashboard/workflows/$workflowId/runs" });
+      const { workflowId } = useParams({
+        from: "/_layout/dashboard/workflows/$workflowId/runs",
+      });
       return (
         <Link
-          to="/_layout/dashboard/workflows/$workflowId/runs/$runId"
+          to="/dashboard/workflows/$workflowId/runs/$runId"
           params={{ workflowId, runId: run.id }}
           className="font-mono text-sm text-primary hover:underline"
         >
@@ -32,8 +51,7 @@ const columns: ColumnDef<WorkflowRun>[] = [
     header: "Status",
     cell: ({ row }) => {
       const status = row.original.status;
-      // TODO: Add color coding for status
-      return <Badge variant="outline">{status}</Badge>;
+      return <Badge variant={statusColors[status]}>{status}</Badge>;
     },
   },
   {

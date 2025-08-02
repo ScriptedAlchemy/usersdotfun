@@ -12,8 +12,8 @@ export const workflowRunSchema = z.object({
   triggeredBy: userSchema.nullable(),
   itemsProcessed: z.number().int(),
   itemsTotal: z.number().int(),
-  startedAt: z.date(),
-  completedAt: z.date().nullable(),
+  startedAt: z.coerce.date(),
+  completedAt: z.coerce.date().nullable(),
 });
 
 // Base workflow run schema without user for create/update operations
@@ -26,8 +26,8 @@ export const sourceItemSchema = z.object({
   id: z.string(),
   workflowId: z.string(),
   data: z.any(),
-  processedAt: z.date().nullable(),
-  createdAt: z.date(),
+  processedAt: z.coerce.date().nullable(),
+  createdAt: z.coerce.date(),
 });
 
 // A historical record of a single plugin execution.
@@ -41,8 +41,8 @@ export const pluginRunSchema = z.object({
   input: z.any().nullable(),
   output: z.any().nullable(),
   error: z.any().nullable(),
-  startedAt: z.date().nullable(),
-  completedAt: z.date().nullable(),
+  startedAt: z.coerce.date().nullable(),
+  completedAt: z.coerce.date().nullable(),
 });
 
 // The real-time summary object that lives in Redis.
@@ -55,7 +55,7 @@ export const workflowRunInfoSchema = workflowRunSchema.extend({
 export const workflowErrorSchema = z.object({
   workflowId: z.string(),
   error: z.string(),
-  timestamp: z.date(),
+  timestamp: z.coerce.date(),
   bullmqJobId: z.string().optional(),
   attemptsMade: z.number(),
 });

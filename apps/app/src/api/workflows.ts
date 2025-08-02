@@ -15,6 +15,7 @@ import { API_BASE_URL, extractData, handleResponse } from "./utils";
 export const getWorkflows = async () => {
   const res = await fetch(`${API_BASE_URL}/workflows`);
   const apiResponse = await handleResponse(res, GetWorkflowsResponseSchema);
+  console.log("apiResponse", apiResponse);
   return extractData(apiResponse);
 };
 
@@ -52,6 +53,22 @@ export const deleteWorkflow = async (id: string): Promise<void> => {
     const error = await res.json();
     throw new Error(error.error?.message || error.message || 'Failed to delete workflow');
   }
+};
+
+export const toggleWorkflowStatus = async (id: string) => {
+  const res = await fetch(`${API_BASE_URL}/workflows/${id}/toggle`, {
+    method: 'POST',
+  });
+  const apiResponse = await handleResponse(res, UpdateWorkflowResponseSchema);
+  return extractData(apiResponse);
+};
+
+export const runWorkflowNow = async (id: string) => {
+  const res = await fetch(`${API_BASE_URL}/workflows/${id}/run`, {
+    method: 'POST',
+  });
+  const apiResponse = await handleResponse(res, UpdateWorkflowResponseSchema);
+  return extractData(apiResponse);
 };
 
 export const getWorkflowItems = async (id: string) => {

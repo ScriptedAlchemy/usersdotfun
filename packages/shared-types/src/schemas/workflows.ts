@@ -38,20 +38,26 @@ export const workflowSchema = z.object({
   id: z.string(),
   name: z.string(),
   status: z.enum(workflowStatusValues),
-  schedule: z.string().refine((val) => {
-    try {
-      CronExpressionParser.parse(val);
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }, { message: "Invalid cron expression" }
-  ).nullable(),
+  schedule: z
+    .string()
+    .refine(
+      (val) => {
+        try {
+          CronExpressionParser.parse(val);
+          return true;
+        } catch (e) {
+          return false;
+        }
+      },
+      { message: "Invalid cron expression" },
+    )
+    .optional()
+    .nullable(),
   source: sourceSchema,
   pipeline: pipelineSchema,
   createdBy: z.string(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
   user: userSchema,
 });
 
