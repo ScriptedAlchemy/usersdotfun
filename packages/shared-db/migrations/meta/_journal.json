@@ -5,22 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1753667148597,
-      "tag": "0000_robust_wasp",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1753725055063,
-      "tag": "0001_handy_skaar",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1753790276100,
-      "tag": "0002_low_whistler",
+      "when": 1754098923194,
+      "tag": "0000_shallow_patch",
       "breakpoints": true
     }
   ]

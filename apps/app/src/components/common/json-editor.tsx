@@ -4,17 +4,17 @@ import { Textarea } from "~/components/ui/textarea";
 import { Label } from "~/components/ui/label";
 import { Alert, AlertDescription } from "~/components/ui/alert";
 import { CheckCircle, XCircle, Copy, Eye, Edit } from "lucide-react";
-import type { CreateWorkflow } from "@usersdotfun/shared-types/types";
-import { createWorkflowSchema } from "@usersdotfun/shared-types/schemas";
+import { z } from "zod";
 
-interface JsonEditorProps {
-  value: CreateWorkflow | null;
-  onChange: (value: CreateWorkflow | null) => void;
+interface JsonEditorProps<T> {
+  value: T | null;
+  onChange: (value: T | null) => void;
+  schema: z.ZodType<T>;
   readOnly?: boolean;
   className?: string;
 }
 
-export function JsonEditor({ value, onChange, readOnly = false, className }: JsonEditorProps) {
+export function JsonEditor<T>({ value, onChange, schema, readOnly = false, className }: JsonEditorProps<T>) {
   const [jsonString, setJsonString] = useState("");
   const [isValid, setIsValid] = useState(true);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -49,7 +49,7 @@ export function JsonEditor({ value, onChange, readOnly = false, className }: Jso
 
     try {
       const parsed = JSON.parse(jsonStr);
-      const result = createWorkflowSchema.safeParse(parsed);
+      const result = schema.safeParse(parsed);
       
       if (result.success) {
         setIsValid(true);

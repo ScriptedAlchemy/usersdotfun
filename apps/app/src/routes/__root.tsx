@@ -1,16 +1,14 @@
 /// <reference types="vite/client" />
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 import {
   HeadContent,
   Outlet,
   Scripts,
   createRootRouteWithContext,
-  useRouteContext
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { createServerFn } from "@tanstack/react-start";
 import { getWebRequest } from "@tanstack/react-start/server";
-import { Router } from "lucide-react";
 import { ThemeProvider } from "next-themes";
 import * as React from "react";
 import { DefaultCatchBoundary } from "~/components/default-catch-boundary";
@@ -23,9 +21,12 @@ import { seo } from "~/utils/seo";
 
 const getUser = createServerFn({ method: "GET" }).handler(async () => {
   const { headers } = getWebRequest()!;
-  const session = await auth.api.getSession({ headers });
-
-  return session?.user || null;
+  try {
+    const session = await auth.api.getSession({ headers });
+    return session?.user || null;
+  } catch (e) {
+    return null;
+  }
 });
 
 export const Route = createRootRouteWithContext<{
@@ -104,16 +105,16 @@ export const Route = createRootRouteWithContext<{
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
-      <WebSocketProvider>
-        <html>
-          <head>
-            <HeadContent />
-          </head>
-          <body>
-            {children}
-            <Scripts />
-          </body>
-        </html>
-      </WebSocketProvider>
+    <WebSocketProvider>
+      <html>
+        <head>
+          <HeadContent />
+        </head>
+        <body>
+          {children}
+          <Scripts />
+        </body>
+      </html>
+    </WebSocketProvider>
   );
 }

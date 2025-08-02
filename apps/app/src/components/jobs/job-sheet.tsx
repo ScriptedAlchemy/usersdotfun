@@ -32,7 +32,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Textarea } from "~/components/ui/textarea";
 import { queryKeys } from "~/lib/query-keys";
-import { JsonEditor } from "./json-editor";
+import { JsonEditor } from "../common/json-editor";
 
 // Form schema that matches the current form structure
 // TODO: grab from shared-types
@@ -119,7 +119,7 @@ export function JobSheet({ job, children, open, onOpenChange }: JobSheetProps) {
         name: job.name,
         schedule: job.schedule || undefined, // Convert null to undefined
         source: {
-          plugin: job.sourcePlugin,
+          pluginId: job.sourcePlugin,
           config: job.sourceConfig,
           search: job.sourceSearch,
         },
@@ -175,9 +175,9 @@ export function JobSheet({ job, children, open, onOpenChange }: JobSheetProps) {
     try {
       return {
         name: formData.name,
-        schedule: formData.schedule || undefined,
+        schedule: formData.schedule || null,
         source: {
-          plugin: formData.sourcePlugin,
+          pluginId: formData.sourcePlugin,
           config: JSON.parse(formData.sourceConfig),
           search: JSON.parse(formData.sourceSearch),
         },
