@@ -1,4 +1,5 @@
 import { createInstance, getInstance } from "@module-federation/enhanced/runtime";
+import { setGlobalFederationInstance } from "@module-federation/runtime-core";
 import { Context, Effect, Layer } from "effect";
 
 type ModuleFederation = ReturnType<typeof createInstance>;
@@ -13,14 +14,17 @@ const createModuleFederationInstance = Effect.cached(
   Effect.sync(() => {
     try {
       let instance = getInstance();
-      
+
       if (!instance) {
         instance = createInstance({
           name: "host",
           remotes: [],
         });
+
+        // ensure the runtime can locate this instance globally
+        setGlobalFederationInstance(instance);
       }
-      
+
       return instance;
     } catch (error) {
       throw new Error(`Failed to initialize Module Federation: ${error}`);
