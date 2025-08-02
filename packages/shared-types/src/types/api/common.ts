@@ -16,17 +16,9 @@ import {
 // ============================================================================
 
 export type ApiResponseBase = z.infer<typeof ApiResponseBaseSchema>;
+export type ApiSuccessResponse = z.infer<typeof ApiSuccessResponseSchema>;
 export type ApiErrorResponse = z.infer<typeof ApiErrorResponseSchema>;
 export type SimpleMessageData = z.infer<typeof SimpleMessageDataSchema>;
-
-// ============================================================================
-// GENERIC API SUCCESS RESPONSE TYPE
-// ============================================================================
-
-export type ApiSuccessResponse<T> = Omit<ApiResponseBase, "message"> & {
-  success: true;
-  data?: T;
-};
 
 // ============================================================================
 // COMMON QUERY TYPES

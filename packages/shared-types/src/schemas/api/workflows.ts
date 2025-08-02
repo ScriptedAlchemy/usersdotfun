@@ -1,14 +1,17 @@
 import { z } from "zod";
 import {
+  baseWorkflowSchema,
   createWorkflowSchema,
+  richWorkflowSchema,
+  updateWorkflowSchema,
+  workflowSchema
+} from "../workflows";
+
+import {
   pluginRunSchema,
   sourceItemSchema,
-  updateWorkflowSchema,
   workflowRunSchema,
-  workflowSchema,
-  richWorkflowSchema,
-  baseWorkflowSchema
-} from "../workflows";
+} from "../runs";
 import {
   ApiErrorResponseSchema,
   ApiSuccessResponseSchema,

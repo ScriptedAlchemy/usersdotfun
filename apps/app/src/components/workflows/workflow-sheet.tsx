@@ -1,7 +1,7 @@
 import { CommonSheet } from "~/components/common/common-sheet";
 import type { RichWorkflow } from "@usersdotfun/shared-types/types";
 import { WorkflowForm } from "./workflow-form";
-// import { WorkflowView } from "./workflow-view"; // This will be created later
+import { WorkflowView } from "./workflow-view";
 
 interface WorkflowSheetProps {
   mode: "create" | "edit" | "view";
@@ -45,7 +45,7 @@ export function WorkflowSheet({
           onSuccess={onClose}
         />
       )}
-      {/* {mode === 'view' && workflow && <WorkflowView workflow={workflow} />} */}
+      {mode === 'view' && workflow && <WorkflowView workflow={workflow} />}
     </CommonSheet>
   );
 }

@@ -1,11 +1,8 @@
 import {
   CreateWorkflowResponseSchema,
-  GetRunDetailsResponseSchema,
   GetWorkflowItemsResponseSchema,
   GetWorkflowResponseSchema,
-  GetWorkflowRunsResponseSchema,
   GetWorkflowsResponseSchema,
-  RetryFromStepResponseSchema,
   UpdateWorkflowResponseSchema
 } from '@usersdotfun/shared-types/schemas';
 
@@ -57,31 +54,9 @@ export const deleteWorkflow = async (id: string): Promise<void> => {
   }
 };
 
-export const getWorkflowRuns = async (id: string) => {
-  const res = await fetch(`${API_BASE_URL}/workflows/${id}/runs`);
-  const apiResponse = await handleResponse(res, GetWorkflowRunsResponseSchema);
-  return extractData(apiResponse);
-};
-
 export const getWorkflowItems = async (id: string) => {
   const res = await fetch(`${API_BASE_URL}/workflows/${id}/items`);
   const apiResponse = await handleResponse(res, GetWorkflowItemsResponseSchema);
-  return extractData(apiResponse);
-};
-
-export const getRunDetails = async (runId: string) => {
-  const res = await fetch(`${API_BASE_URL}/workflows/runs/${runId}/details`);
-  const apiResponse = await handleResponse(res, GetRunDetailsResponseSchema);
-  return extractData(apiResponse);
-};
-
-export const retryFromStep = async (runId: string, itemId: string, fromStepId: string) => {
-  const res = await fetch(`${API_BASE_URL}/workflows/runs/${runId}/items/${itemId}/retry`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ fromStepId }),
-  });
-  const apiResponse = await handleResponse(res, RetryFromStepResponseSchema);
   return extractData(apiResponse);
 };
 

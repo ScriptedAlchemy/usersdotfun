@@ -5,7 +5,7 @@ import { z } from "zod";
 // ============================================================================
 
 export const ApiResponseBaseSchema = z.object({
-  statusCode: z.number().int().min(100).max(599),
+  statusCode: z.number().int().min(100).max(599).default(200),
   message: z.string().optional(),
   code: z.string().optional(),
   timestamp: z

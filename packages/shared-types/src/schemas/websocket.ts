@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { pluginRunSchema, workflowRunInfoSchema } from './workflows';
 import { queueStatusSchema } from './queues';
+import { pluginRunSchema, workflowRunInfoSchema } from './runs';
 
 export const webSocketEventSchema = z.discriminatedUnion('type', [
   z.object({

@@ -1,10 +1,10 @@
 import { z } from "zod";
 import {
   webSocketCommandSchema,
-  webSocketServerEventSchema,
   webSocketConnectionEventSchema,
-  webSocketServerMessageSchema,
   webSocketHealthResponseSchema,
+  webSocketServerEventSchema,
+  webSocketServerMessageSchema,
 } from '../../schemas/api/websocket';
 
 // ============================================================================

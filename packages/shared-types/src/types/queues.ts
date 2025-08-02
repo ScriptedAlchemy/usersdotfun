@@ -6,8 +6,8 @@ import {
   jobTypeEnum,
   queueStatusEnum,
   queueStatusSchema,
-  startWorkflowRunJobDataSchema,
-  sourceQueryJobDataSchema
+  sourceQueryJobDataSchema,
+  startWorkflowRunJobDataSchema
 } from '../schemas/queues';
 
 // Enums
