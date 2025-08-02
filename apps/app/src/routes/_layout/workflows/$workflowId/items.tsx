@@ -5,7 +5,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import type { SourceItem } from "@usersdotfun/shared-types/types";
 import { Badge } from "~/components/ui/badge";
 
-export const Route = createFileRoute("/_layout/dashboard/workflows/$workflowId/items")({
+export const Route = createFileRoute("/_layout/workflows/$workflowId/items")({
   component: WorkflowItemsPage,
 });
 
@@ -15,10 +15,10 @@ const columns: ColumnDef<SourceItem>[] = [
     header: "Item ID",
     cell: ({ row }) => {
       const item = row.original;
-      const { workflowId } = useParams({ from: "/_layout/dashboard/workflows/$workflowId/items" });
+      const { workflowId } = useParams({ from: "/_layout/workflows/$workflowId/items" });
       return (
         <Link
-          to="/_layout/dashboard/workflows/$workflowId/items/$itemId"
+          to="/_layout/workflows/$workflowId/items/$itemId"
           params={{ workflowId, itemId: item.id }}
           className="font-mono text-sm text-primary hover:underline"
         >
@@ -54,7 +54,7 @@ const columns: ColumnDef<SourceItem>[] = [
 ];
 
 function WorkflowItemsPage() {
-  const { workflowId } = useParams({ from: "/_layout/dashboard/workflows/$workflowId/items" });
+  const { workflowId } = useParams({ from: "/_layout/workflows/$workflowId/items" });
   const { data: items, isLoading } = useWorkflowItemsQuery(workflowId);
 
   return (

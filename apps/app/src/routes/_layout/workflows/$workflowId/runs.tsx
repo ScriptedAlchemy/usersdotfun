@@ -9,7 +9,7 @@ import type { VariantProps } from "class-variance-authority";
 import { cn } from "~/lib/utils";
 
 export const Route = createFileRoute(
-  "/_layout/dashboard/workflows/$workflowId/runs",
+  "/_layout/workflows/$workflowId/runs",
 )({
   component: WorkflowRunsPage,
 });
@@ -33,11 +33,11 @@ const columns: ColumnDef<WorkflowRun>[] = [
     cell: ({ row }) => {
       const run = row.original;
       const { workflowId } = useParams({
-        from: "/_layout/dashboard/workflows/$workflowId/runs",
+        from: "/_layout/workflows/$workflowId/runs",
       });
       return (
         <Link
-          to="/dashboard/workflows/$workflowId/runs/$runId"
+          to="/workflows/$workflowId/runs/$runId"
           params={{ workflowId, runId: run.id }}
           className="font-mono text-sm text-primary hover:underline"
         >
@@ -70,7 +70,7 @@ const columns: ColumnDef<WorkflowRun>[] = [
 ];
 
 function WorkflowRunsPage() {
-  const { workflowId } = useParams({ from: "/_layout/dashboard/workflows/$workflowId/runs" });
+  const { workflowId } = useParams({ from: "/_layout/workflows/$workflowId/runs" });
   const { data: runs, isLoading } = useWorkflowRunsQuery(workflowId);
 
   return (

@@ -2,18 +2,18 @@ import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router"
 import { useWorkflowQuery } from "~/hooks/use-api";
 import { WorkflowSheet } from "~/components/workflows/workflow-sheet";
 
-export const Route = createFileRoute("/_layout/dashboard/workflows/$workflowId/edit")({
+export const Route = createFileRoute("/_layout/workflows/$workflowId/edit")({
   component: EditWorkflowPage,
 });
 
 function EditWorkflowPage() {
   const navigate = useNavigate({ from: Route.fullPath });
-  const { workflowId } = useParams({ from: "/_layout/dashboard/workflows/$workflowId/edit" });
+  const { workflowId } = useParams({ from: "/_layout/workflows/$workflowId/edit" });
   const { data: workflow, isLoading } = useWorkflowQuery(workflowId);
 
   const handleClose = () => {
     navigate({
-      to: "/_layout/dashboard/workflows/$workflowId",
+      to: "/_layout/workflows/$workflowId",
       params: { workflowId },
     });
   };

@@ -1,9 +1,9 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/_layout/dashboard/workflows/$workflowId/")({
+export const Route = createFileRoute("/_layout/workflows/$workflowId/")({
   beforeLoad: ({ params }) => {
     throw redirect({
-      to: "/dashboard/workflows/$workflowId/runs",
+      to: "/workflows/$workflowId/runs",
       params,
     });
   },

@@ -1,12 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/_layout/dashboard/")({
+export const Route = createFileRoute("/_layout/")({
   component: Dashboard,
-  beforeLoad: async ({ context }) => {
-    if (!context.user) {
-      throw redirect({ to: "/login" });
-    }
-  },
 });
 
 function Dashboard() {
@@ -26,7 +21,7 @@ function Dashboard() {
             Create and manage your automated workflows.
           </p>
           <a
-            href="/dashboard/workflows"
+            href="/workflows"
             className="text-primary hover:underline"
           >
             View Workflows →
@@ -39,7 +34,7 @@ function Dashboard() {
             Monitor and control your job queues.
           </p>
           <a
-            href="/dashboard/queues"
+            href="/queues"
             className="text-primary hover:underline"
           >
             View Queues →

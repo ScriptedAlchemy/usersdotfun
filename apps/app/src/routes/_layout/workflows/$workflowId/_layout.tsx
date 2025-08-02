@@ -9,14 +9,14 @@ import { Button } from "~/components/ui/button";
 import { PageHeader } from "~/components/common/page-header";
 
 export const Route = createFileRoute(
-  "/_layout/dashboard/workflows/$workflowId/_layout",
+  "/_layout/workflows/$workflowId/_layout",
 )({
   component: WorkflowLayout,
 });
 
 function WorkflowLayout() {
   const { workflowId } = useParams({
-    from: "/_layout/dashboard/workflows/$workflowId/_layout",
+    from: "/_layout/workflows/$workflowId/_layout",
   });
   const { data: workflow, isLoading } = useWorkflowQuery(workflowId);
 
@@ -38,7 +38,7 @@ function WorkflowLayout() {
         <ul className="flex space-x-4">
           <li>
             <Link
-              to="/dashboard/workflows/$workflowId"
+              to="/workflows/$workflowId"
               params={{ workflowId }}
               className="text-blue-500 hover:underline"
               activeProps={{ className: "font-bold" }}
@@ -48,7 +48,7 @@ function WorkflowLayout() {
           </li>
           <li>
             <Link
-              to="/dashboard/workflows/$workflowId/runs"
+              to="/workflows/$workflowId/runs"
               params={{ workflowId }}
               className="text-blue-500 hover:underline"
               activeProps={{ className: "font-bold" }}

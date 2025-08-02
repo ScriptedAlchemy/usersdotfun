@@ -10,7 +10,7 @@ import type { RichWorkflow } from "@usersdotfun/shared-types/types";
 import { Badge } from "~/components/ui/badge";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_layout/dashboard/workflows/")({
+export const Route = createFileRoute("/_layout/workflows/")({
   component: WorkflowsPage,
 });
 
@@ -22,7 +22,7 @@ const columns: ColumnDef<RichWorkflow>[] = [
       const workflow = row.original;
       return (
         <Link
-          to="/dashboard/workflows/$workflowId/runs"
+          to="/workflows/$workflowId/runs"
           params={{ workflowId: workflow.id }}
           className="font-medium text-primary hover:underline"
         >

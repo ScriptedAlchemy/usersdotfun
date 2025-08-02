@@ -24,7 +24,7 @@ function LoginForm() {
         },
         onSuccess: async () => {
           await queryClient.invalidateQueries({ queryKey: ["user"] });
-          navigate({ to: "/dashboard" });
+          navigate({ to: "" });
         },
       }
     );

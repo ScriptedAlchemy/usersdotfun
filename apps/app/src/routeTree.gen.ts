@@ -14,24 +14,24 @@ import { createServerRootRoute } from '@tanstack/react-start/server'
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as authRouteRouteImport } from './routes/(auth)/route'
+import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
 import { Route as authLoginRouteImport } from './routes/(auth)/login'
-import { Route as LayoutDashboardIndexRouteImport } from './routes/_layout/dashboard/index'
-import { Route as LayoutDashboardWorkflowsIndexRouteImport } from './routes/_layout/dashboard/workflows/index'
-import { Route as LayoutDashboardQueuesIndexRouteImport } from './routes/_layout/dashboard/queues/index'
-import { Route as LayoutDashboardWorkflowsWorkflowIdIndexRouteImport } from './routes/_layout/dashboard/workflows/$workflowId/index'
-import { Route as LayoutDashboardWorkflowsWorkflowIdRunsRouteImport } from './routes/_layout/dashboard/workflows/$workflowId/runs'
-import { Route as LayoutDashboardWorkflowsWorkflowIdItemsRouteImport } from './routes/_layout/dashboard/workflows/$workflowId/items'
-import { Route as LayoutDashboardWorkflowsWorkflowIdEditRouteImport } from './routes/_layout/dashboard/workflows/$workflowId/edit'
-import { Route as LayoutDashboardWorkflowsWorkflowIdLayoutRouteImport } from './routes/_layout/dashboard/workflows/$workflowId/_layout'
-import { Route as LayoutDashboardWorkflowsWorkflowIdRunsRunIdRouteImport } from './routes/_layout/dashboard/workflows/$workflowId/runs/$runId'
-import { Route as LayoutDashboardWorkflowsWorkflowIdItemsItemIdRouteImport } from './routes/_layout/dashboard/workflows/$workflowId/items/$itemId'
-import { Route as LayoutDashboardWorkflowsWorkflowIdRunsRunIdIndexRouteImport } from './routes/_layout/dashboard/workflows/$workflowId/runs/$runId/index'
-import { Route as LayoutDashboardWorkflowsWorkflowIdItemsItemIdIndexRouteImport } from './routes/_layout/dashboard/workflows/$workflowId/items/$itemId/index'
+import { Route as LayoutWorkflowsIndexRouteImport } from './routes/_layout/workflows/index'
+import { Route as LayoutQueuesIndexRouteImport } from './routes/_layout/queues/index'
+import { Route as LayoutWorkflowsWorkflowIdIndexRouteImport } from './routes/_layout/workflows/$workflowId/index'
+import { Route as LayoutWorkflowsWorkflowIdRunsRouteImport } from './routes/_layout/workflows/$workflowId/runs'
+import { Route as LayoutWorkflowsWorkflowIdItemsRouteImport } from './routes/_layout/workflows/$workflowId/items'
+import { Route as LayoutWorkflowsWorkflowIdEditRouteImport } from './routes/_layout/workflows/$workflowId/edit'
+import { Route as LayoutWorkflowsWorkflowIdLayoutRouteImport } from './routes/_layout/workflows/$workflowId/_layout'
+import { Route as LayoutWorkflowsWorkflowIdRunsRunIdRouteImport } from './routes/_layout/workflows/$workflowId/runs/$runId'
+import { Route as LayoutWorkflowsWorkflowIdItemsItemIdRouteImport } from './routes/_layout/workflows/$workflowId/items/$itemId'
+import { Route as LayoutWorkflowsWorkflowIdRunsRunIdIndexRouteImport } from './routes/_layout/workflows/$workflowId/runs/$runId/index'
+import { Route as LayoutWorkflowsWorkflowIdItemsItemIdIndexRouteImport } from './routes/_layout/workflows/$workflowId/items/$itemId/index'
 import { ServerRoute as ApiSplatServerRouteImport } from './routes/api/$'
 import { ServerRoute as ApiAuthSplatServerRouteImport } from './routes/api/auth/$'
 
-const LayoutDashboardWorkflowsWorkflowIdRouteImport = createFileRoute(
-  '/_layout/dashboard/workflows/$workflowId',
+const LayoutWorkflowsWorkflowIdRouteImport = createFileRoute(
+  '/_layout/workflows/$workflowId',
 )()
 const rootServerRouteImport = createServerRootRoute()
 
@@ -43,86 +43,84 @@ const authRouteRoute = authRouteRouteImport.update({
   id: '/(auth)',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LayoutIndexRoute = LayoutIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const authLoginRoute = authLoginRouteImport.update({
   id: '/login',
   path: '/login',
   getParentRoute: () => authRouteRoute,
 } as any)
-const LayoutDashboardIndexRoute = LayoutDashboardIndexRouteImport.update({
-  id: '/dashboard/',
-  path: '/dashboard/',
+const LayoutWorkflowsWorkflowIdRoute =
+  LayoutWorkflowsWorkflowIdRouteImport.update({
+    id: '/workflows/$workflowId',
+    path: '/workflows/$workflowId',
+    getParentRoute: () => LayoutRoute,
+  } as any)
+const LayoutWorkflowsIndexRoute = LayoutWorkflowsIndexRouteImport.update({
+  id: '/workflows/',
+  path: '/workflows/',
   getParentRoute: () => LayoutRoute,
 } as any)
-const LayoutDashboardWorkflowsWorkflowIdRoute =
-  LayoutDashboardWorkflowsWorkflowIdRouteImport.update({
-    id: '/dashboard/workflows/$workflowId',
-    path: '/dashboard/workflows/$workflowId',
-    getParentRoute: () => LayoutRoute,
-  } as any)
-const LayoutDashboardWorkflowsIndexRoute =
-  LayoutDashboardWorkflowsIndexRouteImport.update({
-    id: '/dashboard/workflows/',
-    path: '/dashboard/workflows/',
-    getParentRoute: () => LayoutRoute,
-  } as any)
-const LayoutDashboardQueuesIndexRoute =
-  LayoutDashboardQueuesIndexRouteImport.update({
-    id: '/dashboard/queues/',
-    path: '/dashboard/queues/',
-    getParentRoute: () => LayoutRoute,
-  } as any)
-const LayoutDashboardWorkflowsWorkflowIdIndexRoute =
-  LayoutDashboardWorkflowsWorkflowIdIndexRouteImport.update({
+const LayoutQueuesIndexRoute = LayoutQueuesIndexRouteImport.update({
+  id: '/queues/',
+  path: '/queues/',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutWorkflowsWorkflowIdIndexRoute =
+  LayoutWorkflowsWorkflowIdIndexRouteImport.update({
     id: '/',
     path: '/',
-    getParentRoute: () => LayoutDashboardWorkflowsWorkflowIdRoute,
+    getParentRoute: () => LayoutWorkflowsWorkflowIdRoute,
   } as any)
-const LayoutDashboardWorkflowsWorkflowIdRunsRoute =
-  LayoutDashboardWorkflowsWorkflowIdRunsRouteImport.update({
+const LayoutWorkflowsWorkflowIdRunsRoute =
+  LayoutWorkflowsWorkflowIdRunsRouteImport.update({
     id: '/runs',
     path: '/runs',
-    getParentRoute: () => LayoutDashboardWorkflowsWorkflowIdRoute,
+    getParentRoute: () => LayoutWorkflowsWorkflowIdRoute,
   } as any)
-const LayoutDashboardWorkflowsWorkflowIdItemsRoute =
-  LayoutDashboardWorkflowsWorkflowIdItemsRouteImport.update({
+const LayoutWorkflowsWorkflowIdItemsRoute =
+  LayoutWorkflowsWorkflowIdItemsRouteImport.update({
     id: '/items',
     path: '/items',
-    getParentRoute: () => LayoutDashboardWorkflowsWorkflowIdRoute,
+    getParentRoute: () => LayoutWorkflowsWorkflowIdRoute,
   } as any)
-const LayoutDashboardWorkflowsWorkflowIdEditRoute =
-  LayoutDashboardWorkflowsWorkflowIdEditRouteImport.update({
+const LayoutWorkflowsWorkflowIdEditRoute =
+  LayoutWorkflowsWorkflowIdEditRouteImport.update({
     id: '/edit',
     path: '/edit',
-    getParentRoute: () => LayoutDashboardWorkflowsWorkflowIdRoute,
+    getParentRoute: () => LayoutWorkflowsWorkflowIdRoute,
   } as any)
-const LayoutDashboardWorkflowsWorkflowIdLayoutRoute =
-  LayoutDashboardWorkflowsWorkflowIdLayoutRouteImport.update({
+const LayoutWorkflowsWorkflowIdLayoutRoute =
+  LayoutWorkflowsWorkflowIdLayoutRouteImport.update({
     id: '/_layout',
-    getParentRoute: () => LayoutDashboardWorkflowsWorkflowIdRoute,
+    getParentRoute: () => LayoutWorkflowsWorkflowIdRoute,
   } as any)
-const LayoutDashboardWorkflowsWorkflowIdRunsRunIdRoute =
-  LayoutDashboardWorkflowsWorkflowIdRunsRunIdRouteImport.update({
+const LayoutWorkflowsWorkflowIdRunsRunIdRoute =
+  LayoutWorkflowsWorkflowIdRunsRunIdRouteImport.update({
     id: '/$runId',
     path: '/$runId',
-    getParentRoute: () => LayoutDashboardWorkflowsWorkflowIdRunsRoute,
+    getParentRoute: () => LayoutWorkflowsWorkflowIdRunsRoute,
   } as any)
-const LayoutDashboardWorkflowsWorkflowIdItemsItemIdRoute =
-  LayoutDashboardWorkflowsWorkflowIdItemsItemIdRouteImport.update({
+const LayoutWorkflowsWorkflowIdItemsItemIdRoute =
+  LayoutWorkflowsWorkflowIdItemsItemIdRouteImport.update({
     id: '/$itemId',
     path: '/$itemId',
-    getParentRoute: () => LayoutDashboardWorkflowsWorkflowIdItemsRoute,
+    getParentRoute: () => LayoutWorkflowsWorkflowIdItemsRoute,
   } as any)
-const LayoutDashboardWorkflowsWorkflowIdRunsRunIdIndexRoute =
-  LayoutDashboardWorkflowsWorkflowIdRunsRunIdIndexRouteImport.update({
+const LayoutWorkflowsWorkflowIdRunsRunIdIndexRoute =
+  LayoutWorkflowsWorkflowIdRunsRunIdIndexRouteImport.update({
     id: '/',
     path: '/',
-    getParentRoute: () => LayoutDashboardWorkflowsWorkflowIdRunsRunIdRoute,
+    getParentRoute: () => LayoutWorkflowsWorkflowIdRunsRunIdRoute,
   } as any)
-const LayoutDashboardWorkflowsWorkflowIdItemsItemIdIndexRoute =
-  LayoutDashboardWorkflowsWorkflowIdItemsItemIdIndexRouteImport.update({
+const LayoutWorkflowsWorkflowIdItemsItemIdIndexRoute =
+  LayoutWorkflowsWorkflowIdItemsItemIdIndexRouteImport.update({
     id: '/',
     path: '/',
-    getParentRoute: () => LayoutDashboardWorkflowsWorkflowIdItemsItemIdRoute,
+    getParentRoute: () => LayoutWorkflowsWorkflowIdItemsItemIdRoute,
   } as any)
 const ApiSplatServerRoute = ApiSplatServerRouteImport.update({
   id: '/api/$',
@@ -136,101 +134,97 @@ const ApiAuthSplatServerRoute = ApiAuthSplatServerRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof authRouteRouteWithChildren
+  '/': typeof LayoutIndexRoute
   '/login': typeof authLoginRoute
-  '/dashboard': typeof LayoutDashboardIndexRoute
-  '/dashboard/queues': typeof LayoutDashboardQueuesIndexRoute
-  '/dashboard/workflows': typeof LayoutDashboardWorkflowsIndexRoute
-  '/dashboard/workflows/$workflowId': typeof LayoutDashboardWorkflowsWorkflowIdLayoutRoute
-  '/dashboard/workflows/$workflowId/edit': typeof LayoutDashboardWorkflowsWorkflowIdEditRoute
-  '/dashboard/workflows/$workflowId/items': typeof LayoutDashboardWorkflowsWorkflowIdItemsRouteWithChildren
-  '/dashboard/workflows/$workflowId/runs': typeof LayoutDashboardWorkflowsWorkflowIdRunsRouteWithChildren
-  '/dashboard/workflows/$workflowId/': typeof LayoutDashboardWorkflowsWorkflowIdIndexRoute
-  '/dashboard/workflows/$workflowId/items/$itemId': typeof LayoutDashboardWorkflowsWorkflowIdItemsItemIdRouteWithChildren
-  '/dashboard/workflows/$workflowId/runs/$runId': typeof LayoutDashboardWorkflowsWorkflowIdRunsRunIdRouteWithChildren
-  '/dashboard/workflows/$workflowId/items/$itemId/': typeof LayoutDashboardWorkflowsWorkflowIdItemsItemIdIndexRoute
-  '/dashboard/workflows/$workflowId/runs/$runId/': typeof LayoutDashboardWorkflowsWorkflowIdRunsRunIdIndexRoute
+  '/queues': typeof LayoutQueuesIndexRoute
+  '/workflows': typeof LayoutWorkflowsIndexRoute
+  '/workflows/$workflowId': typeof LayoutWorkflowsWorkflowIdLayoutRoute
+  '/workflows/$workflowId/edit': typeof LayoutWorkflowsWorkflowIdEditRoute
+  '/workflows/$workflowId/items': typeof LayoutWorkflowsWorkflowIdItemsRouteWithChildren
+  '/workflows/$workflowId/runs': typeof LayoutWorkflowsWorkflowIdRunsRouteWithChildren
+  '/workflows/$workflowId/': typeof LayoutWorkflowsWorkflowIdIndexRoute
+  '/workflows/$workflowId/items/$itemId': typeof LayoutWorkflowsWorkflowIdItemsItemIdRouteWithChildren
+  '/workflows/$workflowId/runs/$runId': typeof LayoutWorkflowsWorkflowIdRunsRunIdRouteWithChildren
+  '/workflows/$workflowId/items/$itemId/': typeof LayoutWorkflowsWorkflowIdItemsItemIdIndexRoute
+  '/workflows/$workflowId/runs/$runId/': typeof LayoutWorkflowsWorkflowIdRunsRunIdIndexRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof authRouteRouteWithChildren
+  '/': typeof LayoutIndexRoute
   '/login': typeof authLoginRoute
-  '/dashboard': typeof LayoutDashboardIndexRoute
-  '/dashboard/queues': typeof LayoutDashboardQueuesIndexRoute
-  '/dashboard/workflows': typeof LayoutDashboardWorkflowsIndexRoute
-  '/dashboard/workflows/$workflowId': typeof LayoutDashboardWorkflowsWorkflowIdIndexRoute
-  '/dashboard/workflows/$workflowId/edit': typeof LayoutDashboardWorkflowsWorkflowIdEditRoute
-  '/dashboard/workflows/$workflowId/items': typeof LayoutDashboardWorkflowsWorkflowIdItemsRouteWithChildren
-  '/dashboard/workflows/$workflowId/runs': typeof LayoutDashboardWorkflowsWorkflowIdRunsRouteWithChildren
-  '/dashboard/workflows/$workflowId/items/$itemId': typeof LayoutDashboardWorkflowsWorkflowIdItemsItemIdIndexRoute
-  '/dashboard/workflows/$workflowId/runs/$runId': typeof LayoutDashboardWorkflowsWorkflowIdRunsRunIdIndexRoute
+  '/queues': typeof LayoutQueuesIndexRoute
+  '/workflows': typeof LayoutWorkflowsIndexRoute
+  '/workflows/$workflowId': typeof LayoutWorkflowsWorkflowIdIndexRoute
+  '/workflows/$workflowId/edit': typeof LayoutWorkflowsWorkflowIdEditRoute
+  '/workflows/$workflowId/items': typeof LayoutWorkflowsWorkflowIdItemsRouteWithChildren
+  '/workflows/$workflowId/runs': typeof LayoutWorkflowsWorkflowIdRunsRouteWithChildren
+  '/workflows/$workflowId/items/$itemId': typeof LayoutWorkflowsWorkflowIdItemsItemIdIndexRoute
+  '/workflows/$workflowId/runs/$runId': typeof LayoutWorkflowsWorkflowIdRunsRunIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/(auth)': typeof authRouteRouteWithChildren
   '/_layout': typeof LayoutRouteWithChildren
   '/(auth)/login': typeof authLoginRoute
-  '/_layout/dashboard/': typeof LayoutDashboardIndexRoute
-  '/_layout/dashboard/queues/': typeof LayoutDashboardQueuesIndexRoute
-  '/_layout/dashboard/workflows/': typeof LayoutDashboardWorkflowsIndexRoute
-  '/_layout/dashboard/workflows/$workflowId': typeof LayoutDashboardWorkflowsWorkflowIdRouteWithChildren
-  '/_layout/dashboard/workflows/$workflowId/_layout': typeof LayoutDashboardWorkflowsWorkflowIdLayoutRoute
-  '/_layout/dashboard/workflows/$workflowId/edit': typeof LayoutDashboardWorkflowsWorkflowIdEditRoute
-  '/_layout/dashboard/workflows/$workflowId/items': typeof LayoutDashboardWorkflowsWorkflowIdItemsRouteWithChildren
-  '/_layout/dashboard/workflows/$workflowId/runs': typeof LayoutDashboardWorkflowsWorkflowIdRunsRouteWithChildren
-  '/_layout/dashboard/workflows/$workflowId/': typeof LayoutDashboardWorkflowsWorkflowIdIndexRoute
-  '/_layout/dashboard/workflows/$workflowId/items/$itemId': typeof LayoutDashboardWorkflowsWorkflowIdItemsItemIdRouteWithChildren
-  '/_layout/dashboard/workflows/$workflowId/runs/$runId': typeof LayoutDashboardWorkflowsWorkflowIdRunsRunIdRouteWithChildren
-  '/_layout/dashboard/workflows/$workflowId/items/$itemId/': typeof LayoutDashboardWorkflowsWorkflowIdItemsItemIdIndexRoute
-  '/_layout/dashboard/workflows/$workflowId/runs/$runId/': typeof LayoutDashboardWorkflowsWorkflowIdRunsRunIdIndexRoute
+  '/_layout/': typeof LayoutIndexRoute
+  '/_layout/queues/': typeof LayoutQueuesIndexRoute
+  '/_layout/workflows/': typeof LayoutWorkflowsIndexRoute
+  '/_layout/workflows/$workflowId': typeof LayoutWorkflowsWorkflowIdRouteWithChildren
+  '/_layout/workflows/$workflowId/_layout': typeof LayoutWorkflowsWorkflowIdLayoutRoute
+  '/_layout/workflows/$workflowId/edit': typeof LayoutWorkflowsWorkflowIdEditRoute
+  '/_layout/workflows/$workflowId/items': typeof LayoutWorkflowsWorkflowIdItemsRouteWithChildren
+  '/_layout/workflows/$workflowId/runs': typeof LayoutWorkflowsWorkflowIdRunsRouteWithChildren
+  '/_layout/workflows/$workflowId/': typeof LayoutWorkflowsWorkflowIdIndexRoute
+  '/_layout/workflows/$workflowId/items/$itemId': typeof LayoutWorkflowsWorkflowIdItemsItemIdRouteWithChildren
+  '/_layout/workflows/$workflowId/runs/$runId': typeof LayoutWorkflowsWorkflowIdRunsRunIdRouteWithChildren
+  '/_layout/workflows/$workflowId/items/$itemId/': typeof LayoutWorkflowsWorkflowIdItemsItemIdIndexRoute
+  '/_layout/workflows/$workflowId/runs/$runId/': typeof LayoutWorkflowsWorkflowIdRunsRunIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/login'
-    | '/dashboard'
-    | '/dashboard/queues'
-    | '/dashboard/workflows'
-    | '/dashboard/workflows/$workflowId'
-    | '/dashboard/workflows/$workflowId/edit'
-    | '/dashboard/workflows/$workflowId/items'
-    | '/dashboard/workflows/$workflowId/runs'
-    | '/dashboard/workflows/$workflowId/'
-    | '/dashboard/workflows/$workflowId/items/$itemId'
-    | '/dashboard/workflows/$workflowId/runs/$runId'
-    | '/dashboard/workflows/$workflowId/items/$itemId/'
-    | '/dashboard/workflows/$workflowId/runs/$runId/'
+    | '/queues'
+    | '/workflows'
+    | '/workflows/$workflowId'
+    | '/workflows/$workflowId/edit'
+    | '/workflows/$workflowId/items'
+    | '/workflows/$workflowId/runs'
+    | '/workflows/$workflowId/'
+    | '/workflows/$workflowId/items/$itemId'
+    | '/workflows/$workflowId/runs/$runId'
+    | '/workflows/$workflowId/items/$itemId/'
+    | '/workflows/$workflowId/runs/$runId/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
-    | '/dashboard'
-    | '/dashboard/queues'
-    | '/dashboard/workflows'
-    | '/dashboard/workflows/$workflowId'
-    | '/dashboard/workflows/$workflowId/edit'
-    | '/dashboard/workflows/$workflowId/items'
-    | '/dashboard/workflows/$workflowId/runs'
-    | '/dashboard/workflows/$workflowId/items/$itemId'
-    | '/dashboard/workflows/$workflowId/runs/$runId'
+    | '/queues'
+    | '/workflows'
+    | '/workflows/$workflowId'
+    | '/workflows/$workflowId/edit'
+    | '/workflows/$workflowId/items'
+    | '/workflows/$workflowId/runs'
+    | '/workflows/$workflowId/items/$itemId'
+    | '/workflows/$workflowId/runs/$runId'
   id:
     | '__root__'
     | '/(auth)'
     | '/_layout'
     | '/(auth)/login'
-    | '/_layout/dashboard/'
-    | '/_layout/dashboard/queues/'
-    | '/_layout/dashboard/workflows/'
-    | '/_layout/dashboard/workflows/$workflowId'
-    | '/_layout/dashboard/workflows/$workflowId/_layout'
-    | '/_layout/dashboard/workflows/$workflowId/edit'
-    | '/_layout/dashboard/workflows/$workflowId/items'
-    | '/_layout/dashboard/workflows/$workflowId/runs'
-    | '/_layout/dashboard/workflows/$workflowId/'
-    | '/_layout/dashboard/workflows/$workflowId/items/$itemId'
-    | '/_layout/dashboard/workflows/$workflowId/runs/$runId'
-    | '/_layout/dashboard/workflows/$workflowId/items/$itemId/'
-    | '/_layout/dashboard/workflows/$workflowId/runs/$runId/'
+    | '/_layout/'
+    | '/_layout/queues/'
+    | '/_layout/workflows/'
+    | '/_layout/workflows/$workflowId'
+    | '/_layout/workflows/$workflowId/_layout'
+    | '/_layout/workflows/$workflowId/edit'
+    | '/_layout/workflows/$workflowId/items'
+    | '/_layout/workflows/$workflowId/runs'
+    | '/_layout/workflows/$workflowId/'
+    | '/_layout/workflows/$workflowId/items/$itemId'
+    | '/_layout/workflows/$workflowId/runs/$runId'
+    | '/_layout/workflows/$workflowId/items/$itemId/'
+    | '/_layout/workflows/$workflowId/runs/$runId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -279,6 +273,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_layout/': {
+      id: '/_layout/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof LayoutIndexRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/(auth)/login': {
       id: '/(auth)/login'
       path: '/login'
@@ -286,96 +287,89 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authLoginRouteImport
       parentRoute: typeof authRouteRoute
     }
-    '/_layout/dashboard/': {
-      id: '/_layout/dashboard/'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof LayoutDashboardIndexRouteImport
+    '/_layout/workflows/$workflowId': {
+      id: '/_layout/workflows/$workflowId'
+      path: '/workflows/$workflowId'
+      fullPath: '/workflows/$workflowId'
+      preLoaderRoute: typeof LayoutWorkflowsWorkflowIdRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_layout/dashboard/workflows/$workflowId': {
-      id: '/_layout/dashboard/workflows/$workflowId'
-      path: '/dashboard/workflows/$workflowId'
-      fullPath: '/dashboard/workflows/$workflowId'
-      preLoaderRoute: typeof LayoutDashboardWorkflowsWorkflowIdRouteImport
+    '/_layout/workflows/': {
+      id: '/_layout/workflows/'
+      path: '/workflows'
+      fullPath: '/workflows'
+      preLoaderRoute: typeof LayoutWorkflowsIndexRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_layout/dashboard/workflows/': {
-      id: '/_layout/dashboard/workflows/'
-      path: '/dashboard/workflows'
-      fullPath: '/dashboard/workflows'
-      preLoaderRoute: typeof LayoutDashboardWorkflowsIndexRouteImport
+    '/_layout/queues/': {
+      id: '/_layout/queues/'
+      path: '/queues'
+      fullPath: '/queues'
+      preLoaderRoute: typeof LayoutQueuesIndexRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_layout/dashboard/queues/': {
-      id: '/_layout/dashboard/queues/'
-      path: '/dashboard/queues'
-      fullPath: '/dashboard/queues'
-      preLoaderRoute: typeof LayoutDashboardQueuesIndexRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/dashboard/workflows/$workflowId/': {
-      id: '/_layout/dashboard/workflows/$workflowId/'
+    '/_layout/workflows/$workflowId/': {
+      id: '/_layout/workflows/$workflowId/'
       path: '/'
-      fullPath: '/dashboard/workflows/$workflowId/'
-      preLoaderRoute: typeof LayoutDashboardWorkflowsWorkflowIdIndexRouteImport
-      parentRoute: typeof LayoutDashboardWorkflowsWorkflowIdRoute
+      fullPath: '/workflows/$workflowId/'
+      preLoaderRoute: typeof LayoutWorkflowsWorkflowIdIndexRouteImport
+      parentRoute: typeof LayoutWorkflowsWorkflowIdRoute
     }
-    '/_layout/dashboard/workflows/$workflowId/runs': {
-      id: '/_layout/dashboard/workflows/$workflowId/runs'
+    '/_layout/workflows/$workflowId/runs': {
+      id: '/_layout/workflows/$workflowId/runs'
       path: '/runs'
-      fullPath: '/dashboard/workflows/$workflowId/runs'
-      preLoaderRoute: typeof LayoutDashboardWorkflowsWorkflowIdRunsRouteImport
-      parentRoute: typeof LayoutDashboardWorkflowsWorkflowIdRoute
+      fullPath: '/workflows/$workflowId/runs'
+      preLoaderRoute: typeof LayoutWorkflowsWorkflowIdRunsRouteImport
+      parentRoute: typeof LayoutWorkflowsWorkflowIdRoute
     }
-    '/_layout/dashboard/workflows/$workflowId/items': {
-      id: '/_layout/dashboard/workflows/$workflowId/items'
+    '/_layout/workflows/$workflowId/items': {
+      id: '/_layout/workflows/$workflowId/items'
       path: '/items'
-      fullPath: '/dashboard/workflows/$workflowId/items'
-      preLoaderRoute: typeof LayoutDashboardWorkflowsWorkflowIdItemsRouteImport
-      parentRoute: typeof LayoutDashboardWorkflowsWorkflowIdRoute
+      fullPath: '/workflows/$workflowId/items'
+      preLoaderRoute: typeof LayoutWorkflowsWorkflowIdItemsRouteImport
+      parentRoute: typeof LayoutWorkflowsWorkflowIdRoute
     }
-    '/_layout/dashboard/workflows/$workflowId/edit': {
-      id: '/_layout/dashboard/workflows/$workflowId/edit'
+    '/_layout/workflows/$workflowId/edit': {
+      id: '/_layout/workflows/$workflowId/edit'
       path: '/edit'
-      fullPath: '/dashboard/workflows/$workflowId/edit'
-      preLoaderRoute: typeof LayoutDashboardWorkflowsWorkflowIdEditRouteImport
-      parentRoute: typeof LayoutDashboardWorkflowsWorkflowIdRoute
+      fullPath: '/workflows/$workflowId/edit'
+      preLoaderRoute: typeof LayoutWorkflowsWorkflowIdEditRouteImport
+      parentRoute: typeof LayoutWorkflowsWorkflowIdRoute
     }
-    '/_layout/dashboard/workflows/$workflowId/_layout': {
-      id: '/_layout/dashboard/workflows/$workflowId/_layout'
-      path: '/dashboard/workflows/$workflowId'
-      fullPath: '/dashboard/workflows/$workflowId'
-      preLoaderRoute: typeof LayoutDashboardWorkflowsWorkflowIdLayoutRouteImport
-      parentRoute: typeof LayoutDashboardWorkflowsWorkflowIdRoute
+    '/_layout/workflows/$workflowId/_layout': {
+      id: '/_layout/workflows/$workflowId/_layout'
+      path: '/workflows/$workflowId'
+      fullPath: '/workflows/$workflowId'
+      preLoaderRoute: typeof LayoutWorkflowsWorkflowIdLayoutRouteImport
+      parentRoute: typeof LayoutWorkflowsWorkflowIdRoute
     }
-    '/_layout/dashboard/workflows/$workflowId/runs/$runId': {
-      id: '/_layout/dashboard/workflows/$workflowId/runs/$runId'
+    '/_layout/workflows/$workflowId/runs/$runId': {
+      id: '/_layout/workflows/$workflowId/runs/$runId'
       path: '/$runId'
-      fullPath: '/dashboard/workflows/$workflowId/runs/$runId'
-      preLoaderRoute: typeof LayoutDashboardWorkflowsWorkflowIdRunsRunIdRouteImport
-      parentRoute: typeof LayoutDashboardWorkflowsWorkflowIdRunsRoute
+      fullPath: '/workflows/$workflowId/runs/$runId'
+      preLoaderRoute: typeof LayoutWorkflowsWorkflowIdRunsRunIdRouteImport
+      parentRoute: typeof LayoutWorkflowsWorkflowIdRunsRoute
     }
-    '/_layout/dashboard/workflows/$workflowId/items/$itemId': {
-      id: '/_layout/dashboard/workflows/$workflowId/items/$itemId'
+    '/_layout/workflows/$workflowId/items/$itemId': {
+      id: '/_layout/workflows/$workflowId/items/$itemId'
       path: '/$itemId'
-      fullPath: '/dashboard/workflows/$workflowId/items/$itemId'
-      preLoaderRoute: typeof LayoutDashboardWorkflowsWorkflowIdItemsItemIdRouteImport
-      parentRoute: typeof LayoutDashboardWorkflowsWorkflowIdItemsRoute
+      fullPath: '/workflows/$workflowId/items/$itemId'
+      preLoaderRoute: typeof LayoutWorkflowsWorkflowIdItemsItemIdRouteImport
+      parentRoute: typeof LayoutWorkflowsWorkflowIdItemsRoute
     }
-    '/_layout/dashboard/workflows/$workflowId/runs/$runId/': {
-      id: '/_layout/dashboard/workflows/$workflowId/runs/$runId/'
+    '/_layout/workflows/$workflowId/runs/$runId/': {
+      id: '/_layout/workflows/$workflowId/runs/$runId/'
       path: '/'
-      fullPath: '/dashboard/workflows/$workflowId/runs/$runId/'
-      preLoaderRoute: typeof LayoutDashboardWorkflowsWorkflowIdRunsRunIdIndexRouteImport
-      parentRoute: typeof LayoutDashboardWorkflowsWorkflowIdRunsRunIdRoute
+      fullPath: '/workflows/$workflowId/runs/$runId/'
+      preLoaderRoute: typeof LayoutWorkflowsWorkflowIdRunsRunIdIndexRouteImport
+      parentRoute: typeof LayoutWorkflowsWorkflowIdRunsRunIdRoute
     }
-    '/_layout/dashboard/workflows/$workflowId/items/$itemId/': {
-      id: '/_layout/dashboard/workflows/$workflowId/items/$itemId/'
+    '/_layout/workflows/$workflowId/items/$itemId/': {
+      id: '/_layout/workflows/$workflowId/items/$itemId/'
       path: '/'
-      fullPath: '/dashboard/workflows/$workflowId/items/$itemId/'
-      preLoaderRoute: typeof LayoutDashboardWorkflowsWorkflowIdItemsItemIdIndexRouteImport
-      parentRoute: typeof LayoutDashboardWorkflowsWorkflowIdItemsItemIdRoute
+      fullPath: '/workflows/$workflowId/items/$itemId/'
+      preLoaderRoute: typeof LayoutWorkflowsWorkflowIdItemsItemIdIndexRouteImport
+      parentRoute: typeof LayoutWorkflowsWorkflowIdItemsItemIdRoute
     }
   }
 }
@@ -410,106 +404,102 @@ const authRouteRouteWithChildren = authRouteRoute._addFileChildren(
   authRouteRouteChildren,
 )
 
-interface LayoutDashboardWorkflowsWorkflowIdItemsItemIdRouteChildren {
-  LayoutDashboardWorkflowsWorkflowIdItemsItemIdIndexRoute: typeof LayoutDashboardWorkflowsWorkflowIdItemsItemIdIndexRoute
+interface LayoutWorkflowsWorkflowIdItemsItemIdRouteChildren {
+  LayoutWorkflowsWorkflowIdItemsItemIdIndexRoute: typeof LayoutWorkflowsWorkflowIdItemsItemIdIndexRoute
 }
 
-const LayoutDashboardWorkflowsWorkflowIdItemsItemIdRouteChildren: LayoutDashboardWorkflowsWorkflowIdItemsItemIdRouteChildren =
+const LayoutWorkflowsWorkflowIdItemsItemIdRouteChildren: LayoutWorkflowsWorkflowIdItemsItemIdRouteChildren =
   {
-    LayoutDashboardWorkflowsWorkflowIdItemsItemIdIndexRoute:
-      LayoutDashboardWorkflowsWorkflowIdItemsItemIdIndexRoute,
+    LayoutWorkflowsWorkflowIdItemsItemIdIndexRoute:
+      LayoutWorkflowsWorkflowIdItemsItemIdIndexRoute,
   }
 
-const LayoutDashboardWorkflowsWorkflowIdItemsItemIdRouteWithChildren =
-  LayoutDashboardWorkflowsWorkflowIdItemsItemIdRoute._addFileChildren(
-    LayoutDashboardWorkflowsWorkflowIdItemsItemIdRouteChildren,
+const LayoutWorkflowsWorkflowIdItemsItemIdRouteWithChildren =
+  LayoutWorkflowsWorkflowIdItemsItemIdRoute._addFileChildren(
+    LayoutWorkflowsWorkflowIdItemsItemIdRouteChildren,
   )
 
-interface LayoutDashboardWorkflowsWorkflowIdItemsRouteChildren {
-  LayoutDashboardWorkflowsWorkflowIdItemsItemIdRoute: typeof LayoutDashboardWorkflowsWorkflowIdItemsItemIdRouteWithChildren
+interface LayoutWorkflowsWorkflowIdItemsRouteChildren {
+  LayoutWorkflowsWorkflowIdItemsItemIdRoute: typeof LayoutWorkflowsWorkflowIdItemsItemIdRouteWithChildren
 }
 
-const LayoutDashboardWorkflowsWorkflowIdItemsRouteChildren: LayoutDashboardWorkflowsWorkflowIdItemsRouteChildren =
+const LayoutWorkflowsWorkflowIdItemsRouteChildren: LayoutWorkflowsWorkflowIdItemsRouteChildren =
   {
-    LayoutDashboardWorkflowsWorkflowIdItemsItemIdRoute:
-      LayoutDashboardWorkflowsWorkflowIdItemsItemIdRouteWithChildren,
+    LayoutWorkflowsWorkflowIdItemsItemIdRoute:
+      LayoutWorkflowsWorkflowIdItemsItemIdRouteWithChildren,
   }
 
-const LayoutDashboardWorkflowsWorkflowIdItemsRouteWithChildren =
-  LayoutDashboardWorkflowsWorkflowIdItemsRoute._addFileChildren(
-    LayoutDashboardWorkflowsWorkflowIdItemsRouteChildren,
+const LayoutWorkflowsWorkflowIdItemsRouteWithChildren =
+  LayoutWorkflowsWorkflowIdItemsRoute._addFileChildren(
+    LayoutWorkflowsWorkflowIdItemsRouteChildren,
   )
 
-interface LayoutDashboardWorkflowsWorkflowIdRunsRunIdRouteChildren {
-  LayoutDashboardWorkflowsWorkflowIdRunsRunIdIndexRoute: typeof LayoutDashboardWorkflowsWorkflowIdRunsRunIdIndexRoute
+interface LayoutWorkflowsWorkflowIdRunsRunIdRouteChildren {
+  LayoutWorkflowsWorkflowIdRunsRunIdIndexRoute: typeof LayoutWorkflowsWorkflowIdRunsRunIdIndexRoute
 }
 
-const LayoutDashboardWorkflowsWorkflowIdRunsRunIdRouteChildren: LayoutDashboardWorkflowsWorkflowIdRunsRunIdRouteChildren =
+const LayoutWorkflowsWorkflowIdRunsRunIdRouteChildren: LayoutWorkflowsWorkflowIdRunsRunIdRouteChildren =
   {
-    LayoutDashboardWorkflowsWorkflowIdRunsRunIdIndexRoute:
-      LayoutDashboardWorkflowsWorkflowIdRunsRunIdIndexRoute,
+    LayoutWorkflowsWorkflowIdRunsRunIdIndexRoute:
+      LayoutWorkflowsWorkflowIdRunsRunIdIndexRoute,
   }
 
-const LayoutDashboardWorkflowsWorkflowIdRunsRunIdRouteWithChildren =
-  LayoutDashboardWorkflowsWorkflowIdRunsRunIdRoute._addFileChildren(
-    LayoutDashboardWorkflowsWorkflowIdRunsRunIdRouteChildren,
+const LayoutWorkflowsWorkflowIdRunsRunIdRouteWithChildren =
+  LayoutWorkflowsWorkflowIdRunsRunIdRoute._addFileChildren(
+    LayoutWorkflowsWorkflowIdRunsRunIdRouteChildren,
   )
 
-interface LayoutDashboardWorkflowsWorkflowIdRunsRouteChildren {
-  LayoutDashboardWorkflowsWorkflowIdRunsRunIdRoute: typeof LayoutDashboardWorkflowsWorkflowIdRunsRunIdRouteWithChildren
+interface LayoutWorkflowsWorkflowIdRunsRouteChildren {
+  LayoutWorkflowsWorkflowIdRunsRunIdRoute: typeof LayoutWorkflowsWorkflowIdRunsRunIdRouteWithChildren
 }
 
-const LayoutDashboardWorkflowsWorkflowIdRunsRouteChildren: LayoutDashboardWorkflowsWorkflowIdRunsRouteChildren =
+const LayoutWorkflowsWorkflowIdRunsRouteChildren: LayoutWorkflowsWorkflowIdRunsRouteChildren =
   {
-    LayoutDashboardWorkflowsWorkflowIdRunsRunIdRoute:
-      LayoutDashboardWorkflowsWorkflowIdRunsRunIdRouteWithChildren,
+    LayoutWorkflowsWorkflowIdRunsRunIdRoute:
+      LayoutWorkflowsWorkflowIdRunsRunIdRouteWithChildren,
   }
 
-const LayoutDashboardWorkflowsWorkflowIdRunsRouteWithChildren =
-  LayoutDashboardWorkflowsWorkflowIdRunsRoute._addFileChildren(
-    LayoutDashboardWorkflowsWorkflowIdRunsRouteChildren,
+const LayoutWorkflowsWorkflowIdRunsRouteWithChildren =
+  LayoutWorkflowsWorkflowIdRunsRoute._addFileChildren(
+    LayoutWorkflowsWorkflowIdRunsRouteChildren,
   )
 
-interface LayoutDashboardWorkflowsWorkflowIdRouteChildren {
-  LayoutDashboardWorkflowsWorkflowIdLayoutRoute: typeof LayoutDashboardWorkflowsWorkflowIdLayoutRoute
-  LayoutDashboardWorkflowsWorkflowIdEditRoute: typeof LayoutDashboardWorkflowsWorkflowIdEditRoute
-  LayoutDashboardWorkflowsWorkflowIdItemsRoute: typeof LayoutDashboardWorkflowsWorkflowIdItemsRouteWithChildren
-  LayoutDashboardWorkflowsWorkflowIdRunsRoute: typeof LayoutDashboardWorkflowsWorkflowIdRunsRouteWithChildren
-  LayoutDashboardWorkflowsWorkflowIdIndexRoute: typeof LayoutDashboardWorkflowsWorkflowIdIndexRoute
+interface LayoutWorkflowsWorkflowIdRouteChildren {
+  LayoutWorkflowsWorkflowIdLayoutRoute: typeof LayoutWorkflowsWorkflowIdLayoutRoute
+  LayoutWorkflowsWorkflowIdEditRoute: typeof LayoutWorkflowsWorkflowIdEditRoute
+  LayoutWorkflowsWorkflowIdItemsRoute: typeof LayoutWorkflowsWorkflowIdItemsRouteWithChildren
+  LayoutWorkflowsWorkflowIdRunsRoute: typeof LayoutWorkflowsWorkflowIdRunsRouteWithChildren
+  LayoutWorkflowsWorkflowIdIndexRoute: typeof LayoutWorkflowsWorkflowIdIndexRoute
 }
 
-const LayoutDashboardWorkflowsWorkflowIdRouteChildren: LayoutDashboardWorkflowsWorkflowIdRouteChildren =
+const LayoutWorkflowsWorkflowIdRouteChildren: LayoutWorkflowsWorkflowIdRouteChildren =
   {
-    LayoutDashboardWorkflowsWorkflowIdLayoutRoute:
-      LayoutDashboardWorkflowsWorkflowIdLayoutRoute,
-    LayoutDashboardWorkflowsWorkflowIdEditRoute:
-      LayoutDashboardWorkflowsWorkflowIdEditRoute,
-    LayoutDashboardWorkflowsWorkflowIdItemsRoute:
-      LayoutDashboardWorkflowsWorkflowIdItemsRouteWithChildren,
-    LayoutDashboardWorkflowsWorkflowIdRunsRoute:
-      LayoutDashboardWorkflowsWorkflowIdRunsRouteWithChildren,
-    LayoutDashboardWorkflowsWorkflowIdIndexRoute:
-      LayoutDashboardWorkflowsWorkflowIdIndexRoute,
+    LayoutWorkflowsWorkflowIdLayoutRoute: LayoutWorkflowsWorkflowIdLayoutRoute,
+    LayoutWorkflowsWorkflowIdEditRoute: LayoutWorkflowsWorkflowIdEditRoute,
+    LayoutWorkflowsWorkflowIdItemsRoute:
+      LayoutWorkflowsWorkflowIdItemsRouteWithChildren,
+    LayoutWorkflowsWorkflowIdRunsRoute:
+      LayoutWorkflowsWorkflowIdRunsRouteWithChildren,
+    LayoutWorkflowsWorkflowIdIndexRoute: LayoutWorkflowsWorkflowIdIndexRoute,
   }
 
-const LayoutDashboardWorkflowsWorkflowIdRouteWithChildren =
-  LayoutDashboardWorkflowsWorkflowIdRoute._addFileChildren(
-    LayoutDashboardWorkflowsWorkflowIdRouteChildren,
+const LayoutWorkflowsWorkflowIdRouteWithChildren =
+  LayoutWorkflowsWorkflowIdRoute._addFileChildren(
+    LayoutWorkflowsWorkflowIdRouteChildren,
   )
 
 interface LayoutRouteChildren {
-  LayoutDashboardIndexRoute: typeof LayoutDashboardIndexRoute
-  LayoutDashboardQueuesIndexRoute: typeof LayoutDashboardQueuesIndexRoute
-  LayoutDashboardWorkflowsIndexRoute: typeof LayoutDashboardWorkflowsIndexRoute
-  LayoutDashboardWorkflowsWorkflowIdRoute: typeof LayoutDashboardWorkflowsWorkflowIdRouteWithChildren
+  LayoutIndexRoute: typeof LayoutIndexRoute
+  LayoutQueuesIndexRoute: typeof LayoutQueuesIndexRoute
+  LayoutWorkflowsIndexRoute: typeof LayoutWorkflowsIndexRoute
+  LayoutWorkflowsWorkflowIdRoute: typeof LayoutWorkflowsWorkflowIdRouteWithChildren
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
-  LayoutDashboardIndexRoute: LayoutDashboardIndexRoute,
-  LayoutDashboardQueuesIndexRoute: LayoutDashboardQueuesIndexRoute,
-  LayoutDashboardWorkflowsIndexRoute: LayoutDashboardWorkflowsIndexRoute,
-  LayoutDashboardWorkflowsWorkflowIdRoute:
-    LayoutDashboardWorkflowsWorkflowIdRouteWithChildren,
+  LayoutIndexRoute: LayoutIndexRoute,
+  LayoutQueuesIndexRoute: LayoutQueuesIndexRoute,
+  LayoutWorkflowsIndexRoute: LayoutWorkflowsIndexRoute,
+  LayoutWorkflowsWorkflowIdRoute: LayoutWorkflowsWorkflowIdRouteWithChildren,
 }
 
 const LayoutRouteWithChildren =

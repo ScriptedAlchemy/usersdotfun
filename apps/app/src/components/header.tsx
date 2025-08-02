@@ -71,7 +71,7 @@ export function Header() {
         <div className="flex justify-between items-center">
           <div className="flex gap-6 text-sm font-medium">
             <Link
-              to="/dashboard"
+              to="/"
               activeProps={{
                 className: "text-foreground",
               }}
@@ -80,10 +80,10 @@ export function Header() {
                   "text-muted-foreground hover:text-foreground transition-colors",
               }}
             >
-              Dashboard
+              Home
             </Link>
             <Link
-              to="/dashboard/workflows"
+              to="/workflows"
               activeProps={{
                 className: "text-foreground",
               }}
@@ -95,7 +95,7 @@ export function Header() {
               Workflows
             </Link>
             <Link
-              to="/dashboard/queues"
+              to="/queues"
               activeProps={{
                 className: "text-foreground",
               }}

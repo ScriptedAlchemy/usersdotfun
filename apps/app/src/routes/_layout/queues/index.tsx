@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { useState } from "react";
 import { cn } from "~/lib/utils";
 
-export const Route = createFileRoute("/_layout/dashboard/queues/")({
+export const Route = createFileRoute("/_layout/queues/")({
   component: QueuesPage,
 });
 
@@ -77,7 +77,7 @@ function QueueStatusCard({
         </div>
       </CardContent>
     </Card>
-  );
+  )
 }
 
 function QueuesPage() {
