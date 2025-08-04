@@ -1,24 +1,34 @@
-import type {
-  LastProcessedState,
-  PluginSourceInput,
-  PluginSourceOutput,
-  SourcePlugin,
-} from '@usersdotfun/core-sdk';
+import type { LastProcessedState, SourcePlugin } from '@usersdotfun/core-sdk';
 import { ConfigurationError, ContentType } from '@usersdotfun/core-sdk';
 
 import { MasaClient } from './masa-client';
 import {
-  MasaSourceConfig
+  MasaSourceConfig,
+  MasaSourceConfigSchema,
+  MasaSourceInput,
+  MasaSourceInputSchema,
+  MasaSourceOutput,
+  MasaSourceOutputSchema,
 } from './schemas';
 import { ServiceManager, ServiceMap } from './services';
-import { MasaPlatformState, MasaPluginSourceItem, MasaSearchOptions, MasaSearchResult } from './types';
+import type {
+  MasaPlatformState,
+  MasaPluginSourceItem,
+  MasaSearchResult
+} from './types';
 
-export class MasaSourcePlugin implements SourcePlugin<
-  PluginSourceInput<MasaSearchOptions>,
-  PluginSourceOutput<MasaPluginSourceItem>,
-  MasaSourceConfig
-> {
+export class MasaSourcePlugin
+  implements
+  SourcePlugin<
+    typeof MasaSourceInputSchema,
+    typeof MasaSourceOutputSchema,
+    typeof MasaSourceConfigSchema
+  > {
+  readonly id = '@curatedotfun/masa-source' as const;
   readonly type = 'source' as const;
+  readonly inputSchema = MasaSourceInputSchema;
+  readonly outputSchema = MasaSourceOutputSchema;
+  readonly configSchema = MasaSourceConfigSchema;
 
   private masaClient!: MasaClient;
   private serviceManager!: ServiceManager;
@@ -36,10 +46,10 @@ export class MasaSourcePlugin implements SourcePlugin<
     this.serviceManager = new ServiceManager(this.masaClient);
   }
 
-  async execute(input: PluginSourceInput<MasaSearchOptions>): Promise<PluginSourceOutput<MasaPluginSourceItem>> {
+  async execute(input: MasaSourceInput): Promise<MasaSourceOutput> {
     const { searchOptions, lastProcessedState } = input;
 
-    console.log("MasaSourcePlugin: execute called with:", {
+    console.log('MasaSourcePlugin: execute called with:', {
       type: searchOptions.type,
       hasState: !!lastProcessedState
     });

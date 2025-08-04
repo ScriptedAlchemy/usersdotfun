@@ -13,13 +13,15 @@ import {
   getWorkflowQuery,
   getWorkflowRunsQuery,
 } from "~/hooks/use-api";
-import { auth } from "~/lib/auth";
 
 export const Route = createFileRoute(
   "/_layout/workflows/$workflowId/runs/$runId"
 )({
   component: RunDetailsPage,
-  loader: async ({ params: { workflowId, runId }, context: { queryClient } }) => {
+  loader: async ({
+    params: { workflowId, runId },
+    context: { queryClient },
+  }) => {
     const [runDetails] = await Promise.all([
       queryClient.fetchQuery(getRunDetailsQuery(runId)),
       queryClient.ensureQueryData(getWorkflowQuery(workflowId)),

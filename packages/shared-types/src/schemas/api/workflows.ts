@@ -8,10 +8,8 @@ import {
 } from "../workflows";
 
 import {
-  pluginRunSchema,
-  richWorkflowRunSchema,
   sourceItemSchema,
-  workflowRunSchema,
+  workflowRunSchema
 } from "../runs";
 import {
   ApiErrorResponseSchema,

@@ -61,7 +61,7 @@ export interface CreateWorkflowData extends Omit<WorkflowEntity, 'id' | 'created
 
 export interface UpdateWorkflowData extends Partial<Omit<CreateWorkflowData, 'createdBy'>> { }
 
-export interface CreateWorkflowRunData extends Omit<WorkflowRunEntity, 'id' | 'startedAt' | 'itemsProcessed' | 'itemsTotal' | 'completedAt'> { }
+export interface CreateWorkflowRunData extends Omit<WorkflowRunEntity, 'id' | 'startedAt' | 'itemsProcessed' | 'itemsTotal' | 'completedAt' | 'failureReason'> { }
 
 export interface UpdateWorkflowRunData extends Partial<Pick<WorkflowRunEntity, 'status' | 'itemsProcessed' | 'itemsTotal' | 'completedAt' | 'failureReason'>> { }
 

@@ -20,20 +20,33 @@ const processSourceQueryJob = (job: Job<SourceQueryJobData>) =>
     yield* Effect.log(`Processing source query job for workflow: ${workflowId}, run: ${workflowRunId}`);
 
     const workflow = yield* workflowService.getWorkflowById(workflowId);
+    const input = {
+      searchOptions: workflow.source.search,
+      lastProcessedState: lastProcessedState ?? null,
+    };
+
+    const pluginRun = yield* workflowService.createPluginRun({
+      workflowRunId,
+      pluginId: workflow.source.pluginId,
+      config: workflow.source.config,
+      status: 'processing',
+      input,
+      startedAt: new Date(),
+      stepId: 'source',
+      sourceItemId: null,
+    });
 
     const execute = Effect.acquireUseRelease(
       pluginService.initializePlugin<SourcePlugin>(
         workflow.source,
         `Source Query for Workflow "${workflow.name}" [${workflowRunId}]`
       ),
-      (sourcePlugin) => pluginService.executePlugin(
-        sourcePlugin,
-        {
-          searchOptions: workflow.source.search,
-          lastProcessedState: lastProcessedState ?? null
-        },
-        `Source Query for Workflow "${workflow.name}" [${workflowRunId}]`
-      ),
+      (sourcePlugin) =>
+        pluginService.executePlugin(
+          sourcePlugin,
+          input,
+          `Source Query for Workflow "${workflow.name}" [${workflowRunId}]`
+        ),
       () => Effect.void
     );
 
@@ -41,17 +54,35 @@ const processSourceQueryJob = (job: Job<SourceQueryJobData>) =>
 
     const parseResult = GenericPluginSourceOutputSchema.safeParse(rawOutput);
     if (!parseResult.success) {
-      return yield* Effect.fail(new Error(`Source plugin output validation failed: ${parseResult.error.message}`));
+      const error = new Error(`Source plugin output validation failed: ${parseResult.error.message}`);
+      yield* workflowService.updatePluginRun(pluginRun.id, {
+        status: 'failed',
+        error: { message: error.message },
+        completedAt: new Date(),
+      });
+      return yield* Effect.fail(error);
     }
 
     const output = parseResult.data;
     if (!output.success || !output.data) {
-      return yield* Effect.fail(new Error("Source plugin failed to return data"));
+      const error = new Error('Source plugin failed to return data');
+      yield* workflowService.updatePluginRun(pluginRun.id, {
+        status: 'failed',
+        error: output.errors,
+        completedAt: new Date(),
+      });
+      return yield* Effect.fail(error);
     }
+
+    yield* workflowService.updatePluginRun(pluginRun.id, {
+      status: 'completed',
+      output,
+      completedAt: new Date(),
+    });
 
     const { items, nextLastProcessedState } = output.data;
 
-    yield* workflowService.updateWorkflowRun(workflowRunId, { status: "completed", itemsTotal: items.length });
+    yield* workflowService.updateWorkflowRun(workflowRunId, { itemsTotal: items.length });
 
     if (items.length > 0) {
       yield* Effect.log(`Enqueuing ${items.length} items for pipeline processing`);

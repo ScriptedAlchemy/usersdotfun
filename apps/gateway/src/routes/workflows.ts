@@ -151,7 +151,7 @@ export const workflowsRouter = new Hono()
         workflowId: id,
         triggeredBy: user!.id,
       });
-      return { success: true, data: { message: `Workflow ${id} has been queued to run.` } };
+      return { success: true, data: { id: id, message: `Workflow ${id} has been queued to run.` } };
     });
     try {
       const result = await AppRuntime.runPromise(program);

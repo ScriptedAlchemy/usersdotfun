@@ -11,19 +11,19 @@ const processWorkflowRun = (job: Job<StartWorkflowRunJobData>) =>
     const workflowService = yield* WorkflowService;
     const queueService = yield* QueueService;
 
-    // 1. Create the durable run record and publish the "started" event
+    // Create the durable run record and publish the "started" event
     const workflow = yield* workflowService.getWorkflowById(workflowId);
     const run = yield* workflowService.createWorkflowRun({
       workflowId,
-      status: 'running',
+      status: 'started',
       triggeredBy: triggeredBy ?? null,
     });
     // PUBLISH `workflow:run-started` event here via Redis Pub/Sub
 
     yield* Effect.log(`Started Run ${run.id} for Workflow "${workflow.name}"`);
 
-    try {
-      // 2. Enqueue the source query job to handle data fetching and polling
+    const processingEffect = Effect.gen(function* () {
+      // Enqueue the source query job to handle data fetching and polling
       const sourceJobData: SourceQueryJobData = {
         workflowId,
         workflowRunId: run.id,
@@ -33,18 +33,20 @@ const processWorkflowRun = (job: Job<StartWorkflowRunJobData>) =>
       yield* queueService.add(QUEUE_NAMES.SOURCE_QUERY, `query-source`, sourceJobData);
       yield* Effect.log(`Enqueued source query job for workflow ${workflowId}`);
 
-      // 3. Mark the workflow run as completed (the source worker will handle the actual processing)
-      const finalRun = yield* workflowService.updateWorkflowRun(run.id, { status: 'completed', completedAt: new Date() });
-      // PUBLISH `workflow:run-completed` event here
-      yield* Effect.log(`Workflow run ${run.id} completed - source processing delegated to source worker`);
+      // Update the workflow run status to 'running'. The source worker will handle subsequent status updates.
+      yield* workflowService.updateWorkflowRun(run.id, { status: 'running' });
+      yield* Effect.log(`Workflow run ${run.id} is running, source processing delegated to source worker`);
+    });
 
-    } catch (error) {
-      // 4. Handle any failure during the process
-      const finalRun = yield* workflowService.updateWorkflowRun(run.id, { status: 'failed', completedAt: new Date() });
-      // PUBLISH `workflow:run-completed` event here (with failed status)
-      yield* Effect.logError(`Run ${run.id} failed.`, error);
-      return yield* Effect.fail(error); // Allow BullMQ to handle retries
-    }
+    return yield* processingEffect.pipe(
+      Effect.catchAll(error =>
+        Effect.gen(function* () {
+          yield* workflowService.updateWorkflowRun(run.id, { status: 'failed', completedAt: new Date() });
+          yield* Effect.logError(`Run for workflow ${workflowId} failed.`, error);
+          return yield* Effect.fail(error); // Allow BullMQ to handle retries
+        })
+      )
+    );
   });
 
 export const createWorkflowWorker = Effect.gen(function* () {
