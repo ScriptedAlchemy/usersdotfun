@@ -48,6 +48,7 @@ const columns: ColumnDef<WorkflowRun>[] = [
           to="/workflows/$workflowId/runs/$runId"
           params={{ workflowId, runId: run.id }}
           className="font-mono text-sm text-primary hover:underline"
+          preload="intent"
         >
           {run.id.slice(0, 12)}...
         </Link>

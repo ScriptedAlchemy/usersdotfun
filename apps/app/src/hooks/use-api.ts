@@ -52,11 +52,14 @@ export const getRunDetailsQuery = (runId: string) => ({
 export const useRunDetailsQuery = (runId: string) => useQuery(getRunDetailsQuery(runId));
 
 // --- Item Queries ---
-export const useWorkflowItemsQuery = (workflowId: string) => useQuery({
+export const getWorkflowItemsQuery = (workflowId: string) => ({
   queryKey: queryKeys.workflows.items(workflowId),
   queryFn: () => api.getWorkflowItems(workflowId),
   enabled: !!workflowId,
 });
+
+export const useWorkflowItemsQuery = (workflowId: string) =>
+  useQuery(getWorkflowItemsQuery(workflowId));
 
 // --- Queue Queries ---
 export const useQueuesStatusQuery = () => useQuery({
