@@ -1,8 +1,8 @@
 import { z } from "zod";
-import { pluginRunSchema, workflowRunSchema } from "../runs";
+import { pluginRunSchema, richWorkflowRunSchema } from "../runs";
 
-export const getWorkflowRunResponseSchema = workflowRunSchema;
-export const listWorkflowRunsResponseSchema = z.array(workflowRunSchema);
+export const getWorkflowRunResponseSchema = richWorkflowRunSchema;
+export const listWorkflowRunsResponseSchema = z.array(richWorkflowRunSchema);
 
 export const getPluginRunResponseSchema = pluginRunSchema;
 export const listPluginRunsResponseSchema = z.array(pluginRunSchema);

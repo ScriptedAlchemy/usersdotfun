@@ -16,13 +16,12 @@ export const workflowRunSchema = z.object({
   completedAt: z.coerce.date().nullable(),
 });
 
-// Base workflow run schema without user for create/update operations
-export const baseWorkflowRunSchema = workflowRunSchema.omit({ triggeredBy: true }).extend({
-  triggeredBy: z.string().nullable(),
-});
-
 export const richWorkflowRunSchema = workflowRunSchema.extend({
-  triggeredBy: userSchema.nullable(),
+  user: userSchema.pick({
+    id: true,
+    name: true,
+    image: true,
+  }).nullable(),
 });
 
 // A canonical record of a unique piece of data from a source.

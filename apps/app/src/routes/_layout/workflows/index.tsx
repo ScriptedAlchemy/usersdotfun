@@ -11,7 +11,6 @@ import { PlusCircle, Play, Power, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { WorkflowSheet } from "~/components/workflows/workflow-sheet";
 import type { ColumnDef, RowSelectionState } from "@tanstack/react-table";
-import type { RichWorkflow } from "@usersdotfun/shared-types/types";
 import { Badge } from "~/components/ui/badge";
 import { toast } from "sonner";
 import { Checkbox } from "~/components/ui/checkbox";
@@ -32,13 +31,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "~/components/ui/alert-dialog";
+import { RichWorkflow } from "@usersdotfun/shared-types/types";
 
 export const Route = createFileRoute("/_layout/workflows/")({
   component: WorkflowsPage,
 });
 
 const columns = (
-  openSheet: (mode: "view" | "edit", workflow: RichWorkflow) => void,
+  openSheet: (mode: "view" | "edit", workflowId: string) => void,
 ): ColumnDef<RichWorkflow>[] => [
   {
     id: "select",
@@ -137,6 +137,11 @@ const columns = (
             <Play className="mr-2 h-4 w-4" />
             Run Now
           </Button>
+          <Link to="/workflows/$workflowId/runs" params={{ workflowId: workflow.id }}>
+            <Button variant="outline" size="sm">
+              View Runs
+            </Button>
+          </Link>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="h-8 w-8 p-0">
@@ -145,10 +150,10 @@ const columns = (
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => openSheet("view", workflow)}>
+              <DropdownMenuItem onClick={() => openSheet("view", workflow.id)}>
                 View
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => openSheet("edit", workflow)}>
+              <DropdownMenuItem onClick={() => openSheet("edit", workflow.id)}>
                 Edit
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -163,7 +168,7 @@ function WorkflowsPage() {
   const { data: workflows, isLoading } = useWorkflowsQuery();
   const [sheetState, setSheetState] = useState<{
     mode: "create" | "view" | "edit";
-    workflow?: RichWorkflow;
+    workflowId?: string;
     isOpen: boolean;
   }>({
     mode: "create",
@@ -175,9 +180,9 @@ function WorkflowsPage() {
 
   const openSheet = (
     mode: "create" | "view" | "edit",
-    workflow?: RichWorkflow,
+    workflowId?: string,
   ) => {
-    setSheetState({ mode, workflow, isOpen: true });
+    setSheetState({ mode, workflowId, isOpen: true });
   };
 
   const closeSheet = () => {
@@ -242,7 +247,7 @@ function WorkflowsPage() {
         mode={sheetState.mode}
         isOpen={sheetState.isOpen}
         onClose={closeSheet}
-        workflow={sheetState.workflow}
+        workflowId={sheetState.workflowId}
       />
 
       <AlertDialog

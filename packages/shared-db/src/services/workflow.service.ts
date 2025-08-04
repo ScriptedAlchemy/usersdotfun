@@ -1,14 +1,17 @@
 import {
-  baseWorkflowSchema,
   pluginRunSchema,
+  richWorkflowRunSchema,
   richWorkflowSchema,
+  richWorkflowSummarySchema,
   sourceItemSchema,
   workflowRunSchema,
   workflowSchema,
-  richWorkflowRunSchema,
 } from "@usersdotfun/shared-types/schemas";
 import type {
   PluginRun,
+  RichWorkflow,
+  RichWorkflowRun,
+  RichWorkflowSummary,
   SourceItem,
   User,
   Workflow,
@@ -74,14 +77,10 @@ export interface WorkflowService {
   readonly getWorkflowById: (
     id: string
   ) => Effect.Effect<
-    Workflow & {
-      user: User;
-      runs: (WorkflowRun & { triggeredBy: User | null })[];
-      items: SourceItem[];
-    },
+    RichWorkflow,
     WorkflowNotFoundError | DbError
   >;
-  readonly getWorkflows: () => Effect.Effect<Array<Workflow>, DbError>;
+  readonly getWorkflows: () => Effect.Effect<RichWorkflowSummary[], DbError>;
   readonly updateWorkflow: (
     id: string,
     data: UpdateWorkflowData
@@ -99,7 +98,7 @@ export interface WorkflowService {
   ) => Effect.Effect<WorkflowRun, WorkflowRunNotFoundError | DbError>;
   readonly getRunsForWorkflow: (
     workflowId: string
-  ) => Effect.Effect<Array<WorkflowRun & { triggeredBy: User | null }>, DbError>;
+  ) => Effect.Effect<Array<RichWorkflowRun>, DbError>;
   readonly updateWorkflowRun: (
     id: string,
     data: UpdateWorkflowRunData
@@ -141,8 +140,11 @@ export const WorkflowServiceLive = Layer.effect(
     // Generic helper to parse database entities to public types
     const parseEntity = <T>(entity: any, schema: any, entityType: string): Effect.Effect<T, DbError> =>
       Effect.try({
-        try: () => schema.parse(entity),
-        catch: (cause) => new DbError({ cause, message: `Failed to parse ${entityType}` }),
+        try: () => {
+          console.log("entity", entity);
+          return schema.parse(entity)
+        },
+        catch: (cause) => new DbError({ cause, message: `Failed to parse ${entityType}, ${JSON.stringify(entity)}` }),
       });
 
     // Workflow methods
@@ -169,30 +171,18 @@ export const WorkflowServiceLive = Layer.effect(
             })
           )
         ),
-        Effect.flatMap(entity => parseEntity<Workflow>(entity, baseWorkflowSchema, 'workflow'))
+        Effect.flatMap(entity => parseEntity<Workflow>(entity, workflowSchema, 'workflow'))
       );
 
     const getWorkflowById = (
       id: string
-    ): Effect.Effect<
-      Workflow & {
-        user: User;
-        runs: (WorkflowRun & { triggeredBy: User | null })[];
-        items: SourceItem[];
-      },
-      WorkflowNotFoundError | DbError
-    > =>
+    ): Effect.Effect<RichWorkflow, WorkflowNotFoundError | DbError> =>
       Effect.tryPromise({
         try: () =>
           db.query.workflow.findFirst({
             where: eq(schema.workflow.id, id),
             with: {
               user: true,
-              runs: {
-                with: {
-                  triggeredBy: true,
-                },
-              },
               items: true,
             },
           }),
@@ -202,27 +192,49 @@ export const WorkflowServiceLive = Layer.effect(
         Effect.flatMap((result) =>
           requireRecord(result, new WorkflowNotFoundError({ workflowId: id }))
         ),
-        Effect.flatMap((rawWorkflow) =>
+        Effect.flatMap((workflow) =>
+          Effect.map(getRunsForWorkflow(id), (runs) => ({
+            ...workflow,
+            runs,
+          }))
+        ),
+        Effect.flatMap((combined) =>
           parseEntity(
-            rawWorkflow,
+            combined,
             richWorkflowSchema,
             `workflow data for workflow ${id}`
           )
         )
       );
 
-    const getWorkflows = (): Effect.Effect<Array<Workflow & { user: User }>, DbError> =>
+    const getWorkflows = (): Effect.Effect<RichWorkflowSummary[], DbError> =>
       Effect.tryPromise({
-        try: () => db.query.workflow.findMany({
-          with: {
-            user: true,
-          }
-        }),
-        catch: (cause) => new DbError({ cause, message: "Failed to get workflows" }),
+        try: () =>
+          db.query.workflow.findMany({
+            columns: {
+              id: true,
+              name: true,
+              status: true,
+              schedule: true,
+              createdAt: true,
+              createdBy: true,
+            },
+            with: {
+              user: {
+                columns: {
+                  id: true,
+                  name: true,
+                  image: true,
+                },
+              },
+            },
+          }),
+        catch: (cause) =>
+          new DbError({ cause, message: "Failed to get workflows" }),
       }).pipe(
-        Effect.flatMap(workflows =>
-          Effect.forEach(workflows, workflow =>
-            parseEntity<Workflow>(workflow, workflowSchema, 'workflow')
+        Effect.flatMap((workflows) =>
+          Effect.forEach(workflows, (workflow) =>
+            parseEntity(workflow, richWorkflowSummarySchema, "workflow summary")
           )
         )
       );
@@ -244,7 +256,7 @@ export const WorkflowServiceLive = Layer.effect(
         Effect.flatMap((result) =>
           requireRecord(result[0], new WorkflowNotFoundError({ workflowId: id }))
         ),
-        Effect.flatMap(entity => parseEntity<Workflow>(entity, baseWorkflowSchema, 'workflow'))
+        Effect.flatMap(entity => parseEntity<Workflow>(entity, workflowSchema, 'workflow'))
       );
 
     const deleteWorkflow = (id: string): Effect.Effect<void, WorkflowNotFoundError | DbError> =>
@@ -289,13 +301,13 @@ export const WorkflowServiceLive = Layer.effect(
 
     const getRunsForWorkflow = (
       workflowId: string
-    ): Effect.Effect<Array<WorkflowRun & { triggeredBy: User | null }>, DbError> =>
+    ): Effect.Effect<Array<RichWorkflowRun>, DbError> =>
       Effect.tryPromise({
         try: () =>
           db.query.workflowRun.findMany({
             where: eq(schema.workflowRun.workflowId, workflowId),
             with: {
-              triggeredBy: true,
+              user: true,
             },
             orderBy: (runs, { desc }) => desc(runs.startedAt),
           }),

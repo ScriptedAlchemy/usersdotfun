@@ -1,20 +1,22 @@
-import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import { useRunDetailsQuery, useWorkflowRunsQuery } from "~/hooks/use-api";
-import { DataTable } from "~/components/common/data-table";
+import { createFileRoute, useLoaderData, useParams } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
-import type { WorkflowRun } from "@usersdotfun/shared-types/types";
-import { Badge } from "~/components/ui/badge";
 import { workflowRunStatusValues } from "@usersdotfun/shared-types/schemas";
+import type { Workflow, WorkflowRun } from "@usersdotfun/shared-types/types";
 import type { VariantProps } from "class-variance-authority";
-import { cn } from "~/lib/utils";
 import { useState } from "react";
+import { DataTable } from "~/components/common/data-table";
 import { RunDetailsSheet } from "~/components/runs/run-details-sheet";
+import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
+import { getWorkflowQuery, getWorkflowRunsQuery } from "~/hooks/use-api";
 
-export const Route = createFileRoute(
-  "/_layout/workflows/$workflowId/runs",
-)({
+export const Route = createFileRoute("/_layout/workflows/$workflowId/runs")({
   component: WorkflowRunsPage,
+  loader: async ({ params: { workflowId }, context: { queryClient } }) => {
+    const workflow = await queryClient.fetchQuery(getWorkflowQuery(workflowId));
+    const runs = await queryClient.fetchQuery(getWorkflowRunsQuery(workflowId));
+    return { workflow, runs };
+  },
 });
 
 const statusColors: Record<
@@ -30,7 +32,7 @@ const statusColors: Record<
 };
 
 const columns = (
-  setSelectedRun: (run: WorkflowRun) => void,
+  setSelectedRun: (run: WorkflowRun) => void
 ): ColumnDef<WorkflowRun>[] => [
   {
     accessorKey: "id",
@@ -72,33 +74,33 @@ const columns = (
 ];
 
 function WorkflowRunsPage() {
-  const { workflowId } = useParams({
+  const { workflow, runs } = useLoaderData({
     from: "/_layout/workflows/$workflowId/runs",
   });
-  const { data: runs, isLoading } = useWorkflowRunsQuery(workflowId);
-  const [selectedRun, setSelectedRun] = useState<WorkflowRun | null>(null);
-
-  const { data: runDetails, isLoading: isLoadingDetails } = useRunDetailsQuery(
-    selectedRun?.id ?? "",
-  );
+  const [selectedRunId, setSelectedRunId] = useState<string | undefined>();
 
   return (
-    <div>
+    <div className="container mx-auto p-4 sm:p-6 lg:p-8">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold tracking-tight">
+          Workflow Runs: {workflow?.name}
+        </h1>
+        <p className="text-muted-foreground">
+          View and inspect the execution history of your workflow.
+        </p>
+      </div>
       <DataTable
-        columns={columns(setSelectedRun)}
+        columns={columns((run) => setSelectedRunId(run.id))}
         data={runs || []}
-        isLoading={isLoading}
         filterColumnId="id"
         filterPlaceholder="Filter by Run ID..."
       />
-      {selectedRun && (
-        <RunDetailsSheet
-          runDetails={runDetails}
-          isOpen={!!selectedRun}
-          onClose={() => setSelectedRun(null)}
-          isLoading={isLoadingDetails}
-        />
-      )}
+      <RunDetailsSheet
+        mode="view"
+        runId={selectedRunId}
+        isOpen={!!selectedRunId}
+        onClose={() => setSelectedRunId(undefined)}
+      />
     </div>
   );
 }

@@ -24,18 +24,24 @@ export const useWorkflowsQuery = () => useQuery({
   queryFn: api.getWorkflows,
 });
 
-export const useWorkflowQuery = (workflowId: string) => useQuery({
+export const getWorkflowQuery = (workflowId: string) => ({
   queryKey: queryKeys.workflows.detail(workflowId),
   queryFn: () => api.getWorkflow(workflowId),
   enabled: !!workflowId,
 });
 
+export const useWorkflowQuery = (workflowId: string) =>
+  useQuery(getWorkflowQuery(workflowId));
+
 // --- Run Queries ---
-export const useWorkflowRunsQuery = (workflowId: string) => useQuery({
+export const getWorkflowRunsQuery = (workflowId: string) => ({
   queryKey: queryKeys.workflows.runs(workflowId),
   queryFn: () => api.getWorkflowRuns(workflowId),
   enabled: !!workflowId,
 });
+
+export const useWorkflowRunsQuery = (workflowId: string) =>
+  useQuery(getWorkflowRunsQuery(workflowId));
 
 export const useRunDetailsQuery = (runId: string) => useQuery({
   queryKey: queryKeys.runs.detail(runId),

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type {
-  baseWorkflowRunSchema,
   pluginRunSchema,
+  richWorkflowRunSchema,
   sourceItemSchema,
   workflowErrorSchema,
   workflowRunInfoSchema,
@@ -9,7 +9,7 @@ import type {
 } from "../schemas/runs";
 
 export type WorkflowRun = z.infer<typeof workflowRunSchema>;
-export type BaseWorkflowRun = z.infer<typeof baseWorkflowRunSchema>;
+export type RichWorkflowRun = z.infer<typeof richWorkflowRunSchema>;
 export type SourceItem = z.infer<typeof sourceItemSchema>;
 export type PluginRun = z.infer<typeof pluginRunSchema>;
 export type WorkflowRunInfo = z.infer<typeof workflowRunInfoSchema>;

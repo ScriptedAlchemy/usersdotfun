@@ -58,14 +58,10 @@ export const workflowSchema = z.object({
   createdBy: z.string(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
-  user: userSchema,
 });
 
-// Base workflow schema without user for create/update operations
-export const baseWorkflowSchema = workflowSchema.omit({ user: true });
-
 // For creating a new workflow (ID and timestamps are generated).
-export const createWorkflowSchema = baseWorkflowSchema
+export const createWorkflowSchema = workflowSchema
   .omit({
     id: true,
     createdAt: true,
@@ -81,6 +77,24 @@ export const updateWorkflowSchema = createWorkflowSchema.partial();
 
 // The full workflow object with all its relations for the detailed view.
 export const richWorkflowSchema = workflowSchema.extend({
+  user: userSchema,
   runs: z.array(richWorkflowRunSchema),
   items: z.array(sourceItemSchema),
+});
+
+export const workflowSummarySchema = workflowSchema.pick({
+  id: true,
+  name: true,
+  status: true,
+  schedule: true,
+  createdAt: true,
+  createdBy: true,
+});
+
+export const richWorkflowSummarySchema = workflowSummarySchema.extend({
+  user: userSchema.pick({
+    id: true,
+    name: true,
+    image: true,
+  }),
 });

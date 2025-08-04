@@ -21,6 +21,7 @@ export const jwtPayloadSchema = z.object({
 export const userSchema = z.object({
   id: z.string(),
   name: z.string().nullable(),
+  image: z.string().nullable().optional(),
   email: z.string(),
   role: z.enum(Object.values(UserRole) as [UserRole, ...UserRole[]]),
   isAnonymous: z.boolean().optional(),

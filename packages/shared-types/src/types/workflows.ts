@@ -1,17 +1,17 @@
 import { z } from "zod";
 import {
-  baseWorkflowSchema,
   createWorkflowSchema,
   pipelineSchema,
   pipelineStepDefinitionSchema,
   pluginConfigSchema,
   richWorkflowSchema,
+  richWorkflowSummarySchema,
   sourceSchema,
   updateWorkflowSchema,
-  workflowSchema
+  workflowSchema,
+  workflowSummarySchema
 } from '../schemas/workflows';
 import type {
-  BaseWorkflowRun,
   PluginRun,
   SourceItem,
   WorkflowError,
@@ -33,14 +33,14 @@ export type CreateWorkflow = z.infer<typeof createWorkflowSchema>;
 export type UpdateWorkflow = z.infer<typeof updateWorkflowSchema>;
 
 // Extended Types
-export type BaseWorkflow = z.infer<typeof baseWorkflowSchema>;
 export type RichWorkflow = z.infer<typeof richWorkflowSchema>;
+export type WorkflowSummary = z.infer<typeof workflowSummarySchema>;
+export type RichWorkflowSummary = z.infer<typeof richWorkflowSummarySchema>;
 
 export type {
-  BaseWorkflowRun, PluginRun,
+  PluginRun,
   SourceItem,
   WorkflowError,
   WorkflowRun,
   WorkflowRunInfo
 };
-

@@ -1,14 +1,15 @@
 import { z } from "zod";
 import {
-  baseWorkflowSchema,
   createWorkflowSchema,
   richWorkflowSchema,
+  richWorkflowSummarySchema,
   updateWorkflowSchema,
   workflowSchema
 } from "../workflows";
 
 import {
   pluginRunSchema,
+  richWorkflowRunSchema,
   sourceItemSchema,
   workflowRunSchema,
 } from "../runs";
@@ -20,11 +21,11 @@ import {
 } from "./common";
 
 // GET /workflows
-export const GetWorkflowsResponseSchema = ApiSuccessResponseSchema(z.array(workflowSchema));
+export const GetWorkflowsResponseSchema = ApiSuccessResponseSchema(z.array(richWorkflowSummarySchema));
 
 // POST /workflows
 export const CreateWorkflowRequestSchema = z.object({ body: createWorkflowSchema });
-export const CreateWorkflowResponseSchema = ApiSuccessResponseSchema(baseWorkflowSchema);
+export const CreateWorkflowResponseSchema = ApiSuccessResponseSchema(workflowSchema);
 
 // GET /workflows/:id
 export const GetWorkflowRequestSchema = z.object({ params: IdParamSchema });
@@ -35,7 +36,7 @@ export const UpdateWorkflowRequestSchema = z.object({
   params: IdParamSchema,
   body: updateWorkflowSchema,
 });
-export const UpdateWorkflowResponseSchema = ApiSuccessResponseSchema(baseWorkflowSchema);
+export const UpdateWorkflowResponseSchema = ApiSuccessResponseSchema(workflowSchema);
 
 // DELETE /workflows/:id
 export const DeleteWorkflowRequestSchema = z.object({ params: IdParamSchema });
@@ -43,7 +44,7 @@ export const DeleteWorkflowResponseSchema = ApiSuccessResponseSchema(SimpleMessa
 
 // POST /workflows/:id/toggle
 export const ToggleWorkflowRequestSchema = z.object({ params: IdParamSchema });
-export const ToggleWorkflowResponseSchema = ApiSuccessResponseSchema(baseWorkflowSchema);
+export const ToggleWorkflowResponseSchema = ApiSuccessResponseSchema(workflowSchema);
 
 // POST /workflows/:id/run
 export const RunWorkflowRequestSchema = z.object({ params: IdParamSchema });
@@ -61,7 +62,7 @@ export const GetWorkflowItemsResponseSchema = ApiSuccessResponseSchema(z.array(s
 export const GetRunDetailsRequestSchema = z.object({ params: z.object({ runId: z.string() }) });
 export const GetRunDetailsResponseSchema = ApiSuccessResponseSchema(
   z.object({
-    run: workflowRunSchema,
+    run: richWorkflowRunSchema,
     pluginRuns: z.array(pluginRunSchema),
   })
 );

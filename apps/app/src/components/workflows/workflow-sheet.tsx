@@ -1,43 +1,42 @@
 import { CommonSheet } from "~/components/common/common-sheet";
-import type { RichWorkflow } from "@usersdotfun/shared-types/types";
 import { Workflow } from ".";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { useState, useEffect } from "react";
-import { useAtom } from "jotai";
-import { editableWorkflowAtom } from "~/atoms/workflow";
+import { useSetAtom } from "jotai";
+import { workflowIdAtom } from "~/atoms/workflow";
 
 interface WorkflowSheetProps {
   mode: "create" | "edit" | "view";
-  workflow?: RichWorkflow;
+  workflowId?: string;
   isOpen: boolean;
   onClose: () => void;
 }
 
 export function WorkflowSheet({
   mode: initialMode,
-  workflow,
+  workflowId,
   isOpen,
   onClose,
 }: WorkflowSheetProps) {
   const [mode, setMode] = useState(initialMode);
-  const [, setEditableWorkflow] = useAtom(editableWorkflowAtom);
+  const setWorkflowId = useSetAtom(workflowIdAtom);
 
   useEffect(() => {
     setMode(initialMode);
   }, [initialMode]);
 
   useEffect(() => {
-    if (mode === "edit") {
-      setEditableWorkflow(workflow ?? null);
+    if (isOpen) {
+      setWorkflowId(workflowId ?? null);
     }
-  }, [mode, workflow, setEditableWorkflow]);
+  }, [isOpen, workflowId, setWorkflowId]);
 
   const title =
     mode === "create"
       ? "Create New Workflow"
       : mode === "edit"
-      ? `Edit: ${workflow?.name}`
-      : `View: ${workflow?.name}`;
+      ? "Edit Workflow"
+      : "View Workflow";
 
   const description =
     mode === "create"
@@ -47,7 +46,6 @@ export function WorkflowSheet({
       : "Review the details of the workflow.";
 
   return (
-    
     <CommonSheet
       isOpen={isOpen}
       onClose={onClose}
@@ -55,18 +53,22 @@ export function WorkflowSheet({
       description={description}
     >
       {initialMode === "create" ? (
-        <Workflow id={workflow?.id} mode="create" />
+        <Workflow mode="create" />
       ) : (
-        <Tabs value={mode} onValueChange={(value) => setMode(value as "view" | "edit")} className="w-full">
+        <Tabs
+          value={mode}
+          onValueChange={(value) => setMode(value as "view" | "edit")}
+          className="w-full"
+        >
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="view">View</TabsTrigger>
             <TabsTrigger value="edit">Edit</TabsTrigger>
           </TabsList>
           <TabsContent value="view">
-            <Workflow id={workflow?.id} mode="view" />
+            <Workflow mode="view" />
           </TabsContent>
           <TabsContent value="edit">
-            <Workflow id={workflow?.id} mode="edit" />
+            <Workflow mode="edit" />
           </TabsContent>
         </Tabs>
       )}
