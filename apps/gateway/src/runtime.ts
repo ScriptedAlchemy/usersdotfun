@@ -6,7 +6,7 @@ import {
   QueueServiceLive, 
   QueueStatusService, 
   QueueStatusServiceLive, 
-  RedisAppConfig, 
+  QueueConfig, 
   RedisConfigLive, 
   StateService, 
   StateServiceLive 
@@ -31,8 +31,8 @@ const DatabaseConfigLayer = Layer.effect(
   Effect.map(AppConfig, (config) => ({ connectionString: Redacted.value(config.databaseUrl) }))
 );
 
-const RedisAppConfigLayer = Layer.effect(
-  RedisAppConfig,
+const QueueConfigLayer = Layer.effect(
+  QueueConfig,
   Effect.map(AppConfig, (config) => ({ redisUrl: config.redisUrl }))
 );
 
@@ -43,7 +43,7 @@ const DatabaseLayer = DatabaseLive.pipe(
 );
 
 const RedisLayer = RedisConfigLive.pipe(
-  Layer.provide(RedisAppConfigLayer),
+  Layer.provide(QueueConfigLayer),
   Layer.provide(ConfigLayer)
 );
 

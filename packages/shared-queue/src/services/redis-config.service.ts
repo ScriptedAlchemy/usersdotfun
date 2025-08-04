@@ -1,10 +1,5 @@
 import { Context, Effect, Layer, Redacted } from 'effect';
-
-export interface RedisAppConfig {
-  readonly redisUrl: Redacted.Redacted<string>;
-}
-
-export const RedisAppConfig = Context.GenericTag<RedisAppConfig>('RedisAppConfig');
+import { QueueConfig } from '../config';
 
 export interface RedisConfig {
   readonly connectionString: string;
@@ -17,31 +12,27 @@ export interface RedisConfig {
 
 export const RedisConfig = Context.GenericTag<RedisConfig>('RedisConfig');
 
-const parseRedisUrl = (url: string) => {
+const parseRedisUrl = (url: string): Effect.Effect<RedisConfig, Error> => {
   try {
     const parsed = new URL(url);
-    return {
+    return Effect.succeed({
       connectionString: url,
       host: parsed.hostname,
       port: parseInt(parsed.port) || 6379,
       password: parsed.password || undefined,
       username: parsed.username || undefined,
       db: parsed.pathname ? parseInt(parsed.pathname.slice(1)) || 0 : 0,
-    };
+    });
   } catch (error) {
-    throw new Error(`Invalid Redis URL: ${url}`);
+    return Effect.fail(new Error(`Invalid Redis URL: ${url}`));
   }
 };
 
 export const RedisConfigLive = Layer.effect(
   RedisConfig,
   Effect.gen(function* () {
-    const config = yield* RedisAppConfig;
+    const config = yield* QueueConfig;
     const redisUrl = Redacted.value(config.redisUrl);
-
-    return yield* Effect.try({
-      try: () => parseRedisUrl(redisUrl),
-      catch: (error) => new Error(`Failed to parse Redis URL: ${error}`)
-    });
+    return yield* parseRedisUrl(redisUrl);
   })
 );

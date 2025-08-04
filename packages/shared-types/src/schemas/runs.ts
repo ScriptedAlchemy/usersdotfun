@@ -10,6 +10,7 @@ export const workflowRunSchema = z.object({
   workflowId: z.string(),
   status: z.enum(workflowRunStatusValues),
   triggeredBy: z.string().nullable(),
+  failureReason: z.string().nullable(),
   itemsProcessed: z.number().int(),
   itemsTotal: z.number().int(),
   startedAt: z.coerce.date(),

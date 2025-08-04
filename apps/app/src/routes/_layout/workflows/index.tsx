@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   useWorkflowsQuery,
   useToggleWorkflowStatusMutation,
@@ -104,8 +104,24 @@ const columns = (
     id: "actions",
     cell: function Cell({ row }) {
       const workflow = row.original;
+      const navigate = useNavigate({ from: Route.path });
       const toggleMutation = useToggleWorkflowStatusMutation();
       const runMutation = useRunWorkflowNowMutation();
+
+      const handleRunNow = async () => {
+        const promise = runMutation.mutateAsync(workflow.id);
+        toast.promise(promise, {
+          loading: "Triggering workflow...",
+          success: (data) => {
+            navigate({
+              to: "/workflows/$workflowId/runs/$runId",
+              params: { workflowId: workflow.id, runId: data.id },
+            });
+            return "Workflow triggered successfully!";
+          },
+          error: "Failed to trigger workflow.",
+        });
+      };
 
       return (
         <div className="flex items-center space-x-2">
@@ -126,13 +142,7 @@ const columns = (
           <Button
             variant="outline"
             size="sm"
-            onClick={() => {
-              toast.promise(runMutation.mutateAsync(workflow.id), {
-                loading: "Triggering workflow...",
-                success: "Workflow triggered successfully!",
-                error: "Failed to trigger workflow.",
-              });
-            }}
+            onClick={handleRunNow}
           >
             <Play className="mr-2 h-4 w-4" />
             Run Now

@@ -1,7 +1,7 @@
 import { BunTerminal } from "@effect/platform-bun";
 import { EnvironmentServiceLive, ModuleFederationLive, PluginServiceLive, SecretsConfigLive, StateServiceTag } from '@usersdotfun/pipeline-runner';
 import { DatabaseConfig, DatabaseLive, WorkflowService, WorkflowServiceLive } from '@usersdotfun/shared-db';
-import { QueueService, QueueServiceLive, RedisAppConfig, RedisConfigLive, StateService, StateServiceLive } from '@usersdotfun/shared-queue';
+import { QueueConfig, QueueService, QueueServiceLive, RedisConfigLive, StateService, StateServiceLive } from '@usersdotfun/shared-queue';
 import { QUEUE_NAMES } from '@usersdotfun/shared-types/types';
 import { ConfigProvider, Effect, Layer, Logger, LogLevel, Redacted } from 'effect';
 import { runPromise } from "effect-errors";
@@ -34,8 +34,8 @@ const DatabaseConfigLayer = Layer.effect(
   Layer.provide(ConfigLayer)
 );
 
-const RedisAppConfigLayer = Layer.effect(
-  RedisAppConfig,
+const QueueConfigLayer = Layer.effect(
+  QueueConfig,
   Effect.gen(function* () {
     const appConfig = yield* AppConfig;
     return { redisUrl: appConfig.redisUrl };
@@ -50,7 +50,7 @@ const DatabaseLayer = DatabaseLive.pipe(
 );
 
 const RedisLayer = RedisConfigLive.pipe(
-  Layer.provide(RedisAppConfigLayer)
+  Layer.provide(QueueConfigLayer)
 );
 
 // Step 4: Service layers - these depend on infrastructure

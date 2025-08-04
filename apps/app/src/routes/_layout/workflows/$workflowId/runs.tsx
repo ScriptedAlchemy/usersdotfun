@@ -1,13 +1,16 @@
-import { createFileRoute, useLoaderData, useParams } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Link,
+  Outlet,
+  useLoaderData,
+  useParams,
+} from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
 import { workflowRunStatusValues } from "@usersdotfun/shared-types/schemas";
-import type { Workflow, WorkflowRun } from "@usersdotfun/shared-types/types";
+import type { WorkflowRun } from "@usersdotfun/shared-types/types";
 import type { VariantProps } from "class-variance-authority";
-import { useState } from "react";
 import { DataTable } from "~/components/common/data-table";
-import { RunDetailsSheet } from "~/components/runs/run-details-sheet";
 import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
 import { getWorkflowQuery, getWorkflowRunsQuery } from "~/hooks/use-api";
 
 export const Route = createFileRoute("/_layout/workflows/$workflowId/runs")({
@@ -31,22 +34,23 @@ const statusColors: Record<
   polling: "outline",
 };
 
-const columns = (
-  setSelectedRun: (run: WorkflowRun) => void
-): ColumnDef<WorkflowRun>[] => [
+const columns: ColumnDef<WorkflowRun>[] = [
   {
     accessorKey: "id",
     header: "Run ID",
     cell: ({ row }) => {
       const run = row.original;
+      const { workflowId } = useParams({
+        from: "/_layout/workflows/$workflowId/runs",
+      });
       return (
-        <Button
-          variant="link"
-          onClick={() => setSelectedRun(run)}
-          className="p-0 font-mono text-sm text-primary hover:underline"
+        <Link
+          to="/workflows/$workflowId/runs/$runId"
+          params={{ workflowId, runId: run.id }}
+          className="font-mono text-sm text-primary hover:underline"
         >
           {run.id.slice(0, 12)}...
-        </Button>
+        </Link>
       );
     },
   },
@@ -77,7 +81,6 @@ function WorkflowRunsPage() {
   const { workflow, runs } = useLoaderData({
     from: "/_layout/workflows/$workflowId/runs",
   });
-  const [selectedRunId, setSelectedRunId] = useState<string | undefined>();
 
   return (
     <div className="container mx-auto p-4 sm:p-6 lg:p-8">
@@ -90,17 +93,12 @@ function WorkflowRunsPage() {
         </p>
       </div>
       <DataTable
-        columns={columns((run) => setSelectedRunId(run.id))}
+        columns={columns}
         data={runs || []}
         filterColumnId="id"
         filterPlaceholder="Filter by Run ID..."
       />
-      <RunDetailsSheet
-        mode="view"
-        runId={selectedRunId}
-        isOpen={!!selectedRunId}
-        onClose={() => setSelectedRunId(undefined)}
-      />
+      <Outlet />
     </div>
   );
 }

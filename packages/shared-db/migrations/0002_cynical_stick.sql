@@ -1,0 +1,1 @@
+ALTER TABLE "workflow_run" ADD COLUMN "failure_reason" text;

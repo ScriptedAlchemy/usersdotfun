@@ -43,11 +43,13 @@ export const getWorkflowRunsQuery = (workflowId: string) => ({
 export const useWorkflowRunsQuery = (workflowId: string) =>
   useQuery(getWorkflowRunsQuery(workflowId));
 
-export const useRunDetailsQuery = (runId: string) => useQuery({
+export const getRunDetailsQuery = (runId: string) => ({
   queryKey: queryKeys.runs.detail(runId),
   queryFn: () => api.getRunDetails(runId),
   enabled: !!runId,
 });
+
+export const useRunDetailsQuery = (runId: string) => useQuery(getRunDetailsQuery(runId));
 
 // --- Item Queries ---
 export const useWorkflowItemsQuery = (workflowId: string) => useQuery({

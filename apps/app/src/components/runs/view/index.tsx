@@ -8,10 +8,10 @@ import {
 } from "~/components/ui/tabs";
 
 interface RunViewProps {
-  runDetails: RichWorkflowRun;
+  data: RichWorkflowRun;
 }
 
-export function RunView({ runDetails }: RunViewProps) {
+export function RunView({ data }: RunViewProps) {
   return (
     <div className="space-y-6">
       <div>
@@ -19,30 +19,30 @@ export function RunView({ runDetails }: RunViewProps) {
         <div className="mt-2 grid grid-cols-2 gap-4 text-sm">
           <div className="font-semibold">Status</div>
           <div>
-            <Badge variant="outline">{runDetails.status}</Badge>
+            <Badge variant="outline">{data.status}</Badge>
           </div>
           <div className="font-semibold">Triggered By</div>
-          <div>{runDetails.user?.name ?? "N/A"}</div>
+          <div>{data.user?.name ?? "N/A"}</div>
           <div className="font-semibold">Items Processed</div>
           <div>
-            {runDetails.itemsProcessed} / {runDetails.itemsTotal}
+            {data.itemsProcessed} / {data.itemsTotal}
           </div>
           <div className="font-semibold">Started At</div>
-          <div>{new Date(runDetails.startedAt).toLocaleString()}</div>
+          <div>{new Date(data.startedAt).toLocaleString()}</div>
           <div className="font-semibold">Completed At</div>
           <div>
-            {runDetails.completedAt
-              ? new Date(runDetails.completedAt).toLocaleString()
+            {data.completedAt
+              ? new Date(data.completedAt).toLocaleString()
               : "N/A"}
           </div>
         </div>
       </div>
       <div>
         <h3 className="font-medium">
-          Plugin Runs ({runDetails.pluginRuns.length})
+          Plugin Runs ({data.pluginRuns.length})
         </h3>
         <div className="mt-2 space-y-4">
-          {runDetails.pluginRuns.map((pluginRun) => (
+          {data.pluginRuns.map((pluginRun) => (
             <div key={pluginRun.id} className="border p-3 rounded-md">
               <div className="flex justify-between items-center">
                 <p className="font-semibold text-sm">{pluginRun.stepId}</p>

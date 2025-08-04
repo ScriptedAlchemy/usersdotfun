@@ -15,6 +15,13 @@
       "when": 1754326523157,
       "tag": "0001_workable_bloodaxe",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1754329876981,
+      "tag": "0002_cynical_stick",
+      "breakpoints": true
     }
   ]
 }

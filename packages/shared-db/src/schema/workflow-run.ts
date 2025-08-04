@@ -17,6 +17,7 @@ export const workflowRun = pgTable("workflow_run", {
     onDelete: "set null",
   }),
   status: workflowRunStatusEnum("status").notNull().default("started"),
+  failureReason: text("failure_reason"),
   itemsProcessed: integer("items_processed").default(0),
   itemsTotal: integer("items_total").default(0),
   startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),

@@ -63,7 +63,7 @@ export interface UpdateWorkflowData extends Partial<Omit<CreateWorkflowData, 'cr
 
 export interface CreateWorkflowRunData extends Omit<WorkflowRunEntity, 'id' | 'startedAt' | 'itemsProcessed' | 'itemsTotal' | 'completedAt'> { }
 
-export interface UpdateWorkflowRunData extends Partial<Pick<WorkflowRunEntity, 'status' | 'itemsProcessed' | 'itemsTotal' | 'completedAt'>> { }
+export interface UpdateWorkflowRunData extends Partial<Pick<WorkflowRunEntity, 'status' | 'itemsProcessed' | 'itemsTotal' | 'completedAt' | 'failureReason'>> { }
 
 export interface CreateSourceItemData extends Omit<SourceItemEntity, 'id' | 'createdAt'> { }
 
@@ -143,7 +143,6 @@ export const WorkflowServiceLive = Layer.effect(
     const parseEntity = <T>(entity: any, schema: any, entityType: string): Effect.Effect<T, DbError> =>
       Effect.try({
         try: () => {
-          console.log("entity", entity);
           return schema.parse(entity)
         },
         catch: (cause) => new DbError({ cause, message: `Failed to parse ${entityType}, ${JSON.stringify(entity)}` }),
