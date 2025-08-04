@@ -58,20 +58,4 @@ export const GetWorkflowRunsResponseSchema = ApiSuccessResponseSchema(z.array(wo
 export const GetWorkflowItemsRequestSchema = z.object({ params: IdParamSchema });
 export const GetWorkflowItemsResponseSchema = ApiSuccessResponseSchema(z.array(sourceItemSchema));
 
-// GET /runs/:runId/details
-export const GetRunDetailsRequestSchema = z.object({ params: z.object({ runId: z.string() }) });
-export const GetRunDetailsResponseSchema = ApiSuccessResponseSchema(
-  z.object({
-    run: richWorkflowRunSchema,
-    pluginRuns: z.array(pluginRunSchema),
-  })
-);
-
-// POST /runs/:runId/items/:itemId/retry
-export const RetryFromStepRequestSchema = z.object({
-  params: z.object({ runId: z.string(), itemId: z.string() }),
-  body: z.object({ fromStepId: z.string() }),
-});
-export const RetryFromStepResponseSchema = ApiSuccessResponseSchema(SimpleMessageDataSchema);
-
 export const WorkflowApiErrorResponseSchema = ApiErrorResponseSchema;

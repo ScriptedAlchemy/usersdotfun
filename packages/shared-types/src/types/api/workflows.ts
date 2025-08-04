@@ -4,8 +4,6 @@ import {
   CreateWorkflowResponseSchema,
   DeleteWorkflowRequestSchema,
   DeleteWorkflowResponseSchema,
-  GetRunDetailsRequestSchema,
-  GetRunDetailsResponseSchema,
   GetWorkflowItemsRequestSchema,
   GetWorkflowItemsResponseSchema,
   GetWorkflowRequestSchema,
@@ -13,15 +11,13 @@ import {
   GetWorkflowRunsRequestSchema,
   GetWorkflowRunsResponseSchema,
   GetWorkflowsResponseSchema,
-  RetryFromStepRequestSchema,
-  RetryFromStepResponseSchema,
+  RunWorkflowRequestSchema,
+  RunWorkflowResponseSchema,
+  ToggleWorkflowRequestSchema,
+  ToggleWorkflowResponseSchema,
   UpdateWorkflowRequestSchema,
   UpdateWorkflowResponseSchema,
   WorkflowApiErrorResponseSchema,
-  ToggleWorkflowRequestSchema,
-  RunWorkflowRequestSchema,
-  ToggleWorkflowResponseSchema,
-  RunWorkflowResponseSchema,
 } from '../../schemas/api/workflows';
 
 // --- API REQUEST TYPES ---
@@ -34,8 +30,6 @@ export type RunWorkflowRequest = z.infer<typeof RunWorkflowRequestSchema>;
 export type GetWorkflowRequest = z.infer<typeof GetWorkflowRequestSchema>;
 export type GetWorkflowRunsRequest = z.infer<typeof GetWorkflowRunsRequestSchema>;
 export type GetWorkflowItemsRequest = z.infer<typeof GetWorkflowItemsRequestSchema>;
-export type GetRunDetailsRequest = z.infer<typeof GetRunDetailsRequestSchema>;
-export type RetryFromStepRequest = z.infer<typeof RetryFromStepRequestSchema>;
 
 // --- API RESPONSE TYPES ---
 
@@ -48,6 +42,4 @@ export type ToggleWorkflowResponse = z.infer<typeof ToggleWorkflowResponseSchema
 export type RunWorkflowResponse = z.infer<typeof RunWorkflowResponseSchema>;
 export type GetWorkflowRunsResponse = z.infer<typeof GetWorkflowRunsResponseSchema>;
 export type GetWorkflowItemsResponse = z.infer<typeof GetWorkflowItemsResponseSchema>;
-export type GetRunDetailsResponse = z.infer<typeof GetRunDetailsResponseSchema>;
-export type RetryFromStepResponse = z.infer<typeof RetryFromStepResponseSchema>;
 export type WorkflowApiErrorResponse = z.infer<typeof WorkflowApiErrorResponseSchema>;

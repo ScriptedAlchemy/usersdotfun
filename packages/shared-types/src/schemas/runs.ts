@@ -16,7 +16,32 @@ export const workflowRunSchema = z.object({
   completedAt: z.coerce.date().nullable(),
 });
 
+// A historical record of a single plugin execution.
+export const pluginRunSchema = z.object({
+  id: z.string(),
+  workflowRunId: z.string(),
+  sourceItemId: z.string().nullable(),
+  stepId: z.string(),
+  pluginId: z.string(),
+  config: z.any().nullable(),
+  status: z.enum(pluginRunStatusValues),
+  input: z.any().nullable(),
+  output: z.any().nullable(),
+  error: z.any().nullable(),
+  startedAt: z.coerce.date().nullable(),
+  completedAt: z.coerce.date().nullable(),
+});
+
 export const richWorkflowRunSchema = workflowRunSchema.extend({
+  user: userSchema.pick({
+    id: true,
+    name: true,
+    image: true,
+  }).nullable(),
+  pluginRuns: z.array(pluginRunSchema),
+});
+
+export const richWorkflowRunSummarySchema = workflowRunSchema.extend({
   user: userSchema.pick({
     id: true,
     name: true,
@@ -31,21 +56,6 @@ export const sourceItemSchema = z.object({
   data: z.any(),
   processedAt: z.coerce.date().nullable(),
   createdAt: z.coerce.date(),
-});
-
-// A historical record of a single plugin execution.
-export const pluginRunSchema = z.object({
-  id: z.string(),
-  workflowRunId: z.string(),
-  sourceItemId: z.string().nullable(),
-  stepId: z.string(),
-  pluginId: z.string(),
-  status: z.enum(pluginRunStatusValues),
-  input: z.any().nullable(),
-  output: z.any().nullable(),
-  error: z.any().nullable(),
-  startedAt: z.coerce.date().nullable(),
-  completedAt: z.coerce.date().nullable(),
 });
 
 // The real-time summary object that lives in Redis.

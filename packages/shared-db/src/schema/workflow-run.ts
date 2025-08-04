@@ -2,6 +2,7 @@ import { relations } from "drizzle-orm";
 import { integer, pgEnum, pgTable, text, timestamp, varchar } from "drizzle-orm/pg-core";
 import { user } from "./auth";
 import { workflow } from "./workflow";
+import { pluginRun } from "./plugin-run";
 import { workflowRunStatusValues } from "@usersdotfun/shared-types/schemas";
 
 export const workflowRunStatusEnum = pgEnum("workflow_run_status", workflowRunStatusValues);
@@ -22,7 +23,7 @@ export const workflowRun = pgTable("workflow_run", {
   completedAt: timestamp("completed_at", { withTimezone: true }),
 });
 
-export const workflowRunRelations = relations(workflowRun, ({ one }) => ({
+export const workflowRunRelations = relations(workflowRun, ({ one, many }) => ({
   workflow: one(workflow, {
     fields: [workflowRun.workflowId],
     references: [workflow.id],
@@ -32,6 +33,7 @@ export const workflowRunRelations = relations(workflowRun, ({ one }) => ({
     references: [user.id],
     relationName: "triggeredByUser",
   }),
+  pluginRuns: many(pluginRun),
 }));
 
 export type WorkflowRunEntity = typeof workflowRun.$inferSelect;

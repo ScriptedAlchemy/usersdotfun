@@ -1,8 +1,18 @@
 import { z } from "zod";
-import { pluginRunSchema, richWorkflowRunSchema } from "../runs";
+import { richWorkflowRunSchema, richWorkflowRunSummarySchema } from "../runs";
+import { ApiSuccessResponseSchema, IdParamSchema, SimpleMessageDataSchema } from "./common";
 
-export const getWorkflowRunResponseSchema = richWorkflowRunSchema;
-export const listWorkflowRunsResponseSchema = z.array(richWorkflowRunSchema);
+// GET /workflows/:id/runs
+export const ListWorkflowRunsRequestSchema = z.object({ params: IdParamSchema });
+export const ListWorkflowRunsResponseSchema = ApiSuccessResponseSchema(z.array(richWorkflowRunSummarySchema));
 
-export const getPluginRunResponseSchema = pluginRunSchema;
-export const listPluginRunsResponseSchema = z.array(pluginRunSchema);
+// POST workflows/runs/:runId/items/:itemId/retry
+export const RetryFromStepRequestSchema = z.object({
+  params: z.object({ runId: z.string(), itemId: z.string() }),
+  body: z.object({ fromStepId: z.string() }),
+});
+export const RetryFromStepResponseSchema = ApiSuccessResponseSchema(SimpleMessageDataSchema);
+
+// GET /workflows/runs/:runId
+export const GetWorkflowRunRequestSchema = z.object({ params: z.object({ runId: z.string() }) });
+export const GetWorkflowRunResponseSchema = ApiSuccessResponseSchema(richWorkflowRunSchema);

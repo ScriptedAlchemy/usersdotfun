@@ -6,19 +6,18 @@ import {
   CreateWorkflowResponseSchema,
   DeleteWorkflowRequestSchema,
   DeleteWorkflowResponseSchema,
-  GetRunDetailsRequestSchema,
-  GetRunDetailsResponseSchema,
   GetWorkflowItemsRequestSchema,
   GetWorkflowItemsResponseSchema,
   GetWorkflowRequestSchema,
   GetWorkflowResponseSchema,
+  GetWorkflowRunRequestSchema,
+  GetWorkflowRunResponseSchema,
   GetWorkflowRunsRequestSchema,
   GetWorkflowRunsResponseSchema,
   GetWorkflowsResponseSchema,
   RetryFromStepRequestSchema,
   RetryFromStepResponseSchema,
   RunWorkflowRequestSchema,
-  RunWorkflowResponseSchema,
   ToggleWorkflowRequestSchema,
   UpdateWorkflowRequestSchema,
   UpdateWorkflowResponseSchema
@@ -184,7 +183,7 @@ export const workflowsRouter = new Hono()
 
     const program: Effect.Effect<any, Error, AppContext> = Effect.gen(function* () {
       const workflowService = yield* WorkflowService;
-      const runs = yield* workflowService.getRunsForWorkflow(id);
+      const runs = yield* workflowService.getWorkflowRuns(id);
       return { success: true, data: runs };
     });
 
@@ -213,24 +212,21 @@ export const workflowsRouter = new Hono()
     }
   })
 
-  .get('/runs/:runId/details', zValidator('param', GetRunDetailsRequestSchema.shape.params), requireAuth, async (c) => {
+  .get('/runs/:runId/details', zValidator('param', GetWorkflowRunRequestSchema.shape.params), requireAuth, async (c) => {
     const { runId } = c.req.valid('param');
 
     const program: Effect.Effect<any, Error, AppContext> = Effect.gen(function* () {
       const workflowService = yield* WorkflowService;
-      const [run, pluginRuns] = yield* Effect.all([
-        workflowService.getRunById(runId),
-        workflowService.getPluginRunsForRun(runId),
-      ]);
+      const run = yield* workflowService.getWorkflowRunById(runId);
       return {
         success: true,
-        data: { run, pluginRuns },
+        data: run,
       };
     });
 
     try {
       const result = await AppRuntime.runPromise(program);
-      return c.json(GetRunDetailsResponseSchema.parse(result));
+      return c.json(GetWorkflowRunResponseSchema.parse(result));
     } catch (err) {
       return honoErrorHandler(c, err);
     }

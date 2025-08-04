@@ -1,19 +1,19 @@
 import {
-  GetRunDetailsResponseSchema,
-  GetWorkflowRunsResponseSchema,
+  GetWorkflowRunResponseSchema,
+  ListWorkflowRunsResponseSchema,
   RetryFromStepResponseSchema,
 } from '@usersdotfun/shared-types/schemas';
 import { API_BASE_URL, extractData, handleResponse } from "./utils";
 
 export const getWorkflowRuns = async (id: string) => {
   const res = await fetch(`${API_BASE_URL}/workflows/${id}/runs`);
-  const apiResponse = await handleResponse(res, GetWorkflowRunsResponseSchema);
+  const apiResponse = await handleResponse(res, ListWorkflowRunsResponseSchema);
   return extractData(apiResponse);
 };
 
 export const getRunDetails = async (runId: string) => {
   const res = await fetch(`${API_BASE_URL}/workflows/runs/${runId}/details`);
-  const apiResponse = await handleResponse(res, GetRunDetailsResponseSchema);
+  const apiResponse = await handleResponse(res, GetWorkflowRunResponseSchema);
   return extractData(apiResponse);
 };
 

@@ -1,7 +1,7 @@
 import { CronExpressionParser } from "cron-parser";
 import { z } from "zod";
 import { userSchema } from "./auth";
-import { richWorkflowRunSchema, sourceItemSchema } from "./runs";
+import { richWorkflowRunSummarySchema, sourceItemSchema } from "./runs";
 
 export const workflowStatusValues = ["active", "inactive"] as const;
 
@@ -78,7 +78,7 @@ export const updateWorkflowSchema = createWorkflowSchema.partial();
 // The full workflow object with all its relations for the detailed view.
 export const richWorkflowSchema = workflowSchema.extend({
   user: userSchema,
-  runs: z.array(richWorkflowRunSchema),
+  runs: z.array(richWorkflowRunSummarySchema),
   items: z.array(sourceItemSchema),
 });
 
