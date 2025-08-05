@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as api from '../api';
 
-const queryKeys = {
+export const queryKeys = {
   workflows: {
     all: () => ['workflows'] as const,
     detail: (workflowId: string) => ['workflows', workflowId] as const,

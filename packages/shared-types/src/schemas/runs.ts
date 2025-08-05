@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { userSchema } from "./auth";
 
-export const workflowRunStatusValues = ['started', 'running', 'completed', 'failed', 'partially_completed', 'polling'] as const;
+export const workflowRunStatusValues = ['scheduled', 'started', 'running', 'completed', 'failed', 'partially_completed', 'polling'] as const;
 export const pluginRunStatusValues = ['processing', 'completed', 'failed', 'retried'] as const;
 
 // A single execution instance of a Workflow - includes triggeredBy user as it's always returned by the service

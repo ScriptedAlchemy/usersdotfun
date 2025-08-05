@@ -12,7 +12,11 @@ const GenericPluginSourceOutputSchema = createSourceOutputSchema(z.unknown());
 
 const processSourceQueryJob = (job: Job<SourceQueryJobData>) =>
   Effect.gen(function* () {
-    const { workflowId, workflowRunId, lastProcessedState } = job.data;
+    const { workflowId, workflowRunId, data } = job.data;
+    if (!workflowRunId) {
+      return yield* Effect.fail(new Error("workflowRunId is required for source query jobs"));
+    }
+    const { lastProcessedState } = data;
     const workflowService = yield* WorkflowService;
     const queueService = yield* QueueService;
     const pluginService = yield* PluginService;
@@ -118,9 +122,12 @@ const processSourceQueryJob = (job: Job<SourceQueryJobData>) =>
               });
 
               const pipelineJobData: ExecutePipelineJobData = {
+                workflowId,
                 workflowRunId,
-                sourceItemId: sourceItem.id,
-                input: item.raw as Record<string, unknown>,
+                data: {
+                  sourceItemId: sourceItem.id,
+                  input: item.raw as Record<string, unknown>,
+                }
               };
 
               yield* queueService.add(
@@ -161,7 +168,9 @@ const processSourceQueryJob = (job: Job<SourceQueryJobData>) =>
       const followUpJobData: SourceQueryJobData = {
         workflowId,
         workflowRunId,
-        lastProcessedState: { data: nextLastProcessedState }
+        data: {
+          lastProcessedState: { data: nextLastProcessedState }
+        }
       };
 
       const delay = nextLastProcessedState.currentAsyncJob ? 60000 : 300000;
@@ -181,7 +190,7 @@ const processSourceQueryJob = (job: Job<SourceQueryJobData>) =>
         const { workflowId, workflowRunId } = job.data;
         const workflowService = yield* WorkflowService;
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        yield* workflowService.updateWorkflowRun(workflowRunId, {
+        yield* workflowService.updateWorkflowRun(workflowRunId!, {
           status: 'failed',
           completedAt: new Date(),
           failureReason: errorMessage,

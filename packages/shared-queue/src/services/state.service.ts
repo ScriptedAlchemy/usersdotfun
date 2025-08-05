@@ -1,6 +1,6 @@
-import type { PluginRun, WorkflowRunInfo } from '@usersdotfun/shared-types/types';
-import { Context, Effect, Layer, Option } from 'effect';
-import { Redis } from 'ioredis';
+import type { PluginRun, WebSocketEvent, WorkflowRunInfo } from '@usersdotfun/shared-types/types';
+import { Context, Effect, Layer, Option, Scope } from 'effect';
+import Redis from 'ioredis';
 import type { RedisKey } from '../constants/keys';
 import { RedisKeys } from '../constants/keys';
 import { RedisConfig } from './redis-config.service';
@@ -12,15 +12,11 @@ export interface StateService {
   readonly delete: (key: RedisKey<unknown>) => Effect.Effect<void, Error>;
   readonly getKeys: (pattern: string) => Effect.Effect<string[], Error>;
 
-  // --- Specific, High-Level Methods ---
-  readonly getRunSummary: (workflowId: string, runId: string) => Effect.Effect<Option.Option<WorkflowRunInfo>, Error>;
-  readonly setRunSummary: (workflowId: string, runId: string, info: WorkflowRunInfo) => Effect.Effect<void, Error>;
-
-  readonly getPluginRunState: (runId: string, itemId: string, stepId: string) => Effect.Effect<Option.Option<PluginRun>, Error>;
-  readonly setPluginRunState: (runId: string, itemId: string, stepId: string, state: PluginRun) => Effect.Effect<void, Error>;
-
-  readonly addToRunHistory: (workflowId: string, runId: string) => Effect.Effect<void, Error>;
-  readonly getRunHistory: (workflowId: string) => Effect.Effect<string[], Error>;
+  // --- Pub/Sub Methods ---
+  readonly publish: (event: WebSocketEvent) => Effect.Effect<void, Error>;
+  readonly subscribe: (
+    onMessage: (event: WebSocketEvent) => void
+  ) => Effect.Effect<() => void, Error, Scope.Scope>;
 }
 
 export const StateService = Context.GenericTag<StateService>('StateService');
@@ -28,22 +24,28 @@ export const StateService = Context.GenericTag<StateService>('StateService');
 export const StateServiceLive = Layer.scoped(
   StateService,
   Effect.gen(function* () {
-    const prefix = 'workflow-state'; // Updated prefix for clarity
+    const prefix = 'workflow:state';
     const redisConfig = yield* RedisConfig;
 
-    const redis = yield* Effect.acquireRelease(
-      Effect.sync(() => new Redis(redisConfig.connectionString, {
-        keyPrefix: prefix,
-        maxRetriesPerRequest: 3
-      })),
+    const createRedisClient = () => new Redis(redisConfig.connectionString, {
+      keyPrefix: prefix,
+      maxRetriesPerRequest: 3,
+    });
+
+    const client = yield* Effect.acquireRelease(
+      Effect.sync(createRedisClient),
       (redis) => Effect.promise(() => redis.quit())
     );
 
-    // --- Generic Implementation ---
+    const publisher = yield* Effect.acquireRelease(
+      Effect.sync(createRedisClient),
+      (redis) => Effect.promise(() => redis.quit())
+    );
+
     const get = <T>(key: RedisKey<T>) =>
       Effect.tryPromise({
         try: async () => {
-          const result = await redis.get(key.value);
+          const result = await client.get(key.value);
           return result ? Option.some(JSON.parse(result) as T) : Option.none();
         },
         catch: (error) => new Error(`Failed to GET state for ${key.value}: ${error}`),
@@ -52,7 +54,7 @@ export const StateServiceLive = Layer.scoped(
     const set = <T>(key: RedisKey<T>, value: T) =>
       Effect.asVoid(
         Effect.tryPromise({
-          try: () => redis.set(key.value, JSON.stringify(value)),
+          try: () => client.set(key.value, JSON.stringify(value)),
           catch: (error) => new Error(`Failed to SET state for ${key.value}: ${error}`),
         })
       );
@@ -60,51 +62,59 @@ export const StateServiceLive = Layer.scoped(
     const del = (key: RedisKey<unknown>) =>
       Effect.asVoid(
         Effect.tryPromise({
-          try: () => redis.del(key.value),
+          try: () => client.del(key.value),
           catch: (error) => new Error(`Failed to DELETE state for ${key.value}: ${error}`),
         })
       );
 
     const getKeys = (pattern: string) =>
       Effect.tryPromise({
-        try: () => redis.keys(`${prefix}:${pattern}`), // Ensure prefix is included in pattern search
+        try: () => client.keys(`${prefix}:${pattern}`),
         catch: (error) => new Error(`Failed to get KEYS for pattern ${pattern}: ${error}`),
       });
 
+    const publish = (event: WebSocketEvent) =>
+      Effect.tryPromise({
+        try: () => publisher.publish(RedisKeys.webSocketEventsChannel().value, JSON.stringify(event)),
+        catch: (error) => new Error(`Failed to publish event: ${error}`),
+      }).pipe(Effect.asVoid);
+
+    const subscribe = (onMessage: (event: WebSocketEvent) => void) =>
+      Effect.acquireRelease(
+        Effect.sync(createRedisClient),
+        (redis) => Effect.promise(() => redis.quit())
+      ).pipe(
+        Effect.flatMap(subscriber =>
+          Effect.tryPromise({
+            try: async () => {
+              const channel = RedisKeys.webSocketEventsChannel().value;
+              await subscriber.subscribe(channel);
+              subscriber.on('message', (ch, message) => {
+                if (ch === channel) {
+                  try {
+                    const event = JSON.parse(message) as WebSocketEvent;
+                    onMessage(event);
+                  } catch (e) {
+                    console.error('Failed to parse WebSocket event from Redis', e);
+                  }
+                }
+              });
+              return () => {
+                subscriber.unsubscribe(channel).catch(console.error);
+              };
+            },
+            catch: (error) => new Error(`Failed to subscribe: ${error}`),
+          })
+        )
+      );
+
     return {
-      // --- Generic Methods ---
       get,
       set,
       delete: del,
       getKeys,
-
-      // --- Specific, High-Level Methods ---
-      getRunSummary: (workflowId, runId) => get(RedisKeys.runSummary(workflowId, runId)),
-      setRunSummary: (workflowId, runId, info) => set(RedisKeys.runSummary(workflowId, runId), info),
-
-      getPluginRunState: (runId, itemId, stepId) => get(RedisKeys.pluginRunState(runId, itemId, stepId)),
-      setPluginRunState: (runId, itemId, stepId, state) => set(RedisKeys.pluginRunState(runId, itemId, stepId), state),
-
-      addToRunHistory: (workflowId, runId) =>
-        Effect.asVoid(
-          Effect.tryPromise({
-            try: async () => {
-              const historyKey = RedisKeys.workflowRunHistory(workflowId);
-              await redis.lpush(historyKey.value, runId);
-              await redis.ltrim(historyKey.value, 0, 49); // Keep only the last 50 runs
-            },
-            catch: (error) => new Error(`Failed to add run to history for ${workflowId}: ${error}`),
-          })
-        ),
-
-      getRunHistory: (workflowId) =>
-        Effect.tryPromise({
-          try: async () => {
-            const result = await redis.lrange(RedisKeys.workflowRunHistory(workflowId).value, 0, -1);
-            return result || [];
-          },
-          catch: (error) => new Error(`Failed to get run history for ${workflowId}: ${error}`),
-        }),
+      publish,
+      subscribe,
     };
   })
 );

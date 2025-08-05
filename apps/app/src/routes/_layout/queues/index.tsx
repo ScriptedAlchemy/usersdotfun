@@ -88,6 +88,25 @@ const columns = (
     ),
   },
   {
+    accessorKey: "data.workflowRunId",
+    header: "Run ID",
+    cell: ({ row }) => {
+      const { workflowId, workflowRunId } = row.original.data;
+      if (!workflowRunId) {
+        return <span className="text-muted-foreground">N/A</span>;
+      }
+      return (
+        <Link
+          to="/workflows/$workflowId/runs/$runId"
+          params={{ workflowId, runId: workflowRunId }}
+          className="font-mono text-xs text-blue-500 hover:underline"
+        >
+          {workflowRunId}
+        </Link>
+      );
+    },
+  },
+  {
     accessorKey: "attemptsMade",
     header: "Attempts",
   },
@@ -223,7 +242,7 @@ function QueuesPage() {
   const handleDelete = async () => {
     const idsToDelete = Object.keys(rowSelection);
     if (!selectedQueue) return;
-    await toast.promise(
+    toast.promise(
       Promise.all(
         idsToDelete.map((id) =>
           deleteMutation.mutateAsync({ queueName: selectedQueue, jobId: id })
@@ -241,7 +260,7 @@ function QueuesPage() {
 
   const handleClear = async () => {
     if (!selectedQueue) return;
-    await toast.promise(
+    toast.promise(
       clearMutation.mutateAsync({ queueName: selectedQueue, jobType: "all" }),
       {
         loading: "Clearing queue...",
@@ -283,7 +302,50 @@ function QueuesPage() {
               {selectedQueue ? `${selectedQueue} Jobs` : "All Recent Jobs"}
             </h2>
             <div className="flex items-center space-x-2">
-              {selectedQueue && (
+              {!selectedQueue ? (
+                <>
+                  <Button
+                    onClick={() => {
+                      const promises = queuesStatus?.map((q) => resumeMutation.mutateAsync(q.name));
+                      toast.promise(Promise.all(promises || []), {
+                        loading: "Resuming all queues...",
+                        success: "All queues resumed!",
+                        error: "Failed to resume all queues.",
+                      });
+                    }}
+                  >
+                    <Play className="mr-2 h-4 w-4" />
+                    Resume All
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      const promises = queuesStatus?.map((q) => pauseMutation.mutateAsync(q.name));
+                      toast.promise(Promise.all(promises || []), {
+                        loading: "Pausing all queues...",
+                        success: "All queues paused!",
+                        error: "Failed to pause all queues.",
+                      });
+                    }}
+                  >
+                    <Pause className="mr-2 h-4 w-4" />
+                    Pause All
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      const promises = queuesStatus?.map((q) => clearMutation.mutateAsync({ queueName: q.name, jobType: "all" }));
+                      toast.promise(Promise.all(promises || []), {
+                        loading: "Clearing all queues...",
+                        success: "All queues cleared!",
+                        error: "Failed to clear all queues.",
+                      });
+                    }}
+                  >
+                    <XCircle className="mr-2 h-4 w-4" />
+                    Clear All
+                  </Button>
+                </>
+              ) : (
                 <>
                   {Object.keys(rowSelection).length > 0 && (
                     <Button

@@ -1,14 +1,13 @@
-import { QUEUE_NAMES, type JobType, type QueueName } from '@usersdotfun/shared-types/types';
+import { QUEUE_NAMES, type JobType, type QueueName, type JobData} from '@usersdotfun/shared-types/types';
 import { Job, Queue, Worker, type JobsOptions, type RepeatOptions } from 'bullmq';
 import { Context, Effect, Layer, Runtime, Scope } from 'effect';
-import type { JobData } from '../constants/queues';
 import { RedisConfig } from './redis-config.service';
 
 export interface QueueService {
-  readonly add: <T extends JobData>(
+  readonly add: <T>(
     queueName: QueueName,
     jobName: string,
-    data: T,
+    data: JobData<T>,
     options?: {
       delay?: number;
       attempts?: number;
@@ -29,13 +28,13 @@ export interface QueueService {
    * @param jobTemplate Optional template for the jobs produced by this scheduler (name, data, options).
    * @returns An Effect that yields the first job created by this scheduler.
    */
-  readonly upsertScheduledJob: <T extends JobData>(
+  readonly upsertScheduledJob: <T>(
     queueName: QueueName,
     schedulerId: string,
     repeatOptions: RepeatOptions,
     jobTemplate?: {
       name?: string;
-      data?: T;
+      data?: JobData<T>;
       opts?: JobsOptions;
     }
   ) => Effect.Effect<Job<T>, Error>;
@@ -87,10 +86,10 @@ export interface QueueService {
     jobId: string
   ) => Effect.Effect<{ retried: boolean; reason?: string }, Error>;
 
-  readonly createWorker: <T extends JobData, E, R>(
+  readonly createWorker: <T, E, R>(
     queueName: QueueName,
-    processor: (job: Job<T>) => Effect.Effect<void, E, R>
-  ) => Effect.Effect<Worker<T, any, string>, Error, R | Scope.Scope>;
+    processor: (job: Job<JobData<T>>) => Effect.Effect<void, E, R>
+  ) => Effect.Effect<Worker<JobData<T>, any, string>, Error, R | Scope.Scope>;
 }
 
 export const QueueService = Context.GenericTag<QueueService>('QueueService');
@@ -163,10 +162,10 @@ export const QueueServiceLive = Layer.scoped(
     };
 
     return {
-      add: <T extends JobData>(
+      add: <T>(
         queueName: QueueName,
         jobName: string,
-        data: T,
+        data: JobData<T>,
         options?: {
           delay?: number;
           attempts?: number;
@@ -180,13 +179,13 @@ export const QueueServiceLive = Layer.scoped(
           })
         ),
 
-      upsertScheduledJob: <T extends JobData>(
+      upsertScheduledJob: <T>(
         queueName: QueueName,
         schedulerId: string,
         repeatOptions: RepeatOptions,
         jobTemplate?: {
           name?: string;
-          data?: T;
+          data?: JobData<T>;
           opts?: JobsOptions;
         }
       ) =>
@@ -372,14 +371,14 @@ export const QueueServiceLive = Layer.scoped(
           return { retried: true };
         }),
 
-      createWorker: <T extends JobData, E, R>(
+      createWorker: <T, E, R>(
         queueName: QueueName,
-        processor: (job: Job<T>) => Effect.Effect<void, E, R>
+        processor: (job: Job<JobData<T>>) => Effect.Effect<void, E, R>
       ) =>
         Effect.gen(function* () {
           const runtime = yield* Effect.runtime<R>();
 
-          const bullProcessor = async (job: Job<T>) => {
+          const bullProcessor = async (job: Job<JobData<T>>) => {
             try {
               await Runtime.runPromise(runtime)(processor(job));
             } catch (error) {
@@ -391,7 +390,7 @@ export const QueueServiceLive = Layer.scoped(
           const worker = yield* Effect.acquireRelease(
             Effect.sync(
               () =>
-                new Worker<T>(queueName, bullProcessor, {
+                new Worker<JobData<T>>(queueName, bullProcessor, {
                   connection: connectionConfig,
                   concurrency: 5, // Process up to 5 jobs concurrently
                 })

@@ -1,24 +1,31 @@
-import { PluginService } from '@usersdotfun/pipeline-runner';
 import { WorkflowService } from '@usersdotfun/shared-db';
-import { QueueService } from '@usersdotfun/shared-queue';
-import { QUEUE_NAMES, type StartWorkflowRunJobData, type SourceQueryJobData } from '@usersdotfun/shared-types/types';
+import { QueueService, StateService } from '@usersdotfun/shared-queue';
+import { QUEUE_NAMES, type SourceQueryJobData, type StartWorkflowRunJobData } from '@usersdotfun/shared-types/types';
 import { type Job } from 'bullmq';
 import { Effect } from 'effect';
 
 const processWorkflowRun = (job: Job<StartWorkflowRunJobData>) =>
   Effect.gen(function* () {
-    const { workflowId, triggeredBy } = job.data;
+    const { workflowId, data } = job.data;
+    const { triggeredBy } = data;
     const workflowService = yield* WorkflowService;
     const queueService = yield* QueueService;
+    const stateService = yield* StateService;
 
-    // Create the durable run record and publish the "started" event
-    const workflow = yield* workflowService.getWorkflowById(workflowId);
     const run = yield* workflowService.createWorkflowRun({
       workflowId,
-      status: 'started',
-      triggeredBy: triggeredBy ?? null,
+      status: 'scheduled',
+      triggeredBy: triggeredBy ?? 'system',
     });
-    // PUBLISH `workflow:run-started` event here via Redis Pub/Sub
+
+    yield* workflowService.updateWorkflowRun(run.id, { status: 'running' });
+
+    const richRun = yield* workflowService.getWorkflowRunById(run.id);
+    const workflow = yield* workflowService.getWorkflowById(workflowId);
+    yield* stateService.publish({
+      type: 'WORKFLOW_RUN_STARTED',
+      data: richRun,
+    });
 
     yield* Effect.log(`Started Run ${run.id} for Workflow "${workflow.name}"`);
 
@@ -27,7 +34,9 @@ const processWorkflowRun = (job: Job<StartWorkflowRunJobData>) =>
       const sourceJobData: SourceQueryJobData = {
         workflowId,
         workflowRunId: run.id,
-        lastProcessedState: null,
+        data: {
+          lastProcessedState: null,
+        }
       };
 
       yield* queueService.add(QUEUE_NAMES.SOURCE_QUERY, `query-source`, sourceJobData);

@@ -1,6 +1,6 @@
 import { zValidator } from '@hono/zod-validator';
 import { WorkflowService } from '@usersdotfun/shared-db';
-import { QueueService } from '@usersdotfun/shared-queue';
+import { QueueService, StateService } from '@usersdotfun/shared-queue';
 import {
   CreateWorkflowRequestSchema,
   CreateWorkflowResponseSchema,
@@ -61,7 +61,9 @@ export const workflowsRouter = new Hono()
 
       yield* queueService.add(QUEUE_NAMES.WORKFLOW_RUN, 'start-workflow-run', {
         workflowId: newWorkflow.id,
-        triggeredBy: user!.id,
+        data: {
+          triggeredBy: user!.id,
+        }
       });
 
       return { success: true, data: newWorkflow };
@@ -126,7 +128,10 @@ export const workflowsRouter = new Hono()
             pattern: workflow.schedule,
           }, {
             name: 'start-workflow-run',
-            data: { workflowId: id, triggeredBy: 'system' },
+            data: {
+              workflowId: id,
+              data: { triggeredBy: 'system' }
+            },
           });
         }
       }
@@ -149,7 +154,9 @@ export const workflowsRouter = new Hono()
       const queueService = yield* QueueService;
       yield* queueService.add(QUEUE_NAMES.WORKFLOW_RUN, 'start-workflow-run', {
         workflowId: id,
-        triggeredBy: user!.id,
+        data: {
+          triggeredBy: user!.id,
+        }
       });
       return { success: true, data: { id: id, message: `Workflow ${id} has been queued to run.` } };
     });
@@ -241,11 +248,15 @@ export const workflowsRouter = new Hono()
       const queueService = yield* QueueService;
 
       const failedRun = yield* workflowService.getPluginRunByStep(runId, itemId, fromStepId);
+      const run = yield* workflowService.getWorkflowRunById(runId);
       yield* queueService.add(QUEUE_NAMES.PIPELINE_EXECUTION, 'retry-pipeline-step', {
+        workflowId: run.workflowId,
         workflowRunId: runId,
-        sourceItemId: itemId,
-        input: failedRun.input as Record<string, unknown>,
-        startAtStepId: fromStepId,
+        data: {
+          sourceItemId: itemId,
+          input: failedRun.input as Record<string, unknown>,
+          startAtStepId: fromStepId,
+        }
       });
 
       return `Retrying item ${itemId} from step ${fromStepId}.`;

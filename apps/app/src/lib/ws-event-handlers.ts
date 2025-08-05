@@ -1,226 +1,123 @@
 import { QueryClient } from '@tanstack/react-query';
-import { queueOverviewSchema } from '@usersdotfun/shared-types/schemas';
-import type { Job, WorkflowRunInfo, JobWithSteps, WebSocketEvent } from '@usersdotfun/shared-types/types';
-import { z } from 'zod';
-import { queryKeys } from './query-keys';
-import { parseQueueJobId } from './queue-utils';
+import { WebSocketEvent, JobStatus } from '@usersdotfun/shared-types/types';
+import { queryKeys } from '~/hooks/use-api';
 
-type QueueOverview = z.infer<typeof queueOverviewSchema>;
+type QueryUpdater<T> = (oldData: T | undefined) => T | undefined;
 
-type EventHandler = (client: QueryClient, data: any) => void;
+const updateQueryData = <T>(
+  queryClient: QueryClient,
+  queryKey: readonly unknown[],
+  updater: QueryUpdater<T>
+) => {
+  queryClient.setQueryData<T>(queryKey, updater);
+};
 
-export const eventHandlers: Record<WebSocketEvent['type'], EventHandler> = {
-  'job:status-changed': (client, data) => {
-    const { job } = data;
-
-    // Update the list of all jobs
-    client.setQueryData(queryKeys.jobs.lists(), (oldData: Job[] | undefined) => {
-      if (!oldData) return oldData;
-      return oldData.map(existingJob =>
-        existingJob.id === job.id ? job : existingJob
-      );
-    });
-
-    // Update the specific job details
-    client.setQueryData(queryKeys.jobs.detail(job.id), (oldData: JobWithSteps | undefined) => {
-      if (!oldData) return oldData;
-      return { ...oldData, ...job };
-    });
-
-    // Invalidate all-queue-jobs as the status mapping is complex
-    client.invalidateQueries({ queryKey: queryKeys.queues.allJobs() });
+export const eventHandlers: Record<WebSocketEvent['type'], (queryClient: QueryClient, data: any) => void> = {
+  WORKFLOW_RUN_STARTED: (queryClient, data) => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.workflows.runs(data.workflowId) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.workflows.all() });
   },
-
-  'job:deleted': (client, data) => {
-    const { workflowId } = data;
-
-    // Remove from the main jobs list
-    client.setQueryData(queryKeys.jobs.lists(), (oldData: Job[] | undefined) =>
-      oldData ? oldData.filter(job => job.id !== workflowId) : []
+  WORKFLOW_RUN_COMPLETED: (queryClient, data) => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.workflows.runs(data.workflowId) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.workflows.all() });
+  },
+  WORKFLOW_RUN_FAILED: (queryClient, data) => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.workflows.runs(data.workflowId) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.workflows.all() });
+  },
+  WORKFLOW_RUN_POLLING: (queryClient, data) => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.workflows.runs(data.workflowId) });
+  },
+  SOURCE_QUERY_STARTED: (queryClient, data) => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.runs.detail(data.workflowRunId) });
+  },
+  SOURCE_QUERY_COMPLETED: (queryClient, data) => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.runs.detail(data.workflowRunId) });
+  },
+  SOURCE_QUERY_FAILED: (queryClient, data) => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.runs.detail(data.workflowRunId) });
+  },
+  PIPELINE_EXECUTION_STARTED: (queryClient, data) => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.runs.detail(data.workflowRunId) });
+  },
+  PIPELINE_EXECUTION_COMPLETED: (queryClient, data) => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.runs.detail(data.workflowRunId) });
+  },
+  PIPELINE_EXECUTION_FAILED: (queryClient, data) => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.runs.detail(data.workflowRunId) });
+  },
+  PLUGIN_RUN_STARTED: (queryClient, data) => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.runs.detail(data.workflowRunId) });
+  },
+  PLUGIN_RUN_COMPLETED: (queryClient, data) => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.runs.detail(data.workflowRunId) });
+  },
+  PLUGIN_RUN_FAILED: (queryClient, data) => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.runs.detail(data.workflowRunId) });
+  },
+  JOB_CREATED: (queryClient, newJob: JobStatus) => {
+    updateQueryData<{ items: JobStatus[]; total: number }>(
+      queryClient,
+      queryKeys.queues.jobs(newJob.queueName),
+      (oldData) => {
+        if (!oldData) return oldData;
+        return {
+          ...oldData,
+          items: [newJob, ...oldData.items],
+          total: oldData.total + 1,
+        };
+      }
     );
-
-    // Invalidate and remove the specific job query
-    client.removeQueries({ queryKey: queryKeys.jobs.detail(workflowId) });
-
-    // Remove from all-queue-jobs list
-    client.setQueryData(queryKeys.queues.allJobs(), (oldData: any | undefined) => {
-      if (!oldData || !oldData.jobs) return oldData;
-      const newJobs = oldData.jobs.filter((job: any) => {
-        if (!job.id) return true;
-        try {
-          const parsedId = parseQueueJobId(job.id);
-          return parsedId.workflowId !== workflowId;
-        } catch {
-          return true; // Keep jobs that can't be parsed
-        }
-      });
-      return {
-        ...oldData,
-        jobs: newJobs,
-        total: newJobs.length,
-      };
-    });
-
-    // Invalidate queue data as we don't have enough info to update it directly
-    client.invalidateQueries({ queryKey: queryKeys.queues.all() });
+    updateQueryData<{ items: JobStatus[]; total: number }>(
+      queryClient,
+      queryKeys.queues.jobs(),
+      (oldData) => {
+        if (!oldData) return oldData;
+        return {
+          ...oldData,
+          items: [newJob, ...oldData.items],
+          total: oldData.total + 1,
+        };
+      }
+    );
   },
-
-  'job:progress': (client, data) => {
-    const { workflowId } = data;
-
-    // Update job monitoring data if it exists
-    client.setQueryData(queryKeys.jobs.monitoring(workflowId), (oldData: any) => {
+  JOB_UPDATED: (queryClient, updatedJob: JobStatus) => {
+    const updateJobInList = (oldData: { items: JobStatus[]; total: number } | undefined) => {
       if (!oldData) return oldData;
-      return {
-        ...oldData,
-        // Update progress in the monitoring data if needed
-      };
-    });
-
-    // Invalidate all-queue-jobs to reflect progress changes
-    client.invalidateQueries({ queryKey: queryKeys.queues.allJobs() });
-  },
-
-  'job:monitoring-update': (client, data) => {
-    client.setQueryData(queryKeys.jobs.monitoring(data.job.id), data);
-  },
-
-  'job:run-started': (client, data) => {
-    client.setQueryData(queryKeys.jobs.runs(data.workflowId), (oldData: WorkflowRunInfo[] | undefined) => {
-      if (!oldData) return [data.run];
-      const runExists = oldData.some(run => run.runId === data.run.runId);
-      if (runExists) {
-        return oldData.map(run => run.runId === data.run.runId ? data.run : run);
-      } else {
-        return [data.run, ...oldData];
-      }
-    });
-    client.invalidateQueries({ queryKey: queryKeys.jobs.monitoring(data.workflowId) });
-    client.invalidateQueries({ queryKey: queryKeys.queues.allJobs() });
-  },
-
-  'job:run-completed': (client, data) => {
-    client.setQueryData(queryKeys.jobs.runs(data.workflowId), (oldData: WorkflowRunInfo[] | undefined) => {
-      if (!oldData) return [data.run];
-      const runExists = oldData.some(run => run.runId === data.run.runId);
-      if (runExists) {
-        return oldData.map(run => run.runId === data.run.runId ? data.run : run);
-      } else {
-        return [data.run, ...oldData];
-      }
-    });
-    client.invalidateQueries({ queryKey: queryKeys.jobs.monitoring(data.workflowId) });
-    client.invalidateQueries({ queryKey: queryKeys.queues.allJobs() });
-  },
-
-  'pipeline:step-completed': (client, data) => {
-    client.invalidateQueries({ queryKey: queryKeys.jobs.monitoring(data.workflowId) });
-  },
-
-  'pipeline:step-failed': (client, data) => {
-    client.invalidateQueries({ queryKey: queryKeys.jobs.monitoring(data.workflowId) });
-  },
-
-  'queue:status-changed': (client, data) => {
-    client.setQueryData(queryKeys.queues.overview(), (oldData: { queues: Record<string, QueueOverview>; timestamp: string } | undefined) => {
-      if (!oldData) return;
-      return {
-        ...oldData,
-        queues: {
-          ...oldData.queues,
-          [data.queueName]: data.overview,
-        },
-        timestamp: new Date().toISOString(),
-      };
-    });
-    client.invalidateQueries({ queryKey: queryKeys.queues.detail(data.queueName) });
-  },
-
-  'queue:status-update': (client, data) => {
-    // This seems to be a legacy or different event, invalidation is safer
-    client.invalidateQueries({ queryKey: queryKeys.queues.overview() });
-    client.invalidateQueries({ queryKey: queryKeys.queues.details() });
-  },
-
-  'queue:item-added': (client, data) => {
-    client.invalidateQueries({ queryKey: queryKeys.queues.overview() });
-    client.invalidateQueries({ queryKey: queryKeys.queues.detail(data.queueName) });
-    client.invalidateQueries({ queryKey: queryKeys.queues.allJobs() });
-  },
-
-  'queue:item-completed': (client, data) => {
-    client.invalidateQueries({ queryKey: queryKeys.queues.overview() });
-    client.invalidateQueries({ queryKey: queryKeys.queues.detail(data.queueName) });
-    client.invalidateQueries({ queryKey: queryKeys.queues.allJobs() });
-  },
-
-  'queue:item-failed': (client, data) => {
-    client.invalidateQueries({ queryKey: queryKeys.queues.overview() });
-    client.invalidateQueries({ queryKey: queryKeys.queues.detail(data.queueName) });
-    client.invalidateQueries({ queryKey: queryKeys.queues.allJobs() });
-  },
-
-  'queue:item-removed': (client, data) => {
-    // Use a slight delay to allow optimistic updates to complete first
-    setTimeout(() => {
-      client.invalidateQueries({ queryKey: queryKeys.queues.all() });
-      client.invalidateQueries({ queryKey: queryKeys.queues.allJobs() });
-      if (data.workflowId) {
-        client.invalidateQueries({ queryKey: queryKeys.jobs.detail(data.workflowId) });
-        client.invalidateQueries({ queryKey: queryKeys.jobs.lists() });
-      }
-    }, 100);
-  },
-
-  'queue:paused': (client, data) => {
-    client.invalidateQueries({ queryKey: queryKeys.queues.all() });
-    client.invalidateQueries({ queryKey: queryKeys.queues.allJobs() });
-  },
-
-  'queue:resumed': (client, data) => {
-    client.invalidateQueries({ queryKey: queryKeys.queues.all() });
-    client.invalidateQueries({ queryKey: queryKeys.queues.allJobs() });
-  },
-
-  'queue:cleared': (client, data) => {
-    client.invalidateQueries({ queryKey: queryKeys.queues.all() });
-    client.invalidateQueries({ queryKey: queryKeys.queues.allJobs() });
-  },
-
-  'queue:job-removed': (client, data) => {
-    // Delay invalidation to avoid interfering with optimistic updates
-    setTimeout(() => {
-      client.invalidateQueries({ queryKey: queryKeys.queues.all() });
-      // Only invalidate all-queue-jobs if there's no pending optimistic update
-      const hasOptimisticUpdate = client.isMutating({ mutationKey: ['removeQueueItem'] });
-      if (!hasOptimisticUpdate) {
-        client.invalidateQueries({ queryKey: queryKeys.queues.allJobs() });
-      }
-      client.invalidateQueries({ queryKey: queryKeys.jobs.lists() });
-      if (data.workflowId) {
-        client.invalidateQueries({ queryKey: queryKeys.jobs.detail(data.workflowId) });
-      }
-    }, 200);
-  },
-
-  'queue:job-retried': (client, data) => {
-    const retriedJob = data.job;
-
-    // Update the job in the jobs list
-    client.setQueryData(queryKeys.jobs.lists(), (oldData: Job[] | undefined) => {
-      if (!oldData) return oldData;
-      return oldData.map(existingJob =>
-        existingJob.id === retriedJob.id ? retriedJob : existingJob
+      const newItems = oldData.items.map((job) =>
+        job.id === updatedJob.id ? updatedJob : job
       );
-    });
-
-    // Update the specific job details
-    client.setQueryData(queryKeys.jobs.detail(retriedJob.id), (oldData: JobWithSteps | undefined) => {
+      return { ...oldData, items: newItems };
+    };
+    updateQueryData<{ items: JobStatus[]; total: number }>(
+      queryClient,
+      queryKeys.queues.jobs(updatedJob.queueName),
+      updateJobInList
+    );
+    updateQueryData<{ items: JobStatus[]; total: number }>(
+      queryClient,
+      queryKeys.queues.jobs(),
+      updateJobInList
+    );
+  },
+  JOB_REMOVED: (queryClient, { jobId, queueName }: { jobId: string; queueName: string }) => {
+    const removeJobFromList = (oldData: { items: JobStatus[]; total: number } | undefined) => {
       if (!oldData) return oldData;
-      return { ...oldData, ...retriedJob };
-    });
-
-    client.invalidateQueries({ queryKey: queryKeys.queues.all() });
-    client.invalidateQueries({ queryKey: queryKeys.queues.allJobs() });
+      const newItems = oldData.items.filter((job) => job.id !== jobId);
+      return { ...oldData, items: newItems, total: oldData.total - 1 };
+    };
+    updateQueryData<{ items: JobStatus[]; total: number }>(
+      queryClient,
+      queryKeys.queues.jobs(queueName),
+      removeJobFromList
+    );
+    updateQueryData<{ items: JobStatus[]; total: number }>(
+      queryClient,
+      queryKeys.queues.jobs(),
+      removeJobFromList
+    );
+  },
+  QUEUE_STATUS_UPDATED: (queryClient, data) => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.queues.all() });
   },
 };

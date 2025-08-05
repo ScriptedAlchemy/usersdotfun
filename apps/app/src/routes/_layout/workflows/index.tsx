@@ -196,7 +196,7 @@ function WorkflowsPage() {
 
   const handleDelete = async () => {
     const idsToDelete = Object.keys(rowSelection);
-    await toast.promise(
+    toast.promise(
       Promise.all(idsToDelete.map((id) => deleteMutation.mutateAsync(id))),
       {
         loading: "Deleting workflows...",

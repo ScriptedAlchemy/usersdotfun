@@ -12,12 +12,16 @@ const GenericPluginOutputSchema = createOutputSchema(z.unknown());
 
 const processPipelineJob = (job: Job<ExecutePipelineJobData>) =>
   Effect.gen(function* () {
-    const { workflowRunId, sourceItemId, input } = job.data;
+    const { workflowId, workflowRunId, data } = job.data;
+    if (!workflowRunId) {
+      return yield* Effect.fail(new Error("workflowRunId is required for pipeline jobs"));
+    }
+    const { sourceItemId, input } = data;
     const workflowService = yield* WorkflowService;
     const pluginService = yield* PluginService;
 
     const run = yield* workflowService.getWorkflowRunById(workflowRunId);
-    const workflow = yield* workflowService.getWorkflowById(run.workflowId);
+    const workflow = yield* workflowService.getWorkflowById(workflowId);
 
     let currentInput: any = input;
 
@@ -108,9 +112,10 @@ const processPipelineJob = (job: Job<ExecutePipelineJobData>) =>
   }).pipe(
     Effect.catchAll(error =>
       Effect.gen(function* () {
-        const { workflowRunId, sourceItemId } = job.data;
+        const { workflowRunId, data } = job.data;
+        const { sourceItemId } = data;
         const workflowService = yield* WorkflowService;
-        yield* workflowService.updateWorkflowRun(workflowRunId, { status: 'partially_completed' });
+        yield* workflowService.updateWorkflowRun(workflowRunId!, { status: 'partially_completed' });
         yield* Effect.logError(`Pipeline failed for Item ${sourceItemId}`, error);
         return yield* Effect.fail(error);
       })

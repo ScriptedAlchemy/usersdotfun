@@ -1,28 +1,44 @@
 import { z } from "zod";
 import {
-  executePipelineJobDataSchema,
+  executePipelineDataSchema,
   jobDataSchema,
+  jobStatusEnum,
   jobStatusSchema,
   jobTypeEnum,
   queueStatusEnum,
   queueStatusSchema,
-  sourceQueryJobDataSchema,
-  startWorkflowRunJobDataSchema
+  sourceQueryDataSchema,
+  startWorkflowRunDataSchema
 } from '../schemas/queues';
 
 // Enums
 export type QueueStatusType = z.infer<typeof queueStatusEnum>;
 export type JobType = z.infer<typeof jobTypeEnum>;
+export type JobStatusType = z.infer<typeof jobStatusEnum>;
 
 // Queue Management Types
 export type QueueStatus = z.infer<typeof queueStatusSchema>;
 export type JobStatus = z.infer<typeof jobStatusSchema>;
 
-// Queue Job Payload Types
-export type StartWorkflowRunJobData = z.infer<typeof startWorkflowRunJobDataSchema>;
-export type SourceQueryJobData = z.infer<typeof sourceQueryJobDataSchema>;
-export type ExecutePipelineJobData = z.infer<typeof executePipelineJobDataSchema>;
-export type JobData = z.infer<typeof jobDataSchema>;
+// Base Job Data Wrapper
+export type JobData<T> = {
+  workflowId: string;
+  workflowRunId?: string;
+  data: T;
+};
+
+// Specific Job Data Payloads
+export type StartWorkflowRunData = z.infer<typeof startWorkflowRunDataSchema>;
+export type SourceQueryData = z.infer<typeof sourceQueryDataSchema>;
+export type ExecutePipelineData = z.infer<typeof executePipelineDataSchema>;
+
+// Full Job Payload Types
+export type StartWorkflowRunJobData = JobData<StartWorkflowRunData>;
+export type SourceQueryJobData = JobData<SourceQueryData>;
+export type ExecutePipelineJobData = JobData<ExecutePipelineData>;
+
+// Union of all possible job data payloads
+export type AllJobData = z.infer<typeof jobDataSchema>;
 
 // Queue Names
 export const QUEUE_NAMES = {

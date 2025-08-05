@@ -18,6 +18,15 @@ export type RedisKey<T> = {
 
 export const RedisKeys = {
   /**
+   * The channel name for broadcasting WebSocket events.
+   */
+  webSocketEventsChannel: (): RedisKey<string> => ({
+    __type: 'RedisKey',
+    value: 'websocket-events',
+    _value: undefined as unknown as string,
+  }),
+
+  /**
    * Key for a workflow's resumable state (e.g., for source cursors).
    * Example: `workflow:WORKFLOW_ID:state`
    */
