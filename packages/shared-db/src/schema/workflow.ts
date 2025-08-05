@@ -2,8 +2,8 @@ import { relations } from "drizzle-orm";
 import { jsonb, pgEnum, pgTable, text, timestamp, varchar } from "drizzle-orm/pg-core";
 import { workflowStatusValues } from "@usersdotfun/shared-types/schemas";
 import { user } from "./auth";
-import { sourceItem } from "./source-item";
 import { workflowRun } from "./workflow-run";
+import { workflowsToSourceItems } from "./workflows-to-source-items";
 
 export const workflowStatusEnum = pgEnum("workflow_status", workflowStatusValues);
 
@@ -29,7 +29,7 @@ export const workflowRelations = relations(workflow, ({ many, one }) => ({
     relationName: "createdByUser",
   }),
   runs: many(workflowRun),
-  items: many(sourceItem),
+  items: many(workflowsToSourceItems),
 }));
 
 export type WorkflowEntity = typeof workflow.$inferSelect;

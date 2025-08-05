@@ -65,7 +65,10 @@ export interface CreateWorkflowRunData extends Omit<WorkflowRunEntity, 'id' | 's
 
 export interface UpdateWorkflowRunData extends Partial<Pick<WorkflowRunEntity, 'status' | 'itemsProcessed' | 'itemsTotal' | 'completedAt' | 'failureReason'>> { }
 
-export interface CreateSourceItemData extends Omit<SourceItemEntity, 'id' | 'createdAt'> { }
+export interface CreateSourceItemData
+  extends Omit<SourceItemEntity, "id" | "createdAt" | "updatedAt"> {
+  workflowId: string;
+}
 
 export interface CreatePluginRunData extends Omit<PluginRunEntity, 'id' | 'output' | 'error' | 'completedAt'> { }
 
@@ -184,12 +187,16 @@ export const WorkflowServiceLive = Layer.effect(
             where: eq(schema.workflow.id, id),
             with: {
               user: true,
-              items: true,
               runs: {
                 with: {
                   user: true,
-                }
-              }
+                },
+              },
+              items: {
+                with: {
+                  sourceItem: true,
+                },
+              },
             },
           }),
         catch: (cause) =>
@@ -198,6 +205,10 @@ export const WorkflowServiceLive = Layer.effect(
         Effect.flatMap((result) =>
           requireRecord(result, new WorkflowNotFoundError({ workflowId: id }))
         ),
+        Effect.map((r) => ({
+          ...r,
+          items: r.items.map((i) => i.sourceItem),
+        })),
         Effect.flatMap((workflow) =>
           parseEntity(
             workflow,
@@ -362,44 +373,93 @@ export const WorkflowServiceLive = Layer.effect(
       );
 
     // Source item methods
-    const upsertSourceItem = (data: CreateSourceItemData): Effect.Effect<SourceItem, DbError> =>
-      Effect.tryPromise({
-        try: () => {
-          const newItem = {
-            ...data,
-            id: randomUUID(),
-            createdAt: new Date(),
-          };
-          return db.insert(schema.sourceItem)
-            .values(newItem)
-            .onConflictDoUpdate({
-              target: [schema.sourceItem.workflowId, schema.sourceItem.data],
-              set: { processedAt: new Date() }
-            })
-            .returning();
-        },
-        catch: (cause) =>
-          new DbError({ cause, message: "Failed to upsert source item" }),
-      }).pipe(
-        Effect.flatMap((result) =>
-          requireRecord(
-            result[0],
+    const upsertSourceItem = (
+      data: CreateSourceItemData
+    ): Effect.Effect<SourceItem, DbError> =>
+      Effect.gen(function* () {
+        const { workflowId, ...sourceItemData } = data;
+        const now = new Date();
+
+        const upsertedItem = yield* Effect.tryPromise({
+          try: () =>
+            db
+              .insert(schema.sourceItem)
+              .values({
+                ...sourceItemData,
+                id: randomUUID(),
+                createdAt: now,
+                updatedAt: now,
+              })
+              .onConflictDoUpdate({
+                target: schema.sourceItem.externalId,
+                set: {
+                  data: sourceItemData.data,
+                  updatedAt: now,
+                },
+              })
+              .returning(),
+          catch: (cause) =>
+            new DbError({ cause, message: "Failed to upsert source item" }),
+        }).pipe(
+          Effect.flatMap((result) =>
+            requireRecord(
+              result[0],
+              new DbError({
+                cause: new Error("No record returned after upsert"),
+                message: "Failed to upsert source item",
+              })
+            )
+          )
+        );
+
+        yield* Effect.tryPromise({
+          try: () =>
+            db
+              .insert(schema.workflowsToSourceItems)
+              .values({
+                workflowId,
+                sourceItemId: upsertedItem.id,
+              })
+              .onConflictDoNothing()
+              .returning(),
+          catch: (cause) =>
             new DbError({
-              cause: new Error("No record returned after insert"),
-              message: "Failed to upsert source item",
+              cause,
+              message: "Failed to link source item to workflow",
+            }),
+        });
+
+        return yield* parseEntity<SourceItem>(
+          upsertedItem,
+          sourceItemSchema,
+          "source item"
+        );
+      }).pipe(
+        Effect.catchAll((error) =>
+          Effect.fail(
+            new DbError({
+              cause: error,
+              message: "Failed to complete source item upsert transaction",
             })
           )
-        ),
-        Effect.flatMap(entity => parseEntity<SourceItem>(entity, sourceItemSchema, 'source item'))
+        )
       );
 
-    const getItemsForWorkflow = (workflowId: string): Effect.Effect<Array<SourceItem>, DbError> =>
+    const getItemsForWorkflow = (
+      workflowId: string
+    ): Effect.Effect<Array<SourceItem>, DbError> =>
       Effect.tryPromise({
         try: () =>
-          db.query.sourceItem.findMany({
-            where: eq(schema.sourceItem.workflowId, workflowId),
-            orderBy: (items, { desc }) => desc(items.createdAt),
-          }),
+          db.query.workflowsToSourceItems
+            .findMany({
+              where: eq(schema.workflowsToSourceItems.workflowId, workflowId),
+              with: {
+                sourceItem: true,
+              },
+              orderBy: (items, { desc }) =>
+                desc(schema.sourceItem.createdAt),
+            })
+            .then((results) => results.map((r) => r.sourceItem)),
         catch: (cause) =>
           new DbError({
             cause,

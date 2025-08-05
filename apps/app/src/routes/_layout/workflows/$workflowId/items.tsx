@@ -1,9 +1,8 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import { useWorkflowItemsQuery } from "~/hooks/use-api";
-import { DataTable } from "~/components/common/data-table";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { SourceItem } from "@usersdotfun/shared-types/types";
-import { Badge } from "~/components/ui/badge";
+import { DataTable } from "~/components/common/data-table";
+import { useWorkflowItemsQuery } from "~/hooks/use-api";
 
 export const Route = createFileRoute("/_layout/workflows/$workflowId/items")({
   component: WorkflowItemsPage,
@@ -15,7 +14,9 @@ const columns: ColumnDef<SourceItem>[] = [
     header: "Item ID",
     cell: ({ row }) => {
       const item = row.original;
-      const { workflowId } = useParams({ from: "/_layout/workflows/$workflowId/items" });
+      const { workflowId } = useParams({
+        from: "/_layout/workflows/$workflowId/items",
+      });
       return (
         <Link
           to="/workflows/$workflowId/items/$itemId"
@@ -54,7 +55,9 @@ const columns: ColumnDef<SourceItem>[] = [
 ];
 
 function WorkflowItemsPage() {
-  const { workflowId } = useParams({ from: "/_layout/workflows/$workflowId/items" });
+  const { workflowId } = useParams({
+    from: "/_layout/workflows/$workflowId/items",
+  });
   const { data: items, isLoading } = useWorkflowItemsQuery(workflowId);
 
   return (

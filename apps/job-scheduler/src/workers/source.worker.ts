@@ -36,75 +36,120 @@ const processSourceQueryJob = (job: Job<SourceQueryJobData>) =>
       sourceItemId: null,
     });
 
-    const execute = Effect.acquireUseRelease(
-      pluginService.initializePlugin<SourcePlugin>(
-        workflow.source,
-        `Source Query for Workflow "${workflow.name}" [${workflowRunId}]`
-      ),
-      (sourcePlugin) =>
-        pluginService.executePlugin(
-          sourcePlugin,
-          input,
+    const pluginEffect = Effect.gen(function* () {
+      const execute = Effect.acquireUseRelease(
+        pluginService.initializePlugin<SourcePlugin>(
+          workflow.source,
           `Source Query for Workflow "${workflow.name}" [${workflowRunId}]`
         ),
-      () => Effect.void
+        (sourcePlugin) =>
+          pluginService.executePlugin(
+            sourcePlugin,
+            input,
+            `Source Query for Workflow "${workflow.name}" [${workflowRunId}]`
+          ),
+        () => Effect.void
+      );
+
+      const rawOutput = yield* execute;
+
+      const parseResult = GenericPluginSourceOutputSchema.safeParse(rawOutput);
+      if (!parseResult.success) {
+        const error = new Error(`Source plugin output validation failed: ${parseResult.error.message}`);
+        yield* workflowService.updatePluginRun(pluginRun.id, {
+          status: 'failed',
+          error: { message: error.message },
+          completedAt: new Date(),
+        });
+        return yield* Effect.fail(error);
+      }
+
+      const output = parseResult.data;
+      if (!output.success || !output.data) {
+        const error = new Error('Source plugin failed to return data');
+        yield* workflowService.updatePluginRun(pluginRun.id, {
+          status: 'failed',
+          error: output.errors,
+          completedAt: new Date(),
+        });
+        return yield* Effect.fail(error);
+      }
+
+      yield* workflowService.updatePluginRun(pluginRun.id, {
+        status: 'completed',
+        output,
+        completedAt: new Date(),
+      });
+
+      return output.data;
+    }).pipe(
+      Effect.catchAll((error) =>
+        Effect.gen(function* () {
+          yield* workflowService.updatePluginRun(pluginRun.id, {
+            status: "failed",
+            error: {
+              message: "Failed to execute source plugin",
+              cause: error,
+            },
+            completedAt: new Date(),
+          });
+          return yield* Effect.fail(error);
+        })
+      )
     );
 
-    const rawOutput = yield* execute;
-
-    const parseResult = GenericPluginSourceOutputSchema.safeParse(rawOutput);
-    if (!parseResult.success) {
-      const error = new Error(`Source plugin output validation failed: ${parseResult.error.message}`);
-      yield* workflowService.updatePluginRun(pluginRun.id, {
-        status: 'failed',
-        error: { message: error.message },
-        completedAt: new Date(),
-      });
-      return yield* Effect.fail(error);
-    }
-
-    const output = parseResult.data;
-    if (!output.success || !output.data) {
-      const error = new Error('Source plugin failed to return data');
-      yield* workflowService.updatePluginRun(pluginRun.id, {
-        status: 'failed',
-        error: output.errors,
-        completedAt: new Date(),
-      });
-      return yield* Effect.fail(error);
-    }
-
-    yield* workflowService.updatePluginRun(pluginRun.id, {
-      status: 'completed',
-      output,
-      completedAt: new Date(),
-    });
-
-    const { items, nextLastProcessedState } = output.data;
+    const { items, nextLastProcessedState } = yield* pluginEffect;
 
     yield* workflowService.updateWorkflowRun(workflowRunId, { itemsTotal: items.length });
 
-    if (items.length > 0) {
-      yield* Effect.log(`Enqueuing ${items.length} items for pipeline processing`);
+    const processingEffect = Effect.gen(function* () {
+      if (items.length > 0) {
+        yield* Effect.log(`Enqueuing ${items.length} items for pipeline processing`);
 
-      yield* Effect.forEach(items, (item) =>
+        yield* Effect.forEach(
+          items,
+          (item) =>
+            Effect.gen(function* () {
+              const sourceItem = yield* workflowService.upsertSourceItem({
+                workflowId,
+                externalId: item.externalId,
+                data: item,
+                processedAt: null,
+              });
+
+              const pipelineJobData: ExecutePipelineJobData = {
+                workflowRunId,
+                sourceItemId: sourceItem.id,
+                input: item.raw as Record<string, unknown>,
+              };
+
+              yield* queueService.add(
+                QUEUE_NAMES.PIPELINE_EXECUTION,
+                `process-item`,
+                pipelineJobData
+              );
+            }),
+          { concurrency: 10, discard: true }
+        );
+      }
+    });
+
+    yield* processingEffect.pipe(
+      Effect.catchAll((error) =>
         Effect.gen(function* () {
-          const sourceItem = yield* workflowService.upsertSourceItem({
-            workflowId,
-            data: item.raw,
-            processedAt: null,
+          yield* workflowService.updatePluginRun(pluginRun.id, {
+            status: "failed",
+            error: {
+              message: "Failed to process source items",
+              cause: error,
+            },
+            completedAt: new Date(),
           });
+          return yield* Effect.fail(error);
+        })
+      )
+    );
 
-          const pipelineJobData: ExecutePipelineJobData = {
-            workflowRunId,
-            sourceItemId: sourceItem.id,
-            input: item.raw as Record<string, unknown>,
-          };
-
-          yield* queueService.add(QUEUE_NAMES.PIPELINE_EXECUTION, `process-item`, pipelineJobData);
-        }), { concurrency: 10, discard: true }
-      );
-    }
 
     if (nextLastProcessedState) {
       yield* Effect.log(`More data available. Enqueueing follow-up source query for workflow ${workflowId}`);

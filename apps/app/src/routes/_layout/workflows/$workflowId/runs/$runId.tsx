@@ -24,8 +24,8 @@ export const Route = createFileRoute(
   }) => {
     const [runDetails] = await Promise.all([
       queryClient.fetchQuery(getRunDetailsQuery(runId)),
-      queryClient.ensureQueryData(getWorkflowQuery(workflowId)),
-      queryClient.ensureQueryData(getWorkflowRunsQuery(workflowId)),
+      queryClient.fetchQuery(getWorkflowQuery(workflowId)),
+      queryClient.fetchQuery(getWorkflowRunsQuery(workflowId)),
     ]);
     return { runDetails };
   },

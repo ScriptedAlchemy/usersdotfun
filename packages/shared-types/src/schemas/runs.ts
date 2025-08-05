@@ -53,10 +53,11 @@ export const richWorkflowRunSummarySchema = workflowRunSchema.extend({
 // A canonical record of a unique piece of data from a source.
 export const sourceItemSchema = z.object({
   id: z.string(),
-  workflowId: z.string(),
+  externalId: z.string(),
   data: z.any(),
   processedAt: z.coerce.date().nullable(),
   createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
 });
 
 // The real-time summary object that lives in Redis.
