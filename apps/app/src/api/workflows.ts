@@ -10,18 +10,17 @@ import type {
   CreateWorkflowRequest,
   UpdateWorkflowRequest
 } from '@usersdotfun/shared-types/types';
-import { API_BASE_URL, extractData, handleResponse } from "./utils";
+import { API_BASE_URL, extractData, handleResponse, authorizedFetch } from "./utils";
 
 export const getWorkflows = async () => {
-  const res = await fetch(`${API_BASE_URL}/workflows`);
+  const res = await authorizedFetch(`${API_BASE_URL}/workflows`);
   const apiResponse = await handleResponse(res, GetWorkflowsResponseSchema);
   return extractData(apiResponse);
 };
 
 export const createWorkflow = async (workflow: CreateWorkflowRequest['body']) => {
-  const res = await fetch(`${API_BASE_URL}/workflows`, {
+  const res = await authorizedFetch(`${API_BASE_URL}/workflows`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(workflow),
   });
   const apiResponse = await handleResponse(res, CreateWorkflowResponseSchema);
@@ -29,15 +28,14 @@ export const createWorkflow = async (workflow: CreateWorkflowRequest['body']) =>
 };
 
 export const getWorkflow = async (id: string) => {
-  const res = await fetch(`${API_BASE_URL}/workflows/${id}`);
+  const res = await authorizedFetch(`${API_BASE_URL}/workflows/${id}`);
   const apiResponse = await handleResponse(res, GetWorkflowResponseSchema);
   return extractData(apiResponse);
 };
 
 export const updateWorkflow = async (id: string, workflow: UpdateWorkflowRequest['body']) => {
-  const res = await fetch(`${API_BASE_URL}/workflows/${id}`, {
+  const res = await authorizedFetch(`${API_BASE_URL}/workflows/${id}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(workflow),
   });
   const apiResponse = await handleResponse(res, UpdateWorkflowResponseSchema);
@@ -45,7 +43,7 @@ export const updateWorkflow = async (id: string, workflow: UpdateWorkflowRequest
 };
 
 export const deleteWorkflow = async (id: string): Promise<void> => {
-  const res = await fetch(`${API_BASE_URL}/workflows/${id}`, {
+  const res = await authorizedFetch(`${API_BASE_URL}/workflows/${id}`, {
     method: 'DELETE',
   });
   if (!res.ok) {
@@ -55,7 +53,7 @@ export const deleteWorkflow = async (id: string): Promise<void> => {
 };
 
 export const toggleWorkflowStatus = async (id: string) => {
-  const res = await fetch(`${API_BASE_URL}/workflows/${id}/toggle`, {
+  const res = await authorizedFetch(`${API_BASE_URL}/workflows/${id}/toggle`, {
     method: 'POST',
   });
   const apiResponse = await handleResponse(res, UpdateWorkflowResponseSchema);
@@ -63,7 +61,7 @@ export const toggleWorkflowStatus = async (id: string) => {
 };
 
 export const runWorkflowNow = async (id: string) => {
-  const res = await fetch(`${API_BASE_URL}/workflows/${id}/run`, {
+  const res = await authorizedFetch(`${API_BASE_URL}/workflows/${id}/run`, {
     method: 'POST',
   });
   const apiResponse = await handleResponse(res, UpdateWorkflowResponseSchema);
@@ -71,7 +69,7 @@ export const runWorkflowNow = async (id: string) => {
 };
 
 export const getWorkflowItems = async (id: string) => {
-  const res = await fetch(`${API_BASE_URL}/workflows/${id}/items`);
+  const res = await authorizedFetch(`${API_BASE_URL}/workflows/${id}/items`);
   const apiResponse = await handleResponse(res, GetWorkflowItemsResponseSchema);
   return extractData(apiResponse);
 };

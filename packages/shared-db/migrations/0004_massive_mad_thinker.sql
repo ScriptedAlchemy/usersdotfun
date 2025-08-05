@@ -1,0 +1,1 @@
+ALTER TABLE "workflows_to_source_items" ADD COLUMN "created_at" timestamp with time zone DEFAULT now() NOT NULL;

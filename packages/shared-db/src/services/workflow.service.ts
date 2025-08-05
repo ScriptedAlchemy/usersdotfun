@@ -419,6 +419,7 @@ export const WorkflowServiceLive = Layer.effect(
               .values({
                 workflowId,
                 sourceItemId: upsertedItem.id,
+                createdAt: now,
               })
               .onConflictDoNothing()
               .returning(),
@@ -457,7 +458,7 @@ export const WorkflowServiceLive = Layer.effect(
                 sourceItem: true,
               },
               orderBy: (items, { desc }) =>
-                desc(schema.sourceItem.createdAt),
+                desc(items.createdAt),
             })
             .then((results) => results.map((r) => r.sourceItem)),
         catch: (cause) =>

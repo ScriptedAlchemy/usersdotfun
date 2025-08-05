@@ -1,6 +1,23 @@
 import type z from "zod";
 
-export const API_BASE_URL = '/api';
+export const API_BASE_URL = process.env.GATEWAY_URL || 'http://localhost:3001/api';
+
+export const authorizedFetch = async (url: string, options: RequestInit = {}) => {
+  const defaultOptions: RequestInit = {
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  };
+
+  const mergedOptions: RequestInit = {
+    ...defaultOptions,
+    ...options,
+  };
+
+  return fetch(url, mergedOptions);
+};
 
 export async function handleResponse<T>(response: Response, schema: z.Schema<T>): Promise<T> {
   if (!response.ok) {

@@ -9,23 +9,23 @@ import {
   RetryQueueJobResponseSchema,
 } from '@usersdotfun/shared-types/schemas';
 
-import { API_BASE_URL, extractData, handleResponse } from "./utils";
+import { API_BASE_URL, extractData, handleResponse, authorizedFetch } from "./utils";
 
 export const getQueuesStatus = async () => {
-  const res = await fetch(`${API_BASE_URL}/queues`);
+  const res = await authorizedFetch(`${API_BASE_URL}/queues`);
   const apiResponse = await handleResponse(res, GetQueuesStatusResponseSchema);
   return extractData(apiResponse);
 };
 
 export const getQueueDetails = async (queueName: string) => {
   // This function gets jobs for a specific queue with all statuses
-  const res = await fetch(`${API_BASE_URL}/queues/${queueName}/jobs?status=all`);
+  const res = await authorizedFetch(`${API_BASE_URL}/queues/${queueName}/jobs?status=all`);
   const apiResponse = await handleResponse(res, GetQueueJobsResponseSchema);
   return extractData(apiResponse);
 };
 
 export const getQueueJobs = async (queueName: string, status: string) => {
-  const res = await fetch(`${API_BASE_URL}/queues/${queueName}/jobs?status=${status}`);
+  const res = await authorizedFetch(`${API_BASE_URL}/queues/${queueName}/jobs?status=${status}`);
   const apiResponse = await handleResponse(res, GetQueueJobsResponseSchema);
   return extractData(apiResponse);
 };
@@ -42,13 +42,13 @@ export const getAllQueueJobs = async (filters?: {
   if (filters?.limit) params.append('limit', filters.limit.toString());
   if (filters?.offset) params.append('offset', filters.offset.toString());
 
-  const res = await fetch(`${API_BASE_URL}/queues/jobs?${params}`);
+  const res = await authorizedFetch(`${API_BASE_URL}/queues/jobs?${params}`);
   const apiResponse = await handleResponse(res, GetAllQueueJobsResponseSchema);
   return extractData(apiResponse);
 };
 
 export const retryQueueJob = async (queueName: string, jobId: string) => {
-  const res = await fetch(`${API_BASE_URL}/queues/${queueName}/jobs/${jobId}/retry`, {
+  const res = await authorizedFetch(`${API_BASE_URL}/queues/${queueName}/jobs/${jobId}/retry`, {
     method: 'POST',
   });
   const apiResponse = await handleResponse(res, RetryQueueJobResponseSchema);
@@ -56,7 +56,7 @@ export const retryQueueJob = async (queueName: string, jobId: string) => {
 };
 
 export const removeQueueJob = async (queueName: string, jobId: string) => {
-  const res = await fetch(`${API_BASE_URL}/queues/${queueName}/jobs/${jobId}`, {
+  const res = await authorizedFetch(`${API_BASE_URL}/queues/${queueName}/jobs/${jobId}`, {
     method: 'DELETE',
   });
   const apiResponse = await handleResponse(res, RemoveQueueJobResponseSchema);
@@ -64,7 +64,7 @@ export const removeQueueJob = async (queueName: string, jobId: string) => {
 };
 
 export const pauseQueue = async (queueName: string) => {
-  const res = await fetch(`${API_BASE_URL}/queues/${queueName}/pause`, {
+  const res = await authorizedFetch(`${API_BASE_URL}/queues/${queueName}/pause`, {
     method: 'POST',
   });
   const apiResponse = await handleResponse(res, PauseQueueResponseSchema);
@@ -72,7 +72,7 @@ export const pauseQueue = async (queueName: string) => {
 };
 
 export const resumeQueue = async (queueName: string) => {
-  const res = await fetch(`${API_BASE_URL}/queues/${queueName}/resume`, {
+  const res = await authorizedFetch(`${API_BASE_URL}/queues/${queueName}/resume`, {
     method: 'POST',
   });
   const apiResponse = await handleResponse(res, ResumeQueueResponseSchema);
@@ -80,11 +80,8 @@ export const resumeQueue = async (queueName: string) => {
 };
 
 export const clearQueue = async (queueName: string, jobType: 'all' | 'completed' | 'failed' = 'all') => {
-  const res = await fetch(`${API_BASE_URL}/queues/${queueName}/clear`, {
+  const res = await authorizedFetch(`${API_BASE_URL}/queues/${queueName}/clear`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
     body: JSON.stringify({ jobType }),
   });
   const apiResponse = await handleResponse(res, ClearQueueResponseSchema);

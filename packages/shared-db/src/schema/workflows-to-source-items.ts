@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { pgTable, primaryKey, varchar } from "drizzle-orm/pg-core";
+import { pgTable, primaryKey, timestamp, varchar } from "drizzle-orm/pg-core";
 import { workflow } from "./workflow";
 import { sourceItem } from "./source-item";
 
@@ -12,6 +12,7 @@ export const workflowsToSourceItems = pgTable(
     sourceItemId: varchar("source_item_id", { length: 255 })
       .notNull()
       .references(() => sourceItem.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => [primaryKey({ columns: [t.workflowId, t.sourceItemId] })]
 );
