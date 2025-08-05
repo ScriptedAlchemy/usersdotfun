@@ -1,28 +1,30 @@
 import type { Plugin } from '@usersdotfun/core-sdk';
 import Mustache from 'mustache';
-import { z } from 'zod';
 import {
+  SimpleTransformerConfig,
   SimpleTransformerConfigSchema,
+  SimpleTransformerInput,
   SimpleTransformerInputSchema,
+  SimpleTransformerOutput,
   SimpleTransformerOutputSchema,
 } from './schemas';
 
-// Derived Types
-type SimpleTransformerConfig = z.infer<typeof SimpleTransformerConfigSchema>;
-type SimpleTransformerInput = z.infer<typeof SimpleTransformerInputSchema>;
-type SimpleTransformerOutput = z.infer<typeof SimpleTransformerOutputSchema>;
-
 export default class SimpleTransformer
   implements
-  Plugin<
-    SimpleTransformerInput,
-    SimpleTransformerOutput,
-    SimpleTransformerConfig
-  > {
+    Plugin<
+      typeof SimpleTransformerInputSchema,
+      typeof SimpleTransformerOutputSchema,
+      typeof SimpleTransformerConfigSchema
+    >
+{
+  readonly id = '@curatedotfun/simple-transform' as const;
   readonly type = 'transformer' as const;
+  readonly inputSchema = SimpleTransformerInputSchema;
+  readonly outputSchema = SimpleTransformerOutputSchema;
+  readonly configSchema = SimpleTransformerConfigSchema;
   private template: string = '{{content}}'; // Simple default template
 
-  async initialize(config?: SimpleTransformerConfig): Promise<void> {
+  async initialize(config: SimpleTransformerConfig): Promise<void> {
     if (config?.variables?.template) {
       this.template = config.variables.template;
     }

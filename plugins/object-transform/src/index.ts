@@ -1,17 +1,14 @@
 import type { Plugin } from '@usersdotfun/core-sdk';
 import { format } from 'date-fns';
 import Mustache from 'mustache';
-import { z } from 'zod';
 import {
+  ObjectTransformerConfig,
   ObjectTransformerConfigSchema,
+  ObjectTransformerInput,
   ObjectTransformerInputSchema,
+  ObjectTransformerOutput,
   ObjectTransformerOutputSchema,
 } from './schemas';
-
-// Derived Types
-type ObjectTransformerConfig = z.infer<typeof ObjectTransformerConfigSchema>;
-type ObjectTransformerInput = z.infer<typeof ObjectTransformerInputSchema>;
-type ObjectTransformerOutput = z.infer<typeof ObjectTransformerOutputSchema>;
 
 // Default template generators
 type TemplateGenerator = (formatStr?: string) => string | number;
@@ -43,15 +40,19 @@ const defaultTemplates: Record<string, TemplateGenerator> = {
 export default class ObjectTransformer
   implements
     Plugin<
-      ObjectTransformerInput,
-      ObjectTransformerOutput,
-      ObjectTransformerConfig
+      typeof ObjectTransformerInputSchema,
+      typeof ObjectTransformerOutputSchema,
+      typeof ObjectTransformerConfigSchema
     >
 {
+  readonly id = '@curatedotfun/object-transform' as const;
   readonly type = 'transformer' as const;
+  readonly inputSchema = ObjectTransformerInputSchema;
+  readonly outputSchema = ObjectTransformerOutputSchema;
+  readonly configSchema = ObjectTransformerConfigSchema;
   private config: ObjectTransformerConfig | null = null;
 
-  async initialize(config?: ObjectTransformerConfig): Promise<void> {
+  async initialize(config: ObjectTransformerConfig): Promise<void> {
     if (!config) {
       throw new Error('Object transformer requires configuration');
     }

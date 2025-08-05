@@ -16,3 +16,14 @@ export const SimpleTransformerInputSchema = createInputSchema(
 export const SimpleTransformerOutputSchema = createOutputSchema(
   z.object({ content: z.string() })
 );
+
+// Inferred types
+export type SimpleTransformerConfig = z.infer<
+  typeof SimpleTransformerConfigSchema
+>;
+export type SimpleTransformerInput = z.infer<
+  typeof SimpleTransformerInputSchema
+>;
+export type SimpleTransformerOutput = z.infer<
+  typeof SimpleTransformerOutputSchema
+>;

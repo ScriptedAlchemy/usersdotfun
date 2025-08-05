@@ -22,3 +22,14 @@ export const ObjectTransformerInputSchema = createInputSchema(
 export const ObjectTransformerOutputSchema = createOutputSchema(
   z.record(z.string(), z.unknown()),
 );
+
+// Inferred types
+export type ObjectTransformerConfig = z.infer<
+  typeof ObjectTransformerConfigSchema
+>;
+export type ObjectTransformerInput = z.infer<
+  typeof ObjectTransformerInputSchema
+>;
+export type ObjectTransformerOutput = z.infer<
+  typeof ObjectTransformerOutputSchema
+>;
