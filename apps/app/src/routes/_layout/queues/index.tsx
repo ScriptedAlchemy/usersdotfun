@@ -257,14 +257,6 @@ function QueuesPage() {
     <>
       <JobSheet job={selectedJob} isOpen={isSheetOpen} onClose={closeSheet} />
       <div className="container mx-auto p-4 sm:p-6 lg:p-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Queues</h1>
-            <p className="text-muted-foreground">
-              Monitor and manage all job queues.
-            </p>
-          </div>
-        </div>
 
         <div className="mb-8">
           <h2 className="text-xl font-semibold mb-4">Queue Status</h2>

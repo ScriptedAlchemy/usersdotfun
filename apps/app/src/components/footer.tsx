@@ -6,7 +6,7 @@ export function Footer() {
           <div className="text-sm text-muted-foreground">
             © {new Date().getFullYear()} usersdotfun. All rights reserved.
           </div>
-          <div className="flex gap-6 text-sm text-muted-foreground">
+          {/* <div className="flex gap-6 text-sm text-muted-foreground">
             <a href="#" className="hover:text-foreground transition-colors">
               Privacy
             </a>
@@ -16,7 +16,7 @@ export function Footer() {
             <a href="#" className="hover:text-foreground transition-colors">
               Support
             </a>
-          </div>
+          </div> */}
         </div>
       </div>
     </footer>
