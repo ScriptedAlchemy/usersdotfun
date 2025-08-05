@@ -11,13 +11,21 @@ import type { WorkflowRun } from "@usersdotfun/shared-types/types";
 import type { VariantProps } from "class-variance-authority";
 import { DataTable } from "~/components/common/data-table";
 import { Badge } from "~/components/ui/badge";
-import { getWorkflowQuery, getWorkflowRunsQuery } from "~/hooks/use-api";
+import {
+  workflowQueryOptions,
+  workflowRunsQueryOptions,
+} from "~/lib/queries";
+import { useQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/_layout/workflows/$workflowId/runs")({
   component: WorkflowRunsPage,
   loader: async ({ params: { workflowId }, context: { queryClient } }) => {
-    const workflow = await queryClient.fetchQuery(getWorkflowQuery(workflowId));
-    const runs = await queryClient.fetchQuery(getWorkflowRunsQuery(workflowId));
+    const workflow = await queryClient.ensureQueryData(
+      workflowQueryOptions(workflowId)
+    );
+    const runs = await queryClient.ensureQueryData(
+      workflowRunsQueryOptions(workflowId)
+    );
     return { workflow, runs };
   },
 });
@@ -26,6 +34,7 @@ const statusColors: Record<
   (typeof workflowRunStatusValues)[number],
   VariantProps<typeof Badge>["variant"]
 > = {
+  scheduled: "outline",
   started: "default",
   running: "secondary",
   completed: "success",

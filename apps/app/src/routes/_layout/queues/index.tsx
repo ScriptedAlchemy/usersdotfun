@@ -28,17 +28,26 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
 import {
-  useAllQueueJobsQuery, useClearQueueMutation,
-  usePauseQueueMutation, useQueuesStatusQuery, useRemoveQueueJobMutation,
+  allQueueJobsQueryOptions,
+  queuesStatusQueryOptions,
+  useClearQueueMutation,
+  usePauseQueueMutation,
+  useRemoveQueueJobMutation,
   useResumeQueueMutation
-} from "~/hooks/use-api";
+} from "~/lib/queries";
 import { cn } from "~/lib/utils";
+import { useQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/_layout/queues/")({
   component: QueuesPage,
   validateSearch: z.object({
     queueName: z.string().optional(),
   }),
+  loader: async ({ context: { queryClient } }) => {
+    const queuesStatus = await queryClient.ensureQueryData(queuesStatusQueryOptions);
+    const jobs = await queryClient.ensureQueryData(allQueueJobsQueryOptions());
+    return { queuesStatus, jobs };
+  },
 });
 
 const columns = (
@@ -197,20 +206,17 @@ function QueueStatusCard({
 function QueuesPage() {
   const { queueName: selectedQueue } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
-  const { data: queuesStatus, isLoading: isLoadingStatus } =
-    useQueuesStatusQuery() as {
-      data: {
-        name: string;
-        active: number;
-        waiting: number;
-        failed: number;
-        paused: boolean;
-      }[];
-      isLoading: boolean;
-    };
-  const { data: jobs, isLoading: isLoadingJobs } = useAllQueueJobsQuery({
-    queueName: selectedQueue,
-  }) as { data: { items: JobStatus[]; total: number }; isLoading: boolean };
+  const { queuesStatus: initialQueuesStatus, jobs: initialJobs } =
+    Route.useLoaderData();
+
+  const { data: queuesStatus, isLoading: isLoadingStatus } = useQuery({
+    ...queuesStatusQueryOptions,
+    initialData: initialQueuesStatus,
+  });
+  const { data: jobs, isLoading: isLoadingJobs } = useQuery({
+    ...allQueueJobsQueryOptions({ queueName: selectedQueue }),
+    initialData: initialJobs,
+  });
   const [rowSelection, setRowSelection] = useState({});
   const [selectedJob, setSelectedJob] = useState<JobStatus | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);

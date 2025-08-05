@@ -1,22 +1,32 @@
-import { createFileRoute, useLoaderData, useNavigate } from "@tanstack/react-router";
-import { getWorkflowItemsQuery } from "~/hooks/use-api";
+import {
+  createFileRoute,
+  useLoaderData,
+  useNavigate,
+} from "@tanstack/react-router";
+import { AlertCircle, Loader2 } from "lucide-react";
 import { CommonSheet } from "~/components/common/common-sheet";
 import { Item } from "~/components/items";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
-import { AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "~/components/ui/button";
-import type { SourceItem } from "@usersdotfun/shared-types/types";
+import { workflowItemsQueryOptions } from "~/lib/queries";
 
-export const Route = createFileRoute("/_layout/workflows/$workflowId/items/$itemId")({
+export const Route = createFileRoute(
+  "/_layout/workflows/$workflowId/items/$itemId"
+)({
   component: ItemDetailsPage,
-  loader: async ({ params: { workflowId, itemId }, context: { queryClient } }) => {
-    const items = await queryClient.fetchQuery(getWorkflowItemsQuery(workflowId));
-    const item = items.find((i) => i.id === itemId);
-    
+  loader: async ({
+    params: { workflowId, itemId },
+    context: { queryClient },
+  }) => {
+    const items = await queryClient.ensureQueryData(
+      workflowItemsQueryOptions(workflowId)
+    );
+    const item = items?.find((i) => i.id === itemId);
+
     if (!item) {
       throw new Error(`Item ${itemId} not found`);
     }
-    
+
     return { item, workflowId };
   },
   pendingComponent: () => (

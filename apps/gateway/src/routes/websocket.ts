@@ -19,8 +19,6 @@ app.get('/', upgradeWebSocket((c) => {
 
   return {
     onOpen: async (evt: any, ws: any) => {
-      console.log(`WebSocket opened: ${connectionId}`);
-
       connection = {
         id: connectionId,
         subscriptions: new Set(),
@@ -102,7 +100,6 @@ app.get('/', upgradeWebSocket((c) => {
     },
 
     onClose: () => {
-      console.log(`WebSocket closed: ${connectionId}`);
       wsManager.removeConnection(connectionId);
     },
 

@@ -7,18 +7,20 @@ import {
 } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { SourceItem } from "@usersdotfun/shared-types/types";
-import { Button } from "~/components/ui/button";
-import { DataTable } from "~/components/common/data-table";
-import { getWorkflowItemsQuery, getWorkflowQuery } from "~/hooks/use-api";
 import { useState } from "react";
+import { DataTable } from "~/components/common/data-table";
+import { Button } from "~/components/ui/button";
+import {
+  workflowItemsQueryOptions,
+  workflowQueryOptions,
+} from "~/lib/queries";
 
 export const Route = createFileRoute("/_layout/workflows/$workflowId/items")({
   component: WorkflowItemsPage,
   loader: async ({ params: { workflowId }, context: { queryClient } }) => {
     const [items, workflow] = await Promise.all([
-      queryClient.fetchQuery(getWorkflowItemsQuery(workflowId)),
-      queryClient
-        .fetchQuery(getWorkflowQuery(workflowId))
+      queryClient.ensureQueryData(workflowItemsQueryOptions(workflowId)),
+      queryClient.ensureQueryData(workflowQueryOptions(workflowId)),
     ]);
     return { workflow, items };
   },

@@ -9,10 +9,10 @@ import { Run } from "~/components/runs";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import {
-  getRunDetailsQuery,
-  getWorkflowQuery,
-  getWorkflowRunsQuery,
-} from "~/hooks/use-api";
+  runDetailsQueryOptions,
+  workflowQueryOptions,
+  workflowRunsQueryOptions,
+} from "~/lib/queries";
 
 export const Route = createFileRoute(
   "/_layout/workflows/$workflowId/runs/$runId"
@@ -23,9 +23,9 @@ export const Route = createFileRoute(
     context: { queryClient },
   }) => {
     const [runDetails] = await Promise.all([
-      queryClient.ensureQueryData(getRunDetailsQuery(runId)),
-      queryClient.ensureQueryData(getWorkflowQuery(workflowId)),
-      queryClient.ensureQueryData(getWorkflowRunsQuery(workflowId)),
+      queryClient.ensureQueryData(runDetailsQueryOptions(runId)),
+      queryClient.ensureQueryData(workflowQueryOptions(workflowId)),
+      queryClient.ensureQueryData(workflowRunsQueryOptions(workflowId)),
     ]);
     return { runDetails };
   },
@@ -68,6 +68,26 @@ export const Route = createFileRoute(
 function RunDetailsPage() {
   const navigate = useNavigate({ from: Route.fullPath });
   const { runDetails } = useLoaderData({ from: Route.id });
+
+  if (!runDetails) {
+    return (
+      <CommonSheet
+        isOpen={true}
+        onClose={() => window.history.back()}
+        title="Error"
+        description="Run details not found."
+        className="sm:max-w-3xl"
+      >
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Run not found</AlertTitle>
+          <AlertDescription>
+            The run you are looking for could not be found.
+          </AlertDescription>
+        </Alert>
+      </CommonSheet>
+    );
+  }
 
   const handleClose = () => {
     navigate({
