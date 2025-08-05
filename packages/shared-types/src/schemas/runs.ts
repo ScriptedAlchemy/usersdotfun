@@ -33,6 +33,16 @@ export const pluginRunSchema = z.object({
   completedAt: z.coerce.date().nullable(),
 });
 
+// A canonical record of a unique piece of data from a source.
+export const sourceItemSchema = z.object({
+  id: z.string(),
+  externalId: z.string(),
+  data: z.any(),
+  processedAt: z.coerce.date().nullable(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+});
+
 export const richWorkflowRunSchema = workflowRunSchema.extend({
   user: userSchema.pick({
     id: true,
@@ -50,15 +60,6 @@ export const richWorkflowRunSummarySchema = workflowRunSchema.extend({
   }).nullable(),
 });
 
-// A canonical record of a unique piece of data from a source.
-export const sourceItemSchema = z.object({
-  id: z.string(),
-  externalId: z.string(),
-  data: z.any(),
-  processedAt: z.coerce.date().nullable(),
-  createdAt: z.coerce.date(),
-  updatedAt: z.coerce.date(),
-});
 
 // The real-time summary object that lives in Redis.
 export const workflowRunInfoSchema = workflowRunSchema.extend({

@@ -1,4 +1,6 @@
 import type { RichWorkflowRun } from "@usersdotfun/shared-types/types";
+import { Link } from "@tanstack/react-router";
+import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
 import {
   Tabs,
@@ -14,8 +16,18 @@ interface RunViewProps {
 export function RunView({ data }: RunViewProps) {
   return (
     <div className="space-y-6">
-      <div>
+      <div className="flex justify-between items-center">
         <h3 className="font-medium">Run Overview</h3>
+        <Button asChild variant="outline">
+          <Link
+            to="/workflows/$workflowId/items"
+            params={{ workflowId: data.workflowId }}
+          >
+            View Items
+          </Link>
+        </Button>
+      </div>
+      <div>
         <div className="mt-2 grid grid-cols-2 gap-4 text-sm">
           <div className="font-semibold">Status</div>
           <div>
