@@ -19,12 +19,7 @@ import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { WorkflowSheet } from "~/components/workflows/workflow-sheet";
-import {
-  useDeleteWorkflowMutation,
-  useRunWorkflowNowMutation,
-  useToggleWorkflowStatusMutation,
-  useWorkflowsQuery,
-} from "~/hooks/use-api";
+import { useDeleteWorkflowMutation, useRunWorkflowNowMutation, useToggleWorkflowStatusMutation, useWorkflowsQuery } from "~/lib/queries";
 
 export const Route = createFileRoute("/_layout/workflows/")({
   component: WorkflowsPage,

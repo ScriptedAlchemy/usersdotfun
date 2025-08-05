@@ -1,15 +1,19 @@
-import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
-import { useWorkflowQuery } from "~/hooks/use-api";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useSetAtom } from "jotai";
+import { workflowIdAtom } from "~/atoms/workflow";
 import { WorkflowSheet } from "~/components/workflows/workflow-sheet";
+import { workflowQueryOptions } from "~/lib/queries";
 
 export const Route = createFileRoute("/_layout/workflows/$workflowId/edit")({
+  loader: ({ params: { workflowId }, context: { queryClient } }) =>
+    queryClient.ensureQueryData(workflowQueryOptions(workflowId)),
   component: EditWorkflowPage,
 });
 
 function EditWorkflowPage() {
   const navigate = useNavigate({ from: Route.fullPath });
-  const { workflowId } = useParams({ from: "/_layout/workflows/$workflowId/edit" });
-  const { data: workflow, isLoading } = useWorkflowQuery(workflowId);
+  const { workflowId } = Route.useParams();
+  const setWorkflowId = useSetAtom(workflowIdAtom);
 
   const handleClose = () => {
     navigate({
@@ -18,15 +22,10 @@ function EditWorkflowPage() {
     });
   };
 
-  if (isLoading) {
-    // You can render a loading state here, but the sheet handles it too
-    return null;
-  }
-
   return (
     <WorkflowSheet
       mode="edit"
-      workflow={workflow}
+      workflowId={workflowId}
       isOpen={true}
       onClose={handleClose}
     />

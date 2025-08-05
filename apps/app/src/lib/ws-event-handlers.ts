@@ -1,6 +1,6 @@
 import { QueryClient } from '@tanstack/react-query';
-import { WebSocketEvent, JobStatus } from '@usersdotfun/shared-types/types';
-import { queryKeys } from '~/hooks/use-api';
+import { JobStatus, WebSocketEvent } from '@usersdotfun/shared-types/types';
+import { queryKeys } from './queries';
 
 type QueryUpdater<T> = (oldData: T | undefined) => T | undefined;
 

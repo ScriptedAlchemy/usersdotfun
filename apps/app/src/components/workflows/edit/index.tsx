@@ -1,7 +1,6 @@
-import {
-  createWorkflowSchema,
-} from "@usersdotfun/shared-types/schemas";
+import { createWorkflowSchema } from "@usersdotfun/shared-types/schemas";
 import { useAtom } from "jotai";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 import {
@@ -10,15 +9,14 @@ import {
   editableWorkflowSchema,
   workflowIdAtom,
 } from "~/atoms/workflow";
+import { JsonEditor } from "~/components/common/json-editor";
 import { Button } from "~/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import {
   useCreateWorkflowMutation,
   useUpdateWorkflowMutation,
-} from "~/hooks/use-api";
+} from "~/lib/queries";
 import { WorkflowForm } from "./form";
-import { JsonEditor } from "~/components/common/json-editor";
-import { useState, useEffect } from "react";
 
 export function WorkflowEdit() {
   const [workflowId] = useAtom(workflowIdAtom);
@@ -33,9 +31,7 @@ export function WorkflowEdit() {
 
   const handleError = (error: Error) => {
     toast.error(
-      `Failed to ${
-        workflowId ? "update" : "create"
-      } workflow: ${error.message}`
+      `Failed to ${workflowId ? "update" : "create"} workflow: ${error.message}`
     );
   };
 
@@ -46,7 +42,7 @@ export function WorkflowEdit() {
         { onSuccess: handleSuccess, onError: handleError }
       );
     } else {
-      createMutation.mutate(data as z.infer<typeof createWorkflowSchema>, {
+      createMutation.mutate(data, {
         onSuccess: handleSuccess,
         onError: handleError,
       });
@@ -56,12 +52,12 @@ export function WorkflowEdit() {
   return (
     <Tabs defaultValue="json" className="w-full">
       <TabsList className="grid w-full grid-cols-2">
-        <TabsTrigger value="json">JSON</TabsTrigger>
         {/* <TabsTrigger value="form">Form</TabsTrigger> */}
+        <TabsTrigger value="json">JSON</TabsTrigger>
       </TabsList>
       {/* <TabsContent value="form">
-        <WorkflowFormWithAtom onSubmit={onSubmit} />
-      </TabsContent> */}
+        <WorkflowFormWithAtom onSubmit={onSubmit} /> */}
+      {/* </TabsContent> */}
       <TabsContent value="json">
         <JsonEditorWithAtom onSubmit={onSubmit} />
       </TabsContent>

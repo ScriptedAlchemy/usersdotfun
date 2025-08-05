@@ -1,11 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  createWorkflowSchema,
-  richWorkflowSchema,
-} from "@usersdotfun/shared-types/schemas";
 import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { z } from "zod";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
@@ -16,12 +11,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
+
+import { EditableWorkflow, editableWorkflowSchema } from "~/atoms/workflow";
 import {
   useCreateWorkflowMutation,
   useUpdateWorkflowMutation,
-} from "~/hooks/use-api";
+} from "~/lib/queries";
 import { Textarea } from "~/components/ui/textarea";
-import { EditableWorkflow, editableWorkflowSchema } from "~/atoms/workflow";
 
 interface WorkflowFormProps {
   workflow?: EditableWorkflow;
@@ -36,8 +32,8 @@ const schedulePresets = [
 ];
 
 export function WorkflowForm({ workflow, onSubmit }: WorkflowFormProps) {
-  const createMutation = useCreateWorkflowMutation();
-  const updateMutation = useUpdateWorkflowMutation();
+  const { isPending: isCreating } = useCreateWorkflowMutation();
+  const { isPending: isUpdating } = useUpdateWorkflowMutation();
 
   const [scheduleType, setScheduleType] = useState<
     "none" | "preset" | "custom"
@@ -161,9 +157,7 @@ export function WorkflowForm({ workflow, onSubmit }: WorkflowFormProps) {
           )}
         />
         {errors.schedule && (
-          <p className="col-span-4 text-red-500">
-            {errors.schedule.message}
-          </p>
+          <p className="col-span-4 text-red-500">{errors.schedule.message}</p>
         )}
       </div>
       {/* Simple JSON textareas for now, can be improved later */}
@@ -222,13 +216,8 @@ export function WorkflowForm({ workflow, onSubmit }: WorkflowFormProps) {
         )}
       </div>
       <div className="flex justify-end">
-        <Button
-          type="submit"
-          disabled={createMutation.isPending || updateMutation.isPending}
-        >
-          {createMutation.isPending || updateMutation.isPending
-            ? "Saving..."
-            : "Save Workflow"}
+        <Button type="submit" disabled={isCreating || isUpdating}>
+          {isCreating || isUpdating ? "Saving..." : "Save Workflow"}
         </Button>
       </div>
     </form>
