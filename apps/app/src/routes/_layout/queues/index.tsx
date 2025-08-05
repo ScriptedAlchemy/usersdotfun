@@ -1,24 +1,11 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
-import { z } from "zod";
-import { DataTable } from "~/components/common/data-table";
-import { Badge } from "~/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
-import { useAllQueueJobsQuery, useQueuesStatusQuery } from "~/hooks/use-api";
-import { cn } from "~/lib/utils";
-
-export const Route = createFileRoute("/_layout/queues/")({
-  component: QueuesPage,
-  validateSearch: z.object({
-    queueName: z.string().optional(),
-  }),
-});
-
-import { Link } from "@tanstack/react-router";
 import type { JobStatus } from "@usersdotfun/shared-types/types";
 import { MoreHorizontal, Pause, Play, Trash2, XCircle } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { z } from "zod";
+import { DataTable } from "~/components/common/data-table";
 import { JobSheet } from "~/components/queues/job-sheet";
 import {
   AlertDialog,
@@ -30,18 +17,32 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "~/components/ui/alert-dialog";
+import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Checkbox } from "~/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger
+  DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
-import { useClearQueueMutation, usePauseQueueMutation, useRemoveQueueJobMutation, useResumeQueueMutation } from "~/hooks/use-api";
+import {
+  useAllQueueJobsQuery, useClearQueueMutation,
+  usePauseQueueMutation, useQueuesStatusQuery, useRemoveQueueJobMutation,
+  useResumeQueueMutation
+} from "~/hooks/use-api";
+import { cn } from "~/lib/utils";
+
+export const Route = createFileRoute("/_layout/queues/")({
+  component: QueuesPage,
+  validateSearch: z.object({
+    queueName: z.string().optional(),
+  }),
+});
 
 const columns = (
-  openSheet: (job: JobStatus) => void,
+  openSheet: (job: JobStatus) => void
 ): ColumnDef<JobStatus>[] => [
   {
     id: "select",
@@ -65,7 +66,9 @@ const columns = (
   {
     accessorKey: "id",
     header: "Job ID",
-    cell: ({ row }) => <span className="font-mono text-xs">{row.original.id}</span>,
+    cell: ({ row }) => (
+      <span className="font-mono text-xs">{row.original.id}</span>
+    ),
   },
   {
     accessorKey: "name",
@@ -96,7 +99,10 @@ const columns = (
   {
     accessorKey: "processedOn",
     header: "Processed At",
-    cell: ({ row }) => (row.original.processedOn ? new Date(row.original.processedOn).toLocaleString() : 'N/A'),
+    cell: ({ row }) =>
+      row.original.processedOn
+        ? new Date(row.original.processedOn).toLocaleString()
+        : "N/A",
   },
   {
     id: "actions",
@@ -129,7 +135,7 @@ function QueueStatusCard({
   isSelected,
 }: {
   name: string;
-  stats: { active: number; waiting: number; failed: number, paused: boolean };
+  stats: { active: number; waiting: number; failed: number; paused: boolean };
   onClick: () => void;
   isSelected: boolean;
 }) {
@@ -143,7 +149,9 @@ function QueueStatusCard({
     >
       <CardHeader>
         <div className="flex justify-between items-center">
-          <CardTitle className="capitalize">{name.replace(/-/g, " ")}</CardTitle>
+          <CardTitle className="capitalize">
+            {name.replace(/-/g, " ")}
+          </CardTitle>
           <Badge variant={stats.paused ? "secondary" : "default"}>
             {stats.paused ? "Paused" : "Active"}
           </Badge>
@@ -164,16 +172,26 @@ function QueueStatusCard({
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }
 
 function QueuesPage() {
   const { queueName: selectedQueue } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
-  const { data: queuesStatus, isLoading: isLoadingStatus } = useQueuesStatusQuery() as { data: { name: string, active: number, waiting: number, failed: number, paused: boolean }[], isLoading: boolean };
+  const { data: queuesStatus, isLoading: isLoadingStatus } =
+    useQueuesStatusQuery() as {
+      data: {
+        name: string;
+        active: number;
+        waiting: number;
+        failed: number;
+        paused: boolean;
+      }[];
+      isLoading: boolean;
+    };
   const { data: jobs, isLoading: isLoadingJobs } = useAllQueueJobsQuery({
     queueName: selectedQueue,
-  }) as { data: { items: JobStatus[], total: number }, isLoading: boolean };
+  }) as { data: { items: JobStatus[]; total: number }; isLoading: boolean };
   const [rowSelection, setRowSelection] = useState({});
   const [selectedJob, setSelectedJob] = useState<JobStatus | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -195,7 +213,10 @@ function QueuesPage() {
 
   const handleQueueSelect = (queueName: string) => {
     navigate({
-      search: (prev) => ({ ...prev, queueName: prev.queueName === queueName ? undefined : queueName }),
+      search: (prev) => ({
+        ...prev,
+        queueName: prev.queueName === queueName ? undefined : queueName,
+      }),
     });
   };
 
@@ -221,7 +242,7 @@ function QueuesPage() {
   const handleClear = async () => {
     if (!selectedQueue) return;
     await toast.promise(
-      clearMutation.mutateAsync({ queueName: selectedQueue, jobType: 'all' }),
+      clearMutation.mutateAsync({ queueName: selectedQueue, jobType: "all" }),
       {
         loading: "Clearing queue...",
         success: "Queue cleared successfully!",
@@ -234,11 +255,7 @@ function QueuesPage() {
 
   return (
     <>
-      <JobSheet
-        job={selectedJob}
-        isOpen={isSheetOpen}
-        onClose={closeSheet}
-      />
+      <JobSheet job={selectedJob} isOpen={isSheetOpen} onClose={closeSheet} />
       <div className="container mx-auto p-4 sm:p-6 lg:p-8">
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -250,92 +267,97 @@ function QueuesPage() {
         </div>
 
         <div className="mb-8">
-        <h2 className="text-xl font-semibold mb-4">Queue Status</h2>
-        {isLoadingStatus ? (
-          <p>Loading queue statuses...</p>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {queuesStatus?.map((status) => (
-              <QueueStatusCard
-                key={status.name}
-                name={status.name}
-                stats={status}
-                onClick={() => handleQueueSelect(status.name)}
-                isSelected={selectedQueue === status.name}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold">
-            {selectedQueue ? `${selectedQueue} Jobs` : "All Recent Jobs"}
-          </h2>
-          <div className="flex items-center space-x-2">
-            {selectedQueue && (
-              <>
-                {Object.keys(rowSelection).length > 0 && (
-                  <Button
-                    variant="destructive"
-                    onClick={() => setDeleteDialogOpen(true)}
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete ({Object.keys(rowSelection).length})
-                  </Button>
-                )}
-                {queuesStatus?.find(q => q.name === selectedQueue)?.paused ? (
-                  <Button onClick={() => resumeMutation.mutateAsync(selectedQueue)}>
-                    <Play className="mr-2 h-4 w-4" />
-                    Resume
-                  </Button>
-                ) : (
-                  <Button onClick={() => pauseMutation.mutateAsync(selectedQueue)}>
-                    <Pause className="mr-2 h-4 w-4" />
-                    Pause
-                  </Button>
-                )}
-                <Button variant="outline" onClick={handleClear}>
-                  <XCircle className="mr-2 h-4 w-4" />
-                  Clear
-                </Button>
-              </>
-            )}
-          </div>
+          <h2 className="text-xl font-semibold mb-4">Queue Status</h2>
+          {isLoadingStatus ? (
+            <p>Loading queue statuses...</p>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {queuesStatus?.map((status) => (
+                <QueueStatusCard
+                  key={status.name}
+                  name={status.name}
+                  stats={status}
+                  onClick={() => handleQueueSelect(status.name)}
+                  isSelected={selectedQueue === status.name}
+                />
+              ))}
+            </div>
+          )}
         </div>
-        <DataTable
-          columns={pageColumns}
-          data={jobs?.items || []}
-          isLoading={isLoadingJobs}
-          filterColumnId="id"
-          filterPlaceholder="Filter by Job ID..."
-          rowSelection={rowSelection}
-          setRowSelection={setRowSelection}
-          getRowId={(row) => row.id}
-        />
+
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold">
+              {selectedQueue ? `${selectedQueue} Jobs` : "All Recent Jobs"}
+            </h2>
+            <div className="flex items-center space-x-2">
+              {selectedQueue && (
+                <>
+                  {Object.keys(rowSelection).length > 0 && (
+                    <Button
+                      variant="destructive"
+                      onClick={() => setDeleteDialogOpen(true)}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete ({Object.keys(rowSelection).length})
+                    </Button>
+                  )}
+                  {queuesStatus?.find((q) => q.name === selectedQueue)
+                    ?.paused ? (
+                    <Button
+                      onClick={() => resumeMutation.mutateAsync(selectedQueue)}
+                    >
+                      <Play className="mr-2 h-4 w-4" />
+                      Resume
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => pauseMutation.mutateAsync(selectedQueue)}
+                    >
+                      <Pause className="mr-2 h-4 w-4" />
+                      Pause
+                    </Button>
+                  )}
+                  <Button variant="outline" onClick={handleClear}>
+                    <XCircle className="mr-2 h-4 w-4" />
+                    Clear
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+          <DataTable
+            columns={pageColumns}
+            data={jobs?.items || []}
+            isLoading={isLoadingJobs}
+            filterColumnId="id"
+            filterPlaceholder="Filter by Job ID..."
+            rowSelection={rowSelection}
+            setRowSelection={setRowSelection}
+            getRowId={(row) => row.id}
+          />
+        </div>
+        <AlertDialog
+          open={isDeleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the
+                selected jobs.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDelete}>
+                Continue
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
-      <AlertDialog
-        open={isDeleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the
-              selected jobs.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>
-              Continue
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
     </>
   );
 }

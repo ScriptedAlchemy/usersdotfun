@@ -1,6 +1,4 @@
 import type { RichWorkflow } from "@usersdotfun/shared-types/types";
-import { Link } from "@tanstack/react-router";
-import { Button } from "~/components/ui/button";
 
 interface WorkflowViewProps {
   workflow: RichWorkflow;
@@ -11,14 +9,6 @@ export function WorkflowView({ workflow }: WorkflowViewProps) {
     <div className="space-y-6 py-4">
       <div className="flex justify-between items-center">
         <h5 className="font-semibold">Workflow {workflow.id}</h5>
-        <Button asChild variant="outline">
-          <Link
-            to="/workflows/$workflowId/items"
-            params={{ workflowId: workflow.id }}
-          >
-            View Items
-          </Link>
-        </Button>
       </div>
       <div>
         <div className="bg-gray-50 p-3 rounded">

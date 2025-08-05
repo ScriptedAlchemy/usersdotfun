@@ -1,26 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import {
-  useWorkflowsQuery,
-  useToggleWorkflowStatusMutation,
-  useRunWorkflowNowMutation,
-  useDeleteWorkflowMutation,
-} from "~/hooks/use-api";
-import { DataTable } from "~/components/common/data-table";
-import { Button } from "~/components/ui/button";
-import { PlusCircle, Play, Power, Trash2 } from "lucide-react";
-import { useState } from "react";
-import { WorkflowSheet } from "~/components/workflows/workflow-sheet";
 import type { ColumnDef, RowSelectionState } from "@tanstack/react-table";
-import { Badge } from "~/components/ui/badge";
+import { RichWorkflow } from "@usersdotfun/shared-types/types";
+import { Play, PlusCircle, Power, Trash2 } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
-import { Checkbox } from "~/components/ui/checkbox";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "~/components/ui/dropdown-menu";
-import { MoreHorizontal } from "lucide-react";
+import { DataTable } from "~/components/common/data-table";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,14 +15,23 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "~/components/ui/alert-dialog";
-import { RichWorkflow } from "@usersdotfun/shared-types/types";
+import { Badge } from "~/components/ui/badge";
+import { Button } from "~/components/ui/button";
+import { Checkbox } from "~/components/ui/checkbox";
+import { WorkflowSheet } from "~/components/workflows/workflow-sheet";
+import {
+  useDeleteWorkflowMutation,
+  useRunWorkflowNowMutation,
+  useToggleWorkflowStatusMutation,
+  useWorkflowsQuery,
+} from "~/hooks/use-api";
 
 export const Route = createFileRoute("/_layout/workflows/")({
   component: WorkflowsPage,
 });
 
 const columns = (
-  openSheet: (mode: "view" | "edit", workflowId: string) => void,
+  openSheet: (mode: "view" | "edit", workflowId: string) => void
 ): ColumnDef<RichWorkflow>[] => [
   {
     id: "select",
@@ -139,35 +132,40 @@ const columns = (
             <Power className="mr-2 h-4 w-4" />
             Toggle
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRunNow}
-          >
+          <Button variant="outline" size="sm" onClick={handleRunNow}>
             <Play className="mr-2 h-4 w-4" />
             Run Now
           </Button>
-          <Link to="/workflows/$workflowId/runs" params={{ workflowId: workflow.id }}>
-            <Button variant="outline" size="sm">
+          <Button asChild variant="outline" size="sm">
+            <Link
+              to="/workflows/$workflowId/runs"
+              params={{ workflowId: workflow.id }}
+            >
               View Runs
-            </Button>
-          </Link>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Open menu</span>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => openSheet("view", workflow.id)}>
-                View
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => openSheet("edit", workflow.id)}>
-                Edit
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <Link
+              to="/workflows/$workflowId/items"
+              params={{ workflowId: workflow.id }}
+            >
+              View Items
+            </Link>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => openSheet("view", workflow.id)}
+          >
+            Inspect
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => openSheet("edit", workflow.id)}
+          >
+            Edit
+          </Button>
         </div>
       );
     },
@@ -188,10 +186,7 @@ function WorkflowsPage() {
   const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const deleteMutation = useDeleteWorkflowMutation();
 
-  const openSheet = (
-    mode: "create" | "view" | "edit",
-    workflowId?: string,
-  ) => {
+  const openSheet = (mode: "create" | "view" | "edit", workflowId?: string) => {
     setSheetState({ mode, workflowId, isOpen: true });
   };
 
@@ -207,7 +202,7 @@ function WorkflowsPage() {
         loading: "Deleting workflows...",
         success: "Workflows deleted successfully!",
         error: "Failed to delete workflows.",
-      },
+      }
     );
     setRowSelection({});
     setDeleteDialogOpen(false);
@@ -260,10 +255,7 @@ function WorkflowsPage() {
         workflowId={sheetState.workflowId}
       />
 
-      <AlertDialog
-        open={isDeleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-      >
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
