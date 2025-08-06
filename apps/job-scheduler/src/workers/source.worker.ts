@@ -2,7 +2,7 @@ import { createSourceOutputSchema, PlatformStateSchema, type SourcePlugin } from
 import { PluginServiceTag } from '@usersdotfun/pipeline-runner';
 import { WorkflowService } from '@usersdotfun/shared-db';
 import { QueueService, StateService } from '@usersdotfun/shared-queue';
-import { QUEUE_NAMES, type ExecutePipelineJobData, type SourceQueryJobData } from '@usersdotfun/shared-types/types';
+import { QUEUE_NAMES, type ExecutePipelineJobData, type SourceItem, type SourceQueryJobData } from '@usersdotfun/shared-types/types';
 import { type Job } from 'bullmq';
 import { Effect } from 'effect';
 import { z } from 'zod';
@@ -166,7 +166,7 @@ const processSourceQueryJob = (job: Job<SourceQueryJobData>) =>
                 workflowRunId,
                 data: {
                   sourceItemId: sourceItem.id,
-                  input: item.raw as Record<string, unknown>,
+                  input: sourceItem.data,
                 }
               };
 

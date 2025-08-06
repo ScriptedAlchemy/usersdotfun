@@ -38,7 +38,7 @@ export const MasaApiResponseSchema = z.object({
   id: z.string(),
   content: z.string(),
   created_at: z.string().optional(),
-  Metadata: z.object({
+  metadata: z.object({
     created_at: z.string().optional(),
     url: z.string().optional(),
     username: z.string().optional(),

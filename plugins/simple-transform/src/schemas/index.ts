@@ -10,7 +10,7 @@ export const SimpleTransformerConfigSchema = createConfigSchema(
 );
 
 export const SimpleTransformerInputSchema = createInputSchema(
-  z.object({ content: z.string() })
+  z.record(z.string(), z.unknown())
 );
 
 export const SimpleTransformerOutputSchema = createOutputSchema(
