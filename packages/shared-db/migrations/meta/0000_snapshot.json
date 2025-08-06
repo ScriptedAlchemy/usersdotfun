@@ -1,5 +1,5 @@
 {
-  "id": "24d93bec-96fd-4403-b840-fb71c7936165",
+  "id": "e83be810-c708-441d-9f19-9d52457eb0b9",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -423,7 +423,7 @@
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
-          "default": "'active'"
+          "default": "'ACTIVE'"
         },
         "created_at": {
           "name": "created_at",
@@ -490,7 +490,13 @@
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
-          "default": "'started'"
+          "default": "'PENDING'"
+        },
+        "failure_reason": {
+          "name": "failure_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "items_processed": {
           "name": "items_processed",
@@ -565,8 +571,8 @@
           "primaryKey": true,
           "notNull": true
         },
-        "workflow_id": {
-          "name": "workflow_id",
+        "external_id": {
+          "name": "external_id",
           "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true
@@ -589,32 +595,49 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
         }
       },
-      "indexes": {},
-      "foreignKeys": {
-        "source_item_workflow_id_workflow_id_fk": {
-          "name": "source_item_workflow_id_workflow_id_fk",
-          "tableFrom": "source_item",
-          "tableTo": "workflow",
-          "columnsFrom": [
-            "workflow_id"
+      "indexes": {
+        "external_id_idx": {
+          "name": "external_id_idx",
+          "columns": [
+            {
+              "expression": "external_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "source_item_external_id_unique": {
+          "name": "source_item_external_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "external_id"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.pipeline_step": {
-      "name": "pipeline_step",
+    "public.plugin_run": {
+      "name": "plugin_run",
       "schema": "",
       "columns": {
         "id": {
@@ -677,7 +700,7 @@
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
-          "default": "'processing'"
+          "default": "'PENDING'"
         },
         "started_at": {
           "name": "started_at",
@@ -694,9 +717,9 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "pipeline_step_workflow_run_id_workflow_run_id_fk": {
-          "name": "pipeline_step_workflow_run_id_workflow_run_id_fk",
-          "tableFrom": "pipeline_step",
+        "plugin_run_workflow_run_id_workflow_run_id_fk": {
+          "name": "plugin_run_workflow_run_id_workflow_run_id_fk",
+          "tableFrom": "plugin_run",
           "tableTo": "workflow_run",
           "columnsFrom": [
             "workflow_run_id"
@@ -707,9 +730,9 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "pipeline_step_source_item_id_source_item_id_fk": {
-          "name": "pipeline_step_source_item_id_source_item_id_fk",
-          "tableFrom": "pipeline_step",
+        "plugin_run_source_item_id_source_item_id_fk": {
+          "name": "plugin_run_source_item_id_source_item_id_fk",
+          "tableFrom": "plugin_run",
           "tableTo": "source_item",
           "columnsFrom": [
             "source_item_id"
@@ -726,6 +749,73 @@
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
+    },
+    "public.workflows_to_source_items": {
+      "name": "workflows_to_source_items",
+      "schema": "",
+      "columns": {
+        "workflow_id": {
+          "name": "workflow_id",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_item_id": {
+          "name": "source_item_id",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "workflows_to_source_items_workflow_id_workflow_id_fk": {
+          "name": "workflows_to_source_items_workflow_id_workflow_id_fk",
+          "tableFrom": "workflows_to_source_items",
+          "tableTo": "workflow",
+          "columnsFrom": [
+            "workflow_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "workflows_to_source_items_source_item_id_source_item_id_fk": {
+          "name": "workflows_to_source_items_source_item_id_source_item_id_fk",
+          "tableFrom": "workflows_to_source_items",
+          "tableTo": "source_item",
+          "columnsFrom": [
+            "source_item_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "workflows_to_source_items_workflow_id_source_item_id_pk": {
+          "name": "workflows_to_source_items_workflow_id_source_item_id_pk",
+          "columns": [
+            "workflow_id",
+            "source_item_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     }
   },
   "enums": {
@@ -733,30 +823,33 @@
       "name": "workflow_status",
       "schema": "public",
       "values": [
-        "active",
-        "inactive"
+        "ACTIVE",
+        "INACTIVE",
+        "ARCHIVED"
       ]
     },
     "public.workflow_run_status": {
       "name": "workflow_run_status",
       "schema": "public",
       "values": [
-        "started",
-        "running",
-        "completed",
-        "failed",
-        "partially_completed",
-        "polling"
+        "PENDING",
+        "RUNNING",
+        "COMPLETED",
+        "FAILED",
+        "PARTIAL_SUCCESS",
+        "CANCELLED"
       ]
     },
     "public.plugin_run_status": {
       "name": "plugin_run_status",
       "schema": "public",
       "values": [
-        "processing",
-        "completed",
-        "failed",
-        "retried"
+        "PENDING",
+        "RUNNING",
+        "COMPLETED",
+        "FAILED",
+        "SKIPPED",
+        "RETRYING"
       ]
     }
   },

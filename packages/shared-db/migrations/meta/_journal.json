@@ -5,36 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1754098923194,
-      "tag": "0000_shallow_patch",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1754326523157,
-      "tag": "0001_workable_bloodaxe",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1754329876981,
-      "tag": "0002_cynical_stick",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1754342423592,
-      "tag": "0003_awesome_stick",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1754397584728,
-      "tag": "0004_massive_mad_thinker",
+      "when": 1754443534774,
+      "tag": "0000_flat_randall_flagg",
       "breakpoints": true
     }
   ]

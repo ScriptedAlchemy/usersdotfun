@@ -18,6 +18,7 @@ import {
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
+import { workflowStatusColors } from "~/lib/status-colors";
 import { WorkflowSheet } from "~/components/workflows/workflow-sheet";
 import { useDeleteWorkflowMutation, useRunWorkflowNowMutation, useToggleWorkflowStatusMutation, useWorkflowsQuery } from "~/lib/queries";
 
@@ -71,7 +72,7 @@ const columns = (
     cell: ({ row }) => {
       const status = row.original.status;
       return (
-        <Badge variant={status === "active" ? "default" : "secondary"}>
+        <Badge variant={workflowStatusColors[status]}>
           {status}
         </Badge>
       );

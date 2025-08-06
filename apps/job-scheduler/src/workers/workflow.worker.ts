@@ -14,11 +14,11 @@ const processWorkflowRun = (job: Job<StartWorkflowRunJobData>) =>
 
     const run = yield* workflowService.createWorkflowRun({
       workflowId,
-      status: 'scheduled',
+      status: 'PENDING',
       triggeredBy: triggeredBy ?? 'system',
     });
 
-    yield* workflowService.updateWorkflowRun(run.id, { status: 'running' });
+    yield* workflowService.updateWorkflowRun(run.id, { status: 'RUNNING' });
 
     const richRun = yield* workflowService.getWorkflowRunById(run.id);
     const workflow = yield* workflowService.getWorkflowById(workflowId);
@@ -43,14 +43,14 @@ const processWorkflowRun = (job: Job<StartWorkflowRunJobData>) =>
       yield* Effect.log(`Enqueued source query job for workflow ${workflowId}`);
 
       // Update the workflow run status to 'running'. The source worker will handle subsequent status updates.
-      yield* workflowService.updateWorkflowRun(run.id, { status: 'running' });
+      yield* workflowService.updateWorkflowRun(run.id, { status: 'RUNNING' });
       yield* Effect.log(`Workflow run ${run.id} is running, source processing delegated to source worker`);
     });
 
     return yield* processingEffect.pipe(
       Effect.catchAll(error =>
         Effect.gen(function* () {
-          yield* workflowService.updateWorkflowRun(run.id, { status: 'failed', completedAt: new Date() });
+          yield* workflowService.updateWorkflowRun(run.id, { status: 'FAILED', completedAt: new Date() });
           yield* Effect.logError(`Run for workflow ${workflowId} failed.`, error);
           return yield* Effect.fail(error); // Allow BullMQ to handle retries
         })

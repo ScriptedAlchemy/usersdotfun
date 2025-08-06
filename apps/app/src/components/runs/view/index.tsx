@@ -8,6 +8,10 @@ import {
   TabsList,
   TabsTrigger,
 } from "~/components/ui/tabs";
+import {
+  workflowRunStatusColors,
+  pluginRunStatusColors,
+} from "~/lib/status-colors";
 
 interface RunViewProps {
   data: RichWorkflowRun;
@@ -31,7 +35,9 @@ export function RunView({ data }: RunViewProps) {
         <div className="mt-2 grid grid-cols-2 gap-4 text-sm">
           <div className="font-semibold">Status</div>
           <div>
-            <Badge variant="outline">{data.status}</Badge>
+            <Badge variant={workflowRunStatusColors[data.status]}>
+              {data.status}
+            </Badge>
           </div>
           <div className="font-semibold">Triggered By</div>
           <div>{data.user?.name ?? "N/A"}</div>
@@ -58,11 +64,7 @@ export function RunView({ data }: RunViewProps) {
             <div key={pluginRun.id} className="border p-3 rounded-md">
               <div className="flex justify-between items-center">
                 <p className="font-semibold text-sm">{pluginRun.stepId}</p>
-                <Badge
-                  variant={
-                    pluginRun.status === "completed" ? "default" : "destructive"
-                  }
-                >
+                <Badge variant={pluginRunStatusColors[pluginRun.status]}>
                   {pluginRun.status}
                 </Badge>
               </div>

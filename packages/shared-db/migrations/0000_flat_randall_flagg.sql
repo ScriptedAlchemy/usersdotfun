@@ -1,6 +1,6 @@
-CREATE TYPE "public"."workflow_status" AS ENUM('active', 'inactive');--> statement-breakpoint
-CREATE TYPE "public"."workflow_run_status" AS ENUM('started', 'running', 'completed', 'failed', 'partially_completed', 'polling');--> statement-breakpoint
-CREATE TYPE "public"."plugin_run_status" AS ENUM('processing', 'completed', 'failed', 'retried');--> statement-breakpoint
+CREATE TYPE "public"."workflow_status" AS ENUM('ACTIVE', 'INACTIVE', 'ARCHIVED');--> statement-breakpoint
+CREATE TYPE "public"."workflow_run_status" AS ENUM('PENDING', 'RUNNING', 'COMPLETED', 'FAILED', 'PARTIAL_SUCCESS', 'CANCELLED');--> statement-breakpoint
+CREATE TYPE "public"."plugin_run_status" AS ENUM('PENDING', 'RUNNING', 'COMPLETED', 'FAILED', 'SKIPPED', 'RETRYING');--> statement-breakpoint
 CREATE TABLE "account" (
 	"id" text PRIMARY KEY NOT NULL,
 	"account_id" text NOT NULL,
@@ -69,7 +69,7 @@ CREATE TABLE "workflow" (
 	"schedule" varchar(255),
 	"source" jsonb NOT NULL,
 	"pipeline" jsonb NOT NULL,
-	"status" "workflow_status" DEFAULT 'active' NOT NULL,
+	"status" "workflow_status" DEFAULT 'ACTIVE' NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -78,7 +78,8 @@ CREATE TABLE "workflow_run" (
 	"id" varchar(255) PRIMARY KEY NOT NULL,
 	"workflow_id" varchar(255) NOT NULL,
 	"triggered_by" text,
-	"status" "workflow_run_status" DEFAULT 'started' NOT NULL,
+	"status" "workflow_run_status" DEFAULT 'PENDING' NOT NULL,
+	"failure_reason" text,
 	"items_processed" integer DEFAULT 0,
 	"items_total" integer DEFAULT 0,
 	"started_at" timestamp with time zone DEFAULT now() NOT NULL,
@@ -87,13 +88,15 @@ CREATE TABLE "workflow_run" (
 --> statement-breakpoint
 CREATE TABLE "source_item" (
 	"id" varchar(255) PRIMARY KEY NOT NULL,
-	"workflow_id" varchar(255) NOT NULL,
+	"external_id" varchar(255) NOT NULL,
 	"data" jsonb NOT NULL,
 	"processed_at" timestamp with time zone,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "source_item_external_id_unique" UNIQUE("external_id")
 );
 --> statement-breakpoint
-CREATE TABLE "pipeline_step" (
+CREATE TABLE "plugin_run" (
 	"id" varchar(255) PRIMARY KEY NOT NULL,
 	"workflow_run_id" varchar(255) NOT NULL,
 	"source_item_id" varchar(255),
@@ -103,9 +106,16 @@ CREATE TABLE "pipeline_step" (
 	"input" json,
 	"output" json,
 	"error" json,
-	"status" "plugin_run_status" DEFAULT 'processing' NOT NULL,
+	"status" "plugin_run_status" DEFAULT 'PENDING' NOT NULL,
 	"started_at" timestamp with time zone,
 	"completed_at" timestamp with time zone
+);
+--> statement-breakpoint
+CREATE TABLE "workflows_to_source_items" (
+	"workflow_id" varchar(255) NOT NULL,
+	"source_item_id" varchar(255) NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "workflows_to_source_items_workflow_id_source_item_id_pk" PRIMARY KEY("workflow_id","source_item_id")
 );
 --> statement-breakpoint
 ALTER TABLE "account" ADD CONSTRAINT "account_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -113,6 +123,8 @@ ALTER TABLE "session" ADD CONSTRAINT "session_user_id_user_id_fk" FOREIGN KEY ("
 ALTER TABLE "workflow" ADD CONSTRAINT "workflow_created_by_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "workflow_run" ADD CONSTRAINT "workflow_run_workflow_id_workflow_id_fk" FOREIGN KEY ("workflow_id") REFERENCES "public"."workflow"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "workflow_run" ADD CONSTRAINT "workflow_run_triggered_by_user_id_fk" FOREIGN KEY ("triggered_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "source_item" ADD CONSTRAINT "source_item_workflow_id_workflow_id_fk" FOREIGN KEY ("workflow_id") REFERENCES "public"."workflow"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "pipeline_step" ADD CONSTRAINT "pipeline_step_workflow_run_id_workflow_run_id_fk" FOREIGN KEY ("workflow_run_id") REFERENCES "public"."workflow_run"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "pipeline_step" ADD CONSTRAINT "pipeline_step_source_item_id_source_item_id_fk" FOREIGN KEY ("source_item_id") REFERENCES "public"."source_item"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "plugin_run" ADD CONSTRAINT "plugin_run_workflow_run_id_workflow_run_id_fk" FOREIGN KEY ("workflow_run_id") REFERENCES "public"."workflow_run"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "plugin_run" ADD CONSTRAINT "plugin_run_source_item_id_source_item_id_fk" FOREIGN KEY ("source_item_id") REFERENCES "public"."source_item"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "workflows_to_source_items" ADD CONSTRAINT "workflows_to_source_items_workflow_id_workflow_id_fk" FOREIGN KEY ("workflow_id") REFERENCES "public"."workflow"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "workflows_to_source_items" ADD CONSTRAINT "workflows_to_source_items_source_item_id_source_item_id_fk" FOREIGN KEY ("source_item_id") REFERENCES "public"."source_item"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+CREATE UNIQUE INDEX "external_id_idx" ON "source_item" USING btree ("external_id");

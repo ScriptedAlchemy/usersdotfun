@@ -3,7 +3,7 @@ import { z } from "zod";
 import { userSchema } from "./auth";
 import { richWorkflowRunSummarySchema, sourceItemSchema } from "./runs";
 
-export const workflowStatusValues = ["active", "inactive"] as const;
+export const workflowStatusValues = ["ACTIVE", "INACTIVE", "ARCHIVED"] as const;
 
 // Reusable definition for steps that involve a plugin
 export const pluginConfigSchema = z.object({
@@ -69,7 +69,7 @@ export const createWorkflowSchema = workflowSchema
     createdBy: true,
   })
   .extend({
-    status: z.enum(workflowStatusValues).default("inactive"),
+    status: z.enum(workflowStatusValues).default("INACTIVE"),
   });
 
 // For updating an existing workflow.

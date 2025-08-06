@@ -118,9 +118,9 @@ export const workflowsRouter = new Hono()
       const workflowService = yield* WorkflowService;
       const queueService = yield* QueueService;
       const workflow = yield* workflowService.getWorkflowById(id);
-      const newStatus = workflow.status === 'active' ? 'inactive' : 'active';
+      const newStatus = workflow.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
 
-      if (newStatus === 'inactive') {
+      if (newStatus === 'INACTIVE') {
         yield* queueService.removeScheduledJob(QUEUE_NAMES.WORKFLOW_RUN, id);
       } else {
         if (workflow.schedule) {

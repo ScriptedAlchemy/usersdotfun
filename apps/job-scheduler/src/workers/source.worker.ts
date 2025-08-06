@@ -33,7 +33,7 @@ const processSourceQueryJob = (job: Job<SourceQueryJobData>) =>
       workflowRunId,
       pluginId: workflow.source.pluginId,
       config: workflow.source.config,
-      status: 'processing',
+      status: 'RUNNING',
       input,
       startedAt: new Date(),
       stepId: 'source',
@@ -61,7 +61,7 @@ const processSourceQueryJob = (job: Job<SourceQueryJobData>) =>
       if (!parseResult.success) {
         const error = new Error(`Source plugin output validation failed: ${parseResult.error.message}`);
         yield* workflowService.updatePluginRun(pluginRun.id, {
-          status: 'failed',
+          status: 'FAILED',
           error: { message: error.message },
           completedAt: new Date(),
         });
@@ -72,7 +72,7 @@ const processSourceQueryJob = (job: Job<SourceQueryJobData>) =>
       if (!output.success || !output.data) {
         const error = new Error('Source plugin failed to return data');
         yield* workflowService.updatePluginRun(pluginRun.id, {
-          status: 'failed',
+          status: 'FAILED',
           error: output.errors,
           completedAt: new Date(),
         });
@@ -80,7 +80,7 @@ const processSourceQueryJob = (job: Job<SourceQueryJobData>) =>
       }
 
       yield* workflowService.updatePluginRun(pluginRun.id, {
-        status: 'completed',
+        status: 'COMPLETED',
         output,
         completedAt: new Date(),
       });
@@ -90,7 +90,7 @@ const processSourceQueryJob = (job: Job<SourceQueryJobData>) =>
       Effect.catchAll((error) =>
         Effect.gen(function* () {
           yield* workflowService.updatePluginRun(pluginRun.id, {
-            status: "failed",
+            status: "FAILED",
             error: {
               message: "Failed to execute source plugin",
               cause: error,
@@ -145,7 +145,7 @@ const processSourceQueryJob = (job: Job<SourceQueryJobData>) =>
       Effect.catchAll((error) =>
         Effect.gen(function* () {
           yield* workflowService.updatePluginRun(pluginRun.id, {
-            status: "failed",
+            status: "FAILED",
             error: {
               message: "Failed to process source items",
               cause: error,
@@ -162,7 +162,7 @@ const processSourceQueryJob = (job: Job<SourceQueryJobData>) =>
       yield* Effect.log(`More data available. Enqueueing follow-up source query for workflow ${workflowId}`);
       
       yield* workflowService.updateWorkflowRun(workflowRunId, { 
-        status: 'polling'
+        status: 'RUNNING'
       });
 
       const followUpJobData: SourceQueryJobData = {
@@ -179,7 +179,7 @@ const processSourceQueryJob = (job: Job<SourceQueryJobData>) =>
       yield* Effect.log(`Enqueued follow-up source query for workflow ${workflowId} with ${delay}ms delay`);
     } else {
       yield* workflowService.updateWorkflowRun(workflowRunId, { 
-        status: 'completed', 
+        status: 'COMPLETED', 
         completedAt: new Date() 
       });
       yield* Effect.log(`Source query completed for workflow ${workflowId}, processed ${items.length} items.`);
@@ -191,7 +191,7 @@ const processSourceQueryJob = (job: Job<SourceQueryJobData>) =>
         const workflowService = yield* WorkflowService;
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
         yield* workflowService.updateWorkflowRun(workflowRunId!, {
-          status: 'failed',
+          status: 'FAILED',
           completedAt: new Date(),
           failureReason: errorMessage,
         });

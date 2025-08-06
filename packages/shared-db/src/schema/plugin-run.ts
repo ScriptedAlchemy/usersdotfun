@@ -19,7 +19,7 @@ export const pluginRun = pgTable("plugin_run", {
   input: json("input"),
   output: json("output"),
   error: json("error"),
-  status: pluginRunStatusEnum("status").notNull().default("processing"),
+  status: pluginRunStatusEnum("status").notNull().default("PENDING"),
   startedAt: timestamp("started_at", { mode: "date", withTimezone: true }),
   completedAt: timestamp("completed_at", { mode: "date", withTimezone: true })
 });

@@ -116,7 +116,7 @@ const program = Effect.gen(function* () {
 
   yield* Effect.log('Fetching workflows from database...');
   const workflows = yield* workflowService.getWorkflows();
-  const activeWorkflows = workflows.filter(workflow => workflow.status === 'active');
+  const activeWorkflows = workflows.filter(workflow => workflow.status === 'ACTIVE');
   const scheduledWorkflows = activeWorkflows.filter(workflow => workflow.schedule && workflow.schedule.trim() !== '');
 
   yield* Effect.log(`Found ${activeWorkflows.length} active workflows, ${scheduledWorkflows.length} with schedules`);
@@ -132,7 +132,10 @@ const program = Effect.gen(function* () {
           { pattern: workflow.schedule! }, // Cron pattern
           {
             name: 'scheduled-workflow-run',
-            data: { workflowId: workflow.id, triggeredBy: workflow.createdBy },
+            data: {
+              workflowId: workflow.id,
+              data: { triggeredBy: workflow.createdBy },
+            },
           }
         );
         yield* Effect.log(`Upserted scheduled job for workflow "${workflow.name}" (${workflow.id})`);

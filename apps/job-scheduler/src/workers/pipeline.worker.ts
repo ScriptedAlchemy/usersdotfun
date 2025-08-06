@@ -32,7 +32,7 @@ const processPipelineJob = (job: Job<ExecutePipelineJobData>) =>
         stepId: stepDefinition.stepId,
         pluginId: stepDefinition.pluginId,
         config: stepDefinition.config,
-        status: 'processing',
+        status: 'RUNNING',
         input: currentInput,
         startedAt: new Date(),
       });
@@ -60,7 +60,7 @@ const processPipelineJob = (job: Job<ExecutePipelineJobData>) =>
             `Plugin output validation failed: ${parseResult.error.message}`
           );
           yield* workflowService.updatePluginRun(pluginRun.id, {
-            status: 'failed',
+            status: 'FAILED',
             error: { message: error.message },
             completedAt: new Date(),
           });
@@ -75,7 +75,7 @@ const processPipelineJob = (job: Job<ExecutePipelineJobData>) =>
             } execution failed: ${JSON.stringify(output.errors)}`
           );
           yield* workflowService.updatePluginRun(pluginRun.id, {
-            status: 'failed',
+            status: 'FAILED',
             error: { message: error.message },
             completedAt: new Date(),
           });
@@ -83,7 +83,7 @@ const processPipelineJob = (job: Job<ExecutePipelineJobData>) =>
         }
 
         yield* workflowService.updatePluginRun(pluginRun.id, {
-          status: 'completed',
+          status: 'COMPLETED',
           output,
           completedAt: new Date(),
         });
@@ -93,7 +93,7 @@ const processPipelineJob = (job: Job<ExecutePipelineJobData>) =>
         Effect.catchAll((error) =>
           Effect.gen(function* () {
             yield* workflowService.updatePluginRun(pluginRun.id, {
-              status: 'failed',
+              status: 'FAILED',
               error: {
                 message: 'Failed to execute pipeline step',
                 cause: error,
@@ -115,7 +115,7 @@ const processPipelineJob = (job: Job<ExecutePipelineJobData>) =>
         const { workflowRunId, data } = job.data;
         const { sourceItemId } = data;
         const workflowService = yield* WorkflowService;
-        yield* workflowService.updateWorkflowRun(workflowRunId!, { status: 'partially_completed' });
+        yield* workflowService.updateWorkflowRun(workflowRunId!, { status: 'PARTIAL_SUCCESS' });
         yield* Effect.logError(`Pipeline failed for Item ${sourceItemId}`, error);
         return yield* Effect.fail(error);
       })

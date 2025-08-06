@@ -16,7 +16,7 @@ export const workflowRun = pgTable("workflow_run", {
   triggeredBy: text("triggered_by").references(() => user.id, {
     onDelete: "set null",
   }),
-  status: workflowRunStatusEnum("status").notNull().default("started"),
+  status: workflowRunStatusEnum("status").notNull().default("PENDING"),
   failureReason: text("failure_reason"),
   itemsProcessed: integer("items_processed").default(0),
   itemsTotal: integer("items_total").default(0),
