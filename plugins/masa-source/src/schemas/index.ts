@@ -7,7 +7,7 @@ import { z } from 'zod';
 
 // Search options schema
 export const MasaSearchOptionsSchema = z.object({
-  type: z.string(), // e.g., "twitter-scraper", "tiktok-transcription"
+  type: z.string(), // e.g., "twitter", "tiktok"
   query: z.string().optional(),
   pageSize: z.number().optional(),
   platformArgs: z.record(z.string(), z.unknown()).optional(),

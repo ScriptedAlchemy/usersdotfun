@@ -33,7 +33,7 @@ export class MasaClient {
 
   /**
    * Submit a search job to the Masa API.
-   * @param searchType The type of scraper, e.g., "twitter-scraper".
+   * @param searchType The type of scraper, e.g., "twitter".
    * @param query The search query.
    * @param maxResults Maximum number of results to return.
    * @returns Promise resolving to the UUID of the search job, or null on error.
@@ -43,7 +43,7 @@ export class MasaClient {
     query: string,
     maxResults: number,
   ): Promise<string> {
-    const url = `${this.baseUrl}/search/live/${searchType.replace("-scraper", "")}`;
+    const url = `${this.baseUrl}/search/live/${searchType}`;
 
     const payload = {
       type: searchType,
@@ -109,7 +109,7 @@ export class MasaClient {
     searchType: string,
     uuid: string,
   ): Promise<string> {
-    const url = `${this.baseUrl}/search/live/${searchType.replace("-scraper", "")}/status/${uuid}`;
+    const url = `${this.baseUrl}/search/live/${searchType}/status/${uuid}`;
 
     try {
       const response = await fetch(url, {
@@ -161,7 +161,7 @@ export class MasaClient {
     searchType: string,
     uuid: string,
   ): Promise<MasaSearchResult[]> {
-    const url = `${this.baseUrl}/search/live/${searchType.replace("-scraper", "")}/result/${uuid}`;
+    const url = `${this.baseUrl}/search/live/${searchType}/result/${uuid}`;
 
     try {
       const response = await fetch(url, {

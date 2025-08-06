@@ -10,7 +10,7 @@
 //       }
 //     },
 //     "search": { 
-//       "type": "twitter-scraper",
+//       "type": "twitter",
 //       "query": "@open_crosspost #feature",
 //       "pageSize": 100
 //     }

@@ -60,7 +60,7 @@ To use the Masa Source plugin, you need to configure it within your `curate.conf
 
 Each object in the `search` array defines a specific query to be executed by the plugin.
 
--   `type` (required, string): Specifies the platform or data type to search on Masa (e.g., `"twitter-scraper"`). This corresponds to a registered service within the Masa Source plugin.
+-   `type` (required, string): Specifies the platform or data type to search on Masa (e.g., `"twitter"`). This corresponds to a registered service within the Masa Source plugin.
 -   `query` (optional, string): A general query string. Its interpretation depends on the specific service (`type`). For some services, this might map to a primary search term (e.g., `allWords` for Twitter).
 -   `pageSize` (optional, number): A general hint for how many items to fetch per request. The service might override or interpret this.
 -   `language` (optional, string): A language code (e.g., "en", "es") to filter results by language if supported by the service.
@@ -70,7 +70,7 @@ Each object in the `search` array defines a specific query to be executed by the
 
 The Masa Source plugin uses a service-based architecture. Each service handles a specific platform.
 
-#### Twitter Scraper (`type: "twitter-scraper"`)
+#### Twitter Scraper (`type: "twitter"`)
 
 This service fetches tweets from Twitter via Masa.
 
@@ -106,7 +106,7 @@ This service fetches tweets from Twitter via Masa.
           },
           "search": [
             {
-              "type": "twitter-scraper",
+              "type": "twitter",
               "query": "decentralized social media", // General query, is 'allWords'
               "pageSize": 50, // A general hint for how many items to fetch per request. The service might override or interpret this. 
               "language": "en",
@@ -121,7 +121,7 @@ This service fetches tweets from Twitter via Masa.
               }
             },
             {
-              "type": "twitter-scraper",
+              "type": "twitter",
               "platformArgs": {
                 "fromAccounts": ["elonmusk"],
                 "allWords": "innovation",

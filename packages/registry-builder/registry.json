@@ -277,59 +277,63 @@
               "type": "object",
               "properties": {
                 "data": {
-                  "type": "object",
-                  "properties": {
-                    "latestProcessedId": {
-                      "type": "string"
-                    },
-                    "currentAsyncJob": {
-                      "anyOf": [
-                        {
-                          "type": "object",
-                          "properties": {
-                            "workflowId": {
-                              "type": "string"
-                            },
-                            "status": {
-                              "type": "string",
-                              "enum": [
-                                "submitted",
-                                "pending",
-                                "processing",
-                                "done",
-                                "error",
-                                "timeout"
-                              ]
-                            },
-                            "submittedAt": {
-                              "type": "string"
-                            },
-                            "lastCheckedAt": {
-                              "type": "string"
-                            },
-                            "errorMessage": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "workflowId",
-                            "status",
-                            "submittedAt"
-                          ],
-                          "additionalProperties": false
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "latestProcessedId": {
+                          "type": "string"
                         },
-                        {
-                          "type": "null"
+                        "currentAsyncJob": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "workflowId": {
+                                  "type": "string"
+                                },
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "submitted",
+                                    "pending",
+                                    "processing",
+                                    "done",
+                                    "error",
+                                    "timeout"
+                                  ]
+                                },
+                                "submittedAt": {
+                                  "type": "string"
+                                },
+                                "lastCheckedAt": {
+                                  "type": "string"
+                                },
+                                "errorMessage": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "workflowId",
+                                "status",
+                                "submittedAt"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
                         }
-                      ]
+                      },
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
                     }
-                  },
-                  "additionalProperties": false
+                  ]
                 }
               },
-              "required": [
-                "data"
-              ],
               "additionalProperties": false
             },
             {
@@ -587,22 +591,26 @@
               "type": "object",
               "properties": {
                 "data": {
-                  "type": "object",
-                  "properties": {
-                    "lastUpdateId": {
-                      "description": "The ID of the last update processed.",
-                      "type": "number"
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "lastUpdateId": {
+                          "description": "The ID of the last update processed.",
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "lastUpdateId"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
                     }
-                  },
-                  "required": [
-                    "lastUpdateId"
-                  ],
-                  "additionalProperties": false
+                  ]
                 }
               },
-              "required": [
-                "data"
-              ],
               "additionalProperties": false
             },
             {

@@ -9,7 +9,7 @@ export interface ServiceRegistryEntry<TService extends IPlatformSearchService = 
 }
 
 const twitterEntry: ServiceRegistryEntry<TwitterSearchService> = {
-  platformType: "twitter-scraper",
+  platformType: "twitter",
   factory: (masaClient) => new TwitterSearchService(masaClient),
   config: twitterServiceConfig,
 };
@@ -21,7 +21,7 @@ export const serviceRegistry = [
 
 // Type-safe service map
 export type ServiceMap = {
-  'twitter-scraper': TwitterSearchService;
+  'twitter': TwitterSearchService;
   // Add other mappings here
 };
 

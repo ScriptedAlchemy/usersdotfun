@@ -56,7 +56,7 @@ export class TwitterSearchService implements IPlatformSearchService {
         `TwitterSearchService: Checking status for existing job ${currentAsyncJob.workflowId}`,
       );
       const jobStatus = await this.masaClient.checkJobStatus(
-        "twitter-scraper",
+        "twitter",
         currentAsyncJob.workflowId,
       );
 
@@ -65,7 +65,7 @@ export class TwitterSearchService implements IPlatformSearchService {
           `TwitterSearchService: Job ${currentAsyncJob.workflowId} is done. Fetching results.`,
         );
         const results = await this.masaClient.getJobResults(
-          "twitter-scraper",
+          "twitter",
           currentAsyncJob.workflowId,
         );
         const items = results || [];
@@ -85,7 +85,7 @@ export class TwitterSearchService implements IPlatformSearchService {
         if (items.length === pageSize) {
           console.log(`TwitterSearchService: Full page of results (${items.length}). Submitting next job with sinceId: ${newLatestProcessedId}.`);
           const nextQuery = buildTwitterQuery({ ...platformOptions, sinceId: newLatestProcessedId });
-          const nextJobId = await this.masaClient.submitSearchJob("twitter-scraper", nextQuery, pageSize);
+          const nextJobId = await this.masaClient.submitSearchJob("twitter", nextQuery, pageSize);
           
           const nextStateData: MasaPlatformState = {
             ...currentState?.data,
@@ -159,7 +159,7 @@ export class TwitterSearchService implements IPlatformSearchService {
     const masaApiOpts: MasaApiSearchOptions = { query, maxResults };
 
     const newJobId = await this.masaClient.submitSearchJob(
-      "twitter-scraper",
+      "twitter",
       masaApiOpts.query,
       masaApiOpts.maxResults || DEFAULT_PAGE_SIZE,
     );

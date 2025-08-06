@@ -6,7 +6,7 @@ This guide outlines the process for adding a new platform search service to the 
 
 The `MasaSourcePlugin` relies on a central **Service Registry** located in `packages/masa-source/src/services/index.ts`. This registry contains descriptors for each available platform service. Each descriptor includes:
 
-1.  `platformType`: A unique string identifier for the service (e.g., `"twitter-scraper"`, `"news-service"`).
+1.  `platformType`: A unique string identifier for the service (e.g., `"twitter"`, `"news-service"`).
 2.  `factory`: A function that takes a `MasaClient` instance and returns an instance of your service class. Your service class must implement the `IPlatformSearchService` interface.
 3.  `config`: An object containing:
     *   `optionsSchema`: A Zod schema used to validate the search options specific to this platform.

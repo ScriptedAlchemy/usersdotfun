@@ -46,7 +46,9 @@ export class MasaSourcePlugin
       yield* logger.logInfo('Initializing Masa source plugin', { pluginId: self.id });
 
       if (!config?.secrets?.apiKey) {
-        return yield* Effect.fail(new ConfigurationError('Masa API key is required.'));
+        const error = new ConfigurationError('Masa API key is required.');
+        yield* logger.logError('Configuration error: Masa API key is missing.', error);
+        return yield* Effect.fail(error);
       }
 
       self.masaClient = new MasaClient({
@@ -80,8 +82,13 @@ export class MasaSourcePlugin
       // Prepare platform-specific arguments
       const platformArgs = config.preparePlatformArgs(searchOptions);
 
-      // Validate platform arguments
-      const validatedArgs = config.optionsSchema.parse(platformArgs);
+      const validatedArgs = yield* Effect.try({
+        try: () => config.optionsSchema.parse(platformArgs),
+        catch: (error) => {
+          const message = error instanceof Error ? error.message : 'Unknown validation error';
+          return new PluginExecutionError(`Invalid platform arguments: ${message}`, false);
+        }
+      });
 
       // Cast the state to our specific type
       const typedState = lastProcessedState as LastProcessedState<MasaPlatformState> | null;
