@@ -1,12 +1,12 @@
-import { createWorkflowSchema } from "@usersdotfun/shared-types/schemas";
+import {
+  updateWorkflowSchema
+} from "@usersdotfun/shared-types/schemas";
 import { useAtom } from "jotai";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { z } from "zod";
 import {
   EditableWorkflow,
   editableWorkflowAtom,
-  editableWorkflowSchema,
   workflowIdAtom,
 } from "~/atoms/workflow";
 import { JsonEditor } from "~/components/common/json-editor";
@@ -69,7 +69,7 @@ function WorkflowFormWithAtom({ onSubmit }: { onSubmit: (data: any) => void }) {
   const [editableWorkflow] = useAtom(editableWorkflowAtom);
 
   const editableData = editableWorkflow
-    ? editableWorkflowSchema.parse(editableWorkflow)
+    ? updateWorkflowSchema.parse(editableWorkflow)
     : {};
 
   return <WorkflowForm workflow={editableData} onSubmit={onSubmit} />;
@@ -88,7 +88,7 @@ function JsonEditorWithAtom({ onSubmit }: { onSubmit: (data: any) => void }) {
       <JsonEditor
         value={editedWorkflow}
         onChange={setEditedWorkflow}
-        schema={editableWorkflowSchema}
+        schema={updateWorkflowSchema}
       />
       <div className="flex justify-end mt-4">
         <Button onClick={() => onSubmit(editedWorkflow)}>Save from JSON</Button>

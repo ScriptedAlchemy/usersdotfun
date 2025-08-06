@@ -1,18 +1,12 @@
 import {
-  createWorkflowSchema,
-  updateWorkflowSchema,
+  updateWorkflowSchema
 } from "@usersdotfun/shared-types/schemas";
 import { atom } from "jotai";
 import { atomWithQuery } from "jotai-tanstack-query";
 import { z } from "zod";
 import { workflowQueryOptions } from "~/lib/queries";
 
-export const editableWorkflowSchema = z.union([
-  createWorkflowSchema,
-  updateWorkflowSchema,
-]);
-
-export type EditableWorkflow = z.infer<typeof editableWorkflowSchema>;
+export type EditableWorkflow = z.infer<typeof updateWorkflowSchema>;
 
 export const workflowIdAtom = atom<string | null>(null);
 

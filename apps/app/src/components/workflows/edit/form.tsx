@@ -12,12 +12,13 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 
-import { EditableWorkflow, editableWorkflowSchema } from "~/atoms/workflow";
+import { updateWorkflowSchema } from "@usersdotfun/shared-types/schemas";
+import { EditableWorkflow } from "~/atoms/workflow";
+import { Textarea } from "~/components/ui/textarea";
 import {
   useCreateWorkflowMutation,
   useUpdateWorkflowMutation,
 } from "~/lib/queries";
-import { Textarea } from "~/components/ui/textarea";
 
 interface WorkflowFormProps {
   workflow?: EditableWorkflow;
@@ -46,7 +47,7 @@ export function WorkflowForm({ workflow, onSubmit }: WorkflowFormProps) {
     control,
     formState: { errors },
   } = useForm<EditableWorkflow>({
-    resolver: zodResolver(editableWorkflowSchema),
+    resolver: zodResolver(updateWorkflowSchema),
     defaultValues: workflow
       ? {
           name: workflow.name,
