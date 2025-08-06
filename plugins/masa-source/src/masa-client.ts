@@ -42,9 +42,7 @@ export class MasaClient {
     searchType: string,
     query: string,
     maxResults: number,
-  ): Promise<string | null> {
-    // TODO: searchType will need to modify, /twitter, /tiktok
-    // web scrape
+  ): Promise<string> {
     const url = `${this.baseUrl}/search/live/${searchType.replace("-scraper", "")}`;
 
     const payload = {
@@ -87,14 +85,17 @@ export class MasaClient {
           "MasaClient: Masa API returned an error on job submission:",
           data.error,
         );
-        return null;
+        throw new Error(`Masa API returned an error: ${JSON.stringify(data.error)}`);
       }
 
       console.log("MasaClient: Masa search job submitted, UUID:", data.uuid);
+      if (!data.uuid) {
+        throw new Error("Masa API did not return a UUID for the submitted job.");
+      }
       return data.uuid;
     } catch (error) {
       console.error("MasaClient: Failed to submit Masa search job:", error);
-      return null;
+      throw error; // Re-throw the error to be handled by the caller
     }
   }
 
@@ -107,7 +108,7 @@ export class MasaClient {
   public async checkJobStatus(
     searchType: string,
     uuid: string,
-  ): Promise<string | null> {
+  ): Promise<string> {
     const url = `${this.baseUrl}/search/live/${searchType.replace("-scraper", "")}/status/${uuid}`;
 
     try {
@@ -124,7 +125,7 @@ export class MasaClient {
           `MasaClient: Error checking Masa job status: ${response.status} ${response.statusText}`,
           errorText,
         );
-        return "error(fetching_status)";
+        throw new Error(`Masa API error: ${response.status} ${errorText}`);
       }
 
       const data = await response.json();
@@ -140,10 +141,13 @@ export class MasaClient {
       }
 
       console.log(`MasaClient: Masa job status for ${uuid}: ${data.status}`);
+      if (!data.status) {
+        throw new Error("Masa API did not return a status for the job.");
+      }
       return data.status;
     } catch (error) {
       console.error("MasaClient: Failed to check Masa job status:", error);
-      return "error(fetching_status)";
+      throw error;
     }
   }
 
@@ -156,7 +160,7 @@ export class MasaClient {
   public async getJobResults(
     searchType: string,
     uuid: string,
-  ): Promise<MasaSearchResult[] | null> {
+  ): Promise<MasaSearchResult[]> {
     const url = `${this.baseUrl}/search/live/${searchType.replace("-scraper", "")}/result/${uuid}`;
 
     try {
@@ -173,7 +177,7 @@ export class MasaClient {
           `MasaClient: Error retrieving Masa job results: ${response.status} ${response.statusText}`,
           errorText,
         );
-        return null;
+        throw new Error(`Masa API error: ${response.status} ${errorText}`);
       }
 
       const data = await response.json();
@@ -183,7 +187,7 @@ export class MasaClient {
       return data;
     } catch (error) {
       console.error("MasaClient: Failed to retrieve Masa job results:", error);
-      return null;
+      throw error;
     }
   }
 }

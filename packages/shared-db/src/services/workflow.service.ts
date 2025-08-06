@@ -59,7 +59,9 @@ const requireNonEmptyArray = <T, E>(
 
 export interface CreateWorkflowData extends Omit<WorkflowEntity, 'id' | 'createdAt' | 'updatedAt'> { }
 
-export interface UpdateWorkflowData extends Partial<Omit<CreateWorkflowData, 'createdBy'>> { }
+export interface UpdateWorkflowData extends Partial<Omit<CreateWorkflowData, 'createdBy' | 'state'>> {
+  state?: any;
+}
 
 export interface CreateWorkflowRunData extends Omit<WorkflowRunEntity, 'id' | 'startedAt' | 'itemsProcessed' | 'itemsTotal' | 'completedAt' | 'failureReason'> { }
 
@@ -157,9 +159,7 @@ export const WorkflowServiceLive = Layer.effect(
         try: () => {
           const newWorkflowEntity: NewWorkflowEntity = {
             ...data,
-            id: randomUUID(),
-            source: JSON.stringify(data.source),
-            pipeline: JSON.stringify(data.pipeline),
+            id: randomUUID()
           };
           return db.insert(schema.workflow).values(newWorkflowEntity).returning();
         },

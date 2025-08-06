@@ -1,5 +1,5 @@
 {
-  "id": "e83be810-c708-441d-9f19-9d52457eb0b9",
+  "id": "1b9d9ba1-904e-4a4e-b73d-4cb1bf0efe76",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -273,13 +273,15 @@
           "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "default": "now()"
         },
         "updated_at": {
           "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "default": "now()"
         },
         "is_anonymous": {
           "name": "is_anonymous",
@@ -416,6 +418,12 @@
           "type": "jsonb",
           "primaryKey": false,
           "notNull": true
+        },
+        "state": {
+          "name": "state",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
         },
         "status": {
           "name": "status",

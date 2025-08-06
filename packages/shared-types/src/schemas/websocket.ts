@@ -3,6 +3,7 @@ import { jobStatusSchema, queueStatusSchema } from './queues';
 import { pluginRunSchema, workflowRunInfoSchema } from './runs';
 
 export const webSocketEventTypeEnum = z.enum([
+  'WORKFLOW_RUN_CREATED',
   'WORKFLOW_RUN_STARTED',
   'WORKFLOW_RUN_COMPLETED',
   'WORKFLOW_RUN_FAILED',
@@ -23,6 +24,7 @@ export const webSocketEventTypeEnum = z.enum([
 ]);
 
 export const webSocketEventSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('WORKFLOW_RUN_CREATED'), data: workflowRunInfoSchema }),
   z.object({ type: z.literal('WORKFLOW_RUN_STARTED'), data: workflowRunInfoSchema }),
   z.object({ type: z.literal('WORKFLOW_RUN_COMPLETED'), data: workflowRunInfoSchema }),
   z.object({ type: z.literal('WORKFLOW_RUN_FAILED'), data: workflowRunInfoSchema }),

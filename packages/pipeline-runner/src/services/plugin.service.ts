@@ -16,7 +16,8 @@ type PipelinePlugin = Plugin<z.ZodTypeAny, z.ZodTypeAny, z.ZodTypeAny>;
 export interface PluginService {
   readonly initializePlugin: <T extends Plugin<z.ZodTypeAny, z.ZodTypeAny, z.ZodTypeAny>>(
     pluginConfig: { pluginId: string; config: z.ZodTypeAny; },
-    contextDescription: string
+    contextDescription: string,
+    isSourcePlugin?: boolean,
   ) => Effect.Effect<T, PluginError>;
 
   readonly executePlugin: <TInputSchema extends z.ZodTypeAny,
@@ -54,6 +55,7 @@ const loadModuleInternal = (
         message: `Plugin ${pluginId} not found at ${url}`,
         pluginId,
         operation: "load",
+        retryable: false
       }));
     }
 
@@ -122,6 +124,7 @@ export const createPluginCache = (): Effect.Effect<
             message: `Invalid cache key format: ${cacheKey}`,
             pluginId: cacheKey,
             operation: "load",
+            retryable: false
           })
         );
       }
@@ -258,8 +261,7 @@ export const PluginServiceLive = Layer.effect(
                       message: `Failed to initialize ${pluginId}`,
                       pluginId,
                       operation: "initialize",
-                      cause: error,
-                      retryable: true,
+                      cause: error
                     });
                   },
                 }).pipe(
@@ -288,7 +290,7 @@ export const PluginServiceLive = Layer.effect(
     return {
       initializePlugin: <T extends Plugin<any, any, any>>(
         pluginConfig: { pluginId: string; config: any; },
-        contextDescription: string
+        contextDescription: string,
       ): Effect.Effect<T, PluginError> => Effect.gen(function* () {
         const { pluginId, config } = pluginConfig;
         const pluginMetadata = yield* getPlugin(pluginId);
@@ -303,6 +305,7 @@ export const PluginServiceLive = Layer.effect(
             pluginId,
             operation: "validate",
             cause: validationError,
+            retryable: false
           }))
         );
 
@@ -315,6 +318,7 @@ export const PluginServiceLive = Layer.effect(
             pluginId,
             operation: "hydrate-secrets",
             cause: environmentError,
+            retryable: false
           }))
         );
 
@@ -328,6 +332,7 @@ export const PluginServiceLive = Layer.effect(
             pluginId,
             operation: "validate",
             cause: validationError,
+            retryable: false
           }))
         );
 
@@ -355,6 +360,7 @@ export const PluginServiceLive = Layer.effect(
               pluginId: plugin.id,
               operation: "validate",
               cause: validationError,
+              retryable: false
             }))
           );
 
@@ -378,6 +384,7 @@ export const PluginServiceLive = Layer.effect(
               pluginId: plugin.id,
               operation: "validate",
               cause: validationError,
+              retryable: false
             }))
           );
 

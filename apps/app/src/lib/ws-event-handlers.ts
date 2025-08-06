@@ -13,6 +13,10 @@ const updateQueryData = <T>(
 };
 
 export const eventHandlers: Record<WebSocketEvent['type'], (queryClient: QueryClient, data: any) => void> = {
+  WORKFLOW_RUN_CREATED: (queryClient, data) => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.workflows.runs(data.workflowId) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.workflows.all() });
+  },
   WORKFLOW_RUN_STARTED: (queryClient, data) => {
     queryClient.invalidateQueries({ queryKey: queryKeys.workflows.runs(data.workflowId) });
     queryClient.invalidateQueries({ queryKey: queryKeys.workflows.all() });

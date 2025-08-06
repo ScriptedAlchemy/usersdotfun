@@ -1,6 +1,6 @@
 import { zValidator } from '@hono/zod-validator';
 import { WorkflowService } from '@usersdotfun/shared-db';
-import { QueueService } from '@usersdotfun/shared-queue';
+import { QueueService, StateService } from '@usersdotfun/shared-queue';
 import {
   CreateWorkflowRequestSchema,
   CreateWorkflowResponseSchema,
@@ -54,11 +54,13 @@ export const workflowsRouter = new Hono<AppType>()
     const program = Effect.gen(function* () {
       const workflowService = yield* WorkflowService;
       const queueService = yield* QueueService;
+      const stateService = yield* StateService;
 
       const newWorkflow = yield* workflowService.createWorkflow({
         ...body,
         createdBy: user!.id,
         schedule: body.schedule ?? null, // Ensure schedule is not undefined
+        state: body.state ?? null,
       });
 
       if (body.status === workflowStatusEnum.enum.ACTIVE) {
@@ -66,6 +68,10 @@ export const workflowsRouter = new Hono<AppType>()
           workflowId: newWorkflow.id,
           status: 'PENDING',
           triggeredBy: user!.id,
+        });
+        yield* stateService.publish({
+          type: 'WORKFLOW_RUN_CREATED',
+          data: run,
         });
         yield* queueService.add(QUEUE_NAMES.WORKFLOW_RUN, 'start-workflow-run', {
           workflowId: newWorkflow.id,
@@ -145,11 +151,17 @@ export const workflowsRouter = new Hono<AppType>()
     const program = Effect.gen(function* () {
       const queueService = yield* QueueService;
       const workflowService = yield* WorkflowService;
+      const stateService = yield* StateService;
 
       const run = yield* workflowService.createWorkflowRun({
         workflowId: id,
         status: 'PENDING',
         triggeredBy: user!.id,
+      });
+
+      yield* stateService.publish({
+        type: 'WORKFLOW_RUN_CREATED',
+        data: run,
       });
 
       yield* queueService.add(QUEUE_NAMES.WORKFLOW_RUN, 'start-workflow-run', {

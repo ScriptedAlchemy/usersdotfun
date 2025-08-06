@@ -1,11 +1,11 @@
+import { workflowRunStatusValues } from "@usersdotfun/shared-types/schemas";
 import { relations } from "drizzle-orm";
 import { integer, pgEnum, pgTable, text, timestamp, varchar } from "drizzle-orm/pg-core";
 import { user } from "./auth";
-import { workflow } from "./workflow";
 import { pluginRun } from "./plugin-run";
-import { workflowRunStatusValues } from "@usersdotfun/shared-types/schemas";
+import { workflow } from "./workflow";
 
-const workflowRunStatusEnum = pgEnum("workflow_run_status", workflowRunStatusValues);
+export const workflowRunStatusEnum = pgEnum("workflow_run_status", workflowRunStatusValues);
 
 // This is a single execution instance of a workflow.
 export const workflowRun = pgTable("workflow_run", {

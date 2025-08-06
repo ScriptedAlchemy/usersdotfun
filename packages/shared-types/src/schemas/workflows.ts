@@ -57,6 +57,7 @@ export const workflowSchema = z.object({
     .nullable(),
   source: sourceSchema,
   pipeline: pipelineSchema,
+  state: z.any().optional().nullable(),
   createdBy: z.string(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),

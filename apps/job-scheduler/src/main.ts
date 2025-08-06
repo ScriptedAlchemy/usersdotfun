@@ -113,6 +113,7 @@ const AppLayer = Layer.mergeAll(
 const program = Effect.gen(function* () {
   const queueService = yield* QueueService;
   const workflowService = yield* WorkflowService;
+  const stateService = yield* StateService;
 
   yield* Effect.log('Fetching workflows from database...');
   const workflows = yield* workflowService.getWorkflows();
@@ -130,6 +131,10 @@ const program = Effect.gen(function* () {
           workflowId: workflow.id,
           status: 'PENDING',
           triggeredBy: 'system',
+        });
+        yield* stateService.publish({
+          type: 'WORKFLOW_RUN_CREATED',
+          data: run,
         });
         yield* queueService.upsertScheduledJob(
           QUEUE_NAMES.WORKFLOW_RUN,

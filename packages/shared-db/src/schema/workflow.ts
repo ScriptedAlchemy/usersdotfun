@@ -17,6 +17,7 @@ export const workflow = pgTable("workflow", {
   schedule: varchar("schedule", { length: 255 }), // if null, run immediately
   source: jsonb("source").notNull(),
   pipeline: jsonb("pipeline").notNull(),
+  state: jsonb("state"),
   status: workflowStatusEnum("status").notNull().default("ACTIVE"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),

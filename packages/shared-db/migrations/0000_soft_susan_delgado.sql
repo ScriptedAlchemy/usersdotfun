@@ -43,8 +43,8 @@ CREATE TABLE "user" (
 	"email" text NOT NULL,
 	"email_verified" boolean NOT NULL,
 	"image" text,
-	"created_at" timestamp NOT NULL,
-	"updated_at" timestamp NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
 	"is_anonymous" boolean,
 	"role" text,
 	"banned" boolean,
@@ -69,6 +69,7 @@ CREATE TABLE "workflow" (
 	"schedule" varchar(255),
 	"source" jsonb NOT NULL,
 	"pipeline" jsonb NOT NULL,
+	"state" jsonb,
 	"status" "workflow_status" DEFAULT 'ACTIVE' NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL

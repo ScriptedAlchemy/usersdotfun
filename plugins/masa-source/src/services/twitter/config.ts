@@ -23,6 +23,7 @@ export const TwitterOptionsSchema = z.object({
   language: z.string().optional(),
   pageSize: z.number().optional(),
   query: z.string().optional(),
+  sortOrder: z.enum(['asc', 'desc']).optional().default('asc'), // past-to-present (ascending) and present-to-past (descending)
 }).strict();
 
 // Prepare Twitter arguments from generic search options

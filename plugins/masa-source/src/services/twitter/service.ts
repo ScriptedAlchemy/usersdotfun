@@ -73,13 +73,33 @@ export class TwitterSearchService implements IPlatformSearchService {
         // Determine the new latestProcessedId from these items
         let newLatestProcessedId = latestProcessedId;
         if (items.length > 0) {
-          // Assuming items are sorted newest first, or we find the max ID
+          // The API returns tweets from oldest to newest when using since_id.
+          // We want the ID of the newest tweet to use as the since_id for the next request.
           const newestItem = items.reduce((prev, current) =>
-            current.id > prev.id ? current : prev,
+            BigInt(current.id) > BigInt(prev.id) ? current : prev,
           );
-          newLatestProcessedId = newestItem.id || newLatestProcessedId;
+          newLatestProcessedId = newestItem.id;
         }
 
+        const pageSize = platformOptions.pageSize || DEFAULT_PAGE_SIZE;
+        if (items.length === pageSize) {
+          console.log(`TwitterSearchService: Full page of results (${items.length}). Submitting next job with sinceId: ${newLatestProcessedId}.`);
+          const nextQuery = buildTwitterQuery({ ...platformOptions, sinceId: newLatestProcessedId });
+          const nextJobId = await this.masaClient.submitSearchJob("twitter-scraper", nextQuery, pageSize);
+          
+          const nextStateData: MasaPlatformState = {
+            ...currentState?.data,
+            latestProcessedId: newLatestProcessedId,
+            currentAsyncJob: {
+              workflowId: nextJobId,
+              status: "submitted",
+              submittedAt: new Date().toISOString(),
+            },
+          };
+          return { items, nextStateData };
+        }
+
+        // If not paginating, clear the job
         const nextStateData: MasaPlatformState = {
           ...currentState?.data, // Preserve other potential state fields
           latestProcessedId: newLatestProcessedId,

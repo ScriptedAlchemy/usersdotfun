@@ -17,10 +17,10 @@ export const user = pgTable("user", {
     .notNull(),
   image: text("image"),
   createdAt: timestamp("created_at")
-    .$defaultFn(() => /* @__PURE__ */ new Date())
+    .defaultNow()
     .notNull(),
   updatedAt: timestamp("updated_at")
-    .$defaultFn(() => /* @__PURE__ */ new Date())
+    .defaultNow()
     .notNull(),
   isAnonymous: boolean("is_anonymous"),
   role: text("role"),
@@ -31,7 +31,7 @@ export const user = pgTable("user", {
 
 export const userRelations = relations(user, ({ many }) => ({
   workflows: many(workflow, { relationName: "user" }),
-  workflowRuns: many(workflowRun, { relationName: "triggeredBy" }),
+  workflowRuns: many(workflowRun, { relationName: "triggeredByUser" }),
 }));
 
 export const session = pgTable("session", {
