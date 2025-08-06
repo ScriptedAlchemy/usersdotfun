@@ -106,6 +106,9 @@ export interface WorkflowService {
   readonly getWorkflowRuns: (
     workflowId: string
   ) => Effect.Effect<Array<RichWorkflowRunSummary>, DbError>;
+  readonly getActiveWorkflowRun: (
+    workflowId: string
+  ) => Effect.Effect<WorkflowRun | null, DbError>;
   readonly updateWorkflowRun: (
     id: string,
     data: UpdateWorkflowRunData
@@ -352,6 +355,30 @@ export const WorkflowServiceLive = Layer.effect(
         Effect.flatMap(entity => parseEntity<RichWorkflowRun>(entity, richWorkflowRunSchema, 'workflow run'))
       );
 
+    const getActiveWorkflowRun = (
+      workflowId: string
+    ): Effect.Effect<WorkflowRun | null, DbError> =>
+      Effect.tryPromise({
+        try: () =>
+          db.query.workflowRun.findFirst({
+            where: and(
+              eq(schema.workflowRun.workflowId, workflowId),
+              eq(schema.workflowRun.status, "RUNNING")
+            ),
+          }),
+        catch: (cause) =>
+          new DbError({
+            cause,
+            message: "Failed to get active workflow run",
+          }),
+      }).pipe(
+        Effect.flatMap(result =>
+          result
+            ? parseEntity<WorkflowRun>(result, workflowRunSchema, 'workflow run')
+            : Effect.succeed(null)
+        )
+      );
+
     const updateWorkflowRun = (
       id: string,
       data: UpdateWorkflowRunData
@@ -575,6 +602,7 @@ export const WorkflowServiceLive = Layer.effect(
       createWorkflowRun,
       getWorkflowRunById,
       getWorkflowRuns,
+      getActiveWorkflowRun,
       updateWorkflowRun,
       upsertSourceItem,
       getItemsForWorkflow,

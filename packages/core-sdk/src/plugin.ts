@@ -1,5 +1,7 @@
 import type { JSONSchemaType } from "ajv/dist/2020";
 import { z } from 'zod';
+import { Context, Effect } from "effect";
+import type { ConfigurationError, PluginExecutionError } from "./errors";
 
 // Helpers
 export const createOutputSchema = <T extends z.ZodTypeAny>(dataSchema: T) =>
@@ -75,9 +77,9 @@ export interface Plugin<
 > {
   readonly id: string;
   readonly type: PluginType;
-  initialize(config?: z.infer<TConfigSchema>): Promise<void>;
-  execute(input: z.infer<TInputSchema>): Promise<z.infer<TOutputSchema>>;
-  shutdown(): Promise<void>;
+  initialize(config?: z.infer<TConfigSchema>): Effect.Effect<void, ConfigurationError, PluginLoggerTag>;
+  execute(input: z.infer<TInputSchema>): Effect.Effect<z.infer<TOutputSchema>, PluginExecutionError, PluginLoggerTag>;
+  shutdown(): Effect.Effect<void, never, PluginLoggerTag>;
 }
 
 export type PluginType = "transformer" | "distributor" | "source";
@@ -95,3 +97,15 @@ export interface PluginMetadata {
 export interface PluginRegistry {
   [pluginId: string]: PluginMetadata;
 }
+
+export interface PluginLogger {
+  readonly logInfo: (message: string, context?: unknown) => Effect.Effect<void>;
+  readonly logWarning: (message: string, context?: unknown) => Effect.Effect<void>;
+  readonly logError: (message: string, error?: unknown, context?: unknown) => Effect.Effect<void>;
+  readonly logDebug: (message: string, context?: unknown) => Effect.Effect<void>;
+}
+
+export class PluginLoggerTag extends Context.Tag("PluginLogger")<
+  PluginLoggerTag,
+  PluginLogger
+>() {}

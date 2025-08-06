@@ -1,5 +1,5 @@
 import { createSourceOutputSchema, PlatformStateSchema, type SourcePlugin } from '@usersdotfun/core-sdk';
-import { PluginService } from '@usersdotfun/pipeline-runner';
+import { PluginServiceTag } from '@usersdotfun/pipeline-runner';
 import { WorkflowService } from '@usersdotfun/shared-db';
 import { QueueService, StateService } from '@usersdotfun/shared-queue';
 import { QUEUE_NAMES, type ExecutePipelineJobData, type SourceQueryJobData } from '@usersdotfun/shared-types/types';
@@ -16,10 +16,18 @@ const processSourceQueryJob = (job: Job<SourceQueryJobData>) =>
     if (!workflowRunId) {
       return yield* Effect.fail(new Error("workflowRunId is required for source query jobs"));
     }
-    const { lastProcessedState } = data;
     const workflowService = yield* WorkflowService;
+    const activeRun = yield* workflowService.getActiveWorkflowRun(workflowId);
+
+    if (activeRun && activeRun.id !== workflowRunId) {
+      yield* Effect.log(`Workflow ${workflowId} has another active run (${activeRun.id}). Delaying job.`);
+      // Re-enqueue the job with a delay
+      yield* Effect.tryPromise(() => job.moveToDelayed(Date.now() + 60000, job.token!));
+      return;
+    }
+    const { lastProcessedState } = data;
     const queueService = yield* QueueService;
-    const pluginService = yield* PluginService;
+    const pluginService = yield* PluginServiceTag;
     const stateService = yield* StateService;
 
     yield* Effect.log(`Processing source query job for workflow: ${workflowId}, run: ${workflowRunId}`);
@@ -50,8 +58,7 @@ const processSourceQueryJob = (job: Job<SourceQueryJobData>) =>
       const execute = Effect.acquireUseRelease(
         pluginService.initializePlugin<SourcePlugin>(
           workflow.source,
-          `Source Query for Workflow "${workflow.name}" [${workflowRunId}]`,
-          true // This is a source plugin, disable retries
+          `Source Query for Workflow "${workflow.name}" [${workflowRunId}]`
         ),
         (sourcePlugin) =>
           pluginService.executePlugin(

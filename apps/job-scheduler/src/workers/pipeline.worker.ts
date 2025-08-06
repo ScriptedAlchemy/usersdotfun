@@ -1,5 +1,5 @@
 import { createOutputSchema } from '@usersdotfun/core-sdk';
-import { PluginService } from '@usersdotfun/pipeline-runner';
+import { PluginServiceTag } from '@usersdotfun/pipeline-runner';
 import { WorkflowService } from '@usersdotfun/shared-db';
 import { QueueService, StateService } from '@usersdotfun/shared-queue';
 import { QUEUE_NAMES, type ExecutePipelineJobData } from '@usersdotfun/shared-types/types';
@@ -18,7 +18,7 @@ const processPipelineJob = (job: Job<ExecutePipelineJobData>) =>
     }
     const { sourceItemId, input } = data;
     const workflowService = yield* WorkflowService;
-    const pluginService = yield* PluginService;
+    const pluginService = yield* PluginServiceTag;
     const stateService = yield* StateService;
 
     const run = yield* workflowService.getWorkflowRunById(workflowRunId);

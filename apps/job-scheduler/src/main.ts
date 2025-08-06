@@ -1,11 +1,11 @@
 import { BunTerminal } from "@effect/platform-bun";
-import { EnvironmentServiceLive, ModuleFederationLive, PluginServiceLive, SecretsConfigLive, StateServiceTag } from '@usersdotfun/pipeline-runner';
-import { DatabaseConfig, DatabaseLive, WorkflowService, WorkflowServiceLive } from '@usersdotfun/shared-db';
-import { QueueConfig, QueueService, QueueServiceLive, RedisConfigLive, StateService, StateServiceLive } from '@usersdotfun/shared-queue';
-import { QUEUE_NAMES } from '@usersdotfun/shared-types/types';
-import { ConfigProvider, Effect, Layer, Logger, LogLevel, Redacted } from 'effect';
+import { EnvironmentServiceLive, ModuleFederationLive, PluginLoggerLive, PluginServiceLive, SecretsConfigLive, StateServiceTag } from '@usersdotfun/pipeline-runner';
+import { DatabaseConfig, DatabaseLive, WorkflowServiceLive } from '@usersdotfun/shared-db';
+import { QueueConfig, QueueServiceLive, RedisConfigLive, StateService, StateServiceLive } from '@usersdotfun/shared-queue';
+import { ConfigProvider, Effect, Layer, Logger, LogLevel, Redacted, Schedule } from 'effect';
 import { runPromise } from "effect-errors";
 import { AppConfig, AppConfigLive } from './config';
+import { discoverAndScheduleWorkflows } from "./jobs";
 import { createPipelineWorker } from './workers/pipeline.worker';
 import { createSourceWorker } from './workers/source.worker';
 import { createWorkflowWorker } from './workers/workflow.worker';
@@ -79,9 +79,11 @@ const EnvironmentServiceLayer = EnvironmentServiceLive.pipe(
 // Step 7: ModuleFederation layer - standalone
 const ModuleFederationLayer = ModuleFederationLive;
 
+const PluginLoggerLayer = PluginLoggerLive;
+
 // Step 8: PluginService layer - depends on ModuleFederation and EnvironmentService
 const PluginServiceLayer = PluginServiceLive.pipe(
-  Layer.provide(Layer.mergeAll(ModuleFederationLayer, EnvironmentServiceLayer))
+  Layer.provide(Layer.mergeAll(ModuleFederationLayer, EnvironmentServiceLayer, PluginLoggerLayer))
 );
 
 // Step 7: Pipeline bridge layer - depends on StateService
@@ -107,61 +109,35 @@ const AppLayer = Layer.mergeAll(
   SecretsConfigLayer,
   EnvironmentServiceLayer,
   ModuleFederationLayer,
-  PipelineStateServiceLayer
+  PipelineStateServiceLayer,
+  PluginLoggerLayer
 );
 
 const program = Effect.gen(function* () {
-  const queueService = yield* QueueService;
-  const workflowService = yield* WorkflowService;
-  const stateService = yield* StateService;
-
-  yield* Effect.log('Fetching workflows from database...');
-  const workflows = yield* workflowService.getWorkflows();
-  const activeWorkflows = workflows.filter(workflow => workflow.status === 'ACTIVE');
-  const scheduledWorkflows = activeWorkflows.filter(workflow => workflow.schedule && workflow.schedule.trim() !== '');
-
-  yield* Effect.log(`Found ${activeWorkflows.length} active workflows, ${scheduledWorkflows.length} with schedules`);
-
-  // Upsert scheduled jobs for active workflows with schedules
-  yield* Effect.forEach(
-    scheduledWorkflows,
-    (workflow) =>
-      Effect.gen(function* () {
-        const run = yield* workflowService.createWorkflowRun({
-          workflowId: workflow.id,
-          status: 'PENDING',
-          triggeredBy: 'system',
-        });
-        yield* stateService.publish({
-          type: 'WORKFLOW_RUN_CREATED',
-          data: run,
-        });
-        yield* queueService.upsertScheduledJob(
-          QUEUE_NAMES.WORKFLOW_RUN,
-          workflow.id, // Use workflow ID as scheduler ID
-          { pattern: workflow.schedule! }, // Cron pattern
-          {
-            name: 'scheduled-workflow-run',
-            data: {
-              workflowId: workflow.id,
-              workflowRunId: run.id,
-              data: { triggeredBy: workflow.createdBy },
-            },
-          }
-        );
-        yield* Effect.log(`Upserted scheduled job for workflow "${workflow.name}" (${workflow.id})`);
-      }),
-    { concurrency: 5, discard: true }
+  // Kick off the initial discovery and scheduling
+  const scheduledDiscovery = Effect.repeat(
+    discoverAndScheduleWorkflows,
+    Schedule.spaced('1 minute')
+  ).pipe(
+    Effect.catchAll(error => Effect.logError("Error in workflow discovery", error))
   );
 
   yield* Effect.log('Starting workers...');
   yield* Effect.fork(createWorkflowWorker);
   yield* Effect.fork(createSourceWorker);
   yield* Effect.fork(createPipelineWorker);
+  yield* Effect.fork(scheduledDiscovery);
 
   yield* Effect.log('Job scheduler and workers are running.');
   yield* Effect.never;
-});
+}).pipe(
+  Effect.catchAll(error =>
+    Effect.gen(function* () {
+      yield* Effect.logError('Application startup failed', error);
+      // return yield* Effect.fail(error);
+    })
+  )
+);
 
 const runnable = program.pipe(
   Effect.provide(AppLayer),

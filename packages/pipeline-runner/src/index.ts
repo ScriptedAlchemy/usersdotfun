@@ -6,3 +6,4 @@ export * from "./services/plugin.service";
 export * from "./services/state.service";
 export * from "./services/environment.service";
 export * from "./services/secrets.config";
+export * from "./services/plugin-logger.service";

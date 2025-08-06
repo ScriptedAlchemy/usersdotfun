@@ -1,6 +1,6 @@
 
-import type { Config, Plugin, PluginMetadata } from "@usersdotfun/core-sdk";
-import { ConfigurationError } from "@usersdotfun/core-sdk";
+import type { Config, Plugin, PluginExecutionError, PluginMetadata } from "@usersdotfun/core-sdk";
+import { ConfigurationError, PluginLoggerTag } from "@usersdotfun/core-sdk";
 import { Cache, Context, Duration, Effect, Layer, Schedule } from "effect";
 import type z from "zod";
 import registryData from "../../../registry-builder/registry.json" with { type: "json" };
@@ -17,7 +17,6 @@ export interface PluginService {
   readonly initializePlugin: <T extends Plugin<z.ZodTypeAny, z.ZodTypeAny, z.ZodTypeAny>>(
     pluginConfig: { pluginId: string; config: z.ZodTypeAny; },
     contextDescription: string,
-    isSourcePlugin?: boolean,
   ) => Effect.Effect<T, PluginError>;
 
   readonly executePlugin: <TInputSchema extends z.ZodTypeAny,
@@ -29,7 +28,10 @@ export interface PluginService {
     ) => Effect.Effect<z.infer<TOutputSchema>, PluginError>;
 }
 
-export const PluginService = Context.GenericTag<PluginService>("PluginService");
+export class PluginServiceTag extends Context.Tag("PluginService")<
+  PluginServiceTag,
+  PluginService
+>() { }
 
 const retrySchedule = Schedule.exponential(Duration.millis(100)).pipe(
   Schedule.compose(Schedule.recurs(2))
@@ -39,10 +41,11 @@ const loadModuleInternal = (
   pluginId: string,
   url: string
 ): Effect.Effect<new () => PipelinePlugin, PluginError, ModuleFederationTag> =>
+
   Effect.gen(function* () {
     const response = yield* Effect.tryPromise({
       try: () => fetch(url, { method: "HEAD" }),
-      catch: () => new PluginError({
+      catch: (): PluginError => new PluginError({
         message: `Network error while fetching plugin ${pluginId} from ${url}`,
         pluginId,
         operation: "load",
@@ -161,10 +164,11 @@ export const getPlugin = (pluginId: string): Effect.Effect<PluginMetadata, Plugi
   });
 
 export const PluginServiceLive = Layer.effect(
-  PluginService,
+  PluginServiceTag,
   Effect.gen(function* () {
     const moduleCache = yield* createPluginCache();
     const environmentService = yield* EnvironmentServiceTag;
+    const logger = yield* PluginLoggerTag;
 
     // This is the original `loadPlugin` function, now used internally
     const loadAndInstantiate = (
@@ -244,35 +248,26 @@ export const PluginServiceLive = Layer.effect(
                   }));
                 }
 
-                const initialize: Effect.Effect<void, PluginError> = Effect.tryPromise({
-                  try: () => instance.initialize(config),
-                  catch: (error): PluginError => {
-                    if (error instanceof ConfigurationError) {
-                      return new PluginError({
-                        message: `Configuration error in ${pluginId}: ${error.message}`,
-                        pluginId,
-                        operation: "initialize",
-                        cause: error,
-                        retryable: false,
-                      });
-                    }
+                const pluginLayer = Layer.succeed(PluginLoggerTag, logger);
 
+                const initialize: Effect.Effect<void, PluginError> = instance.initialize(config).pipe(
+                  Effect.mapError((error: ConfigurationError): PluginError => {
                     return new PluginError({
-                      message: `Failed to initialize ${pluginId}`,
+                      message: `Configuration error in ${pluginId}: ${error.message}`,
                       pluginId,
                       operation: "initialize",
-                      cause: error
+                      cause: error,
+                      retryable: error.retryable,
                     });
-                  },
-                }).pipe(
+                  }),
                   Effect.catchAll((pluginError) => {
-                    // Only retry if the error is retryable
                     if (pluginError.retryable) {
                       return Effect.fail(pluginError).pipe(Effect.retry(retrySchedule));
                     } else {
                       return Effect.fail(pluginError);
                     }
-                  })
+                  }),
+                  Effect.provide(pluginLayer)
                 );
 
                 // Return instance after successful initialization
@@ -294,6 +289,8 @@ export const PluginServiceLive = Layer.effect(
       ): Effect.Effect<T, PluginError> => Effect.gen(function* () {
         const { pluginId, config } = pluginConfig;
         const pluginMetadata = yield* getPlugin(pluginId);
+
+        yield* logger.logInfo(`Initializing plugin ${pluginId}`, { contextDescription });
 
         const validatedRawConfig = yield* SchemaValidator.validate(
           pluginMetadata.configSchema,
@@ -338,6 +335,9 @@ export const PluginServiceLive = Layer.effect(
 
         // Now, load and initialize
         const plugin = yield* internalPluginLoader(pluginId, finalValidatedConfig);
+
+        yield* logger.logInfo(`Successfully initialized plugin ${pluginId}`, { contextDescription });
+
         return plugin as T;
       }),
 
@@ -348,6 +348,8 @@ export const PluginServiceLive = Layer.effect(
           input: z.infer<TInputSchema>,
           contextDescription: string
         ): Effect.Effect<z.infer<TOutputSchema>, PluginError> => Effect.gen(function* () {
+          yield* logger.logInfo(`Executing plugin ${plugin.id}`, { contextDescription });
+
           const pluginMetadata = yield* getPlugin(plugin.id);
 
           const validatedInput = yield* SchemaValidator.validate(
@@ -364,15 +366,21 @@ export const PluginServiceLive = Layer.effect(
             }))
           );
 
-          const output = yield* Effect.tryPromise({
-            try: () => plugin.execute(validatedInput as z.infer<TInputSchema>),
-            catch: (error) => new PluginError({
-              message: `Plugin execution failed: ${error instanceof Error ? error.message : String(error)}`,
+          const pluginLayer = Layer.succeed(PluginLoggerTag, logger);
+
+          const output = yield* plugin.execute(validatedInput as z.infer<TInputSchema>).pipe(
+            Effect.provide(pluginLayer),
+            Effect.mapError((error: PluginExecutionError) => new PluginError({
+              message: `Plugin execution failed: ${error.message}`,
               pluginId: plugin.id,
               operation: "execute",
-              cause: error instanceof Error ? error : new Error(String(error)),
-            }),
-          });
+              cause: error,
+              retryable: error.retryable,
+            })),
+            Effect.retry(retrySchedule.pipe(
+              Schedule.whileInput((error: PluginError) => error.retryable ?? false)
+            ))
+          );
 
           const validatedOutput = yield* SchemaValidator.validate(
             pluginMetadata.outputSchema,
@@ -387,6 +395,11 @@ export const PluginServiceLive = Layer.effect(
               retryable: false
             }))
           );
+
+          yield* logger.logInfo(`Successfully executed plugin ${plugin.id}`, {
+            contextDescription,
+            outputSize: JSON.stringify(validatedOutput).length
+          });
 
           return validatedOutput as z.infer<TOutputSchema>;
         }),

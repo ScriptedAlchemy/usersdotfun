@@ -12,15 +12,26 @@ const processWorkflowRun = (job: Job<StartWorkflowRunJobData>) =>
     const queueService = yield* QueueService;
     const stateService = yield* StateService;
 
-    const run = yield* workflowService.getWorkflowRunById(workflowRunId);
-
-    yield* workflowService.updateWorkflowRun(run.id, { status: 'RUNNING' });
-
-    const richRun = yield* workflowService.getWorkflowRunById(run.id);
     const workflow = yield* workflowService.getWorkflowById(workflowId);
+
+    // Check if there's already a run in progress
+    const existingRun = yield* workflowService.getActiveWorkflowRun(workflowId);
+    if (existingRun && existingRun.id !== workflowRunId) {
+      yield* Effect.log(`Workflow ${workflowId} already has an active run (${existingRun.id}). Skipping.`);
+      return;
+    }
+
+    const run = workflowRunId
+      ? yield* workflowService.getWorkflowRunById(workflowRunId)
+      : yield* workflowService.createWorkflowRun({
+        workflowId,
+        status: 'RUNNING',
+        triggeredBy: triggeredBy ?? 'system',
+      });
+
     yield* stateService.publish({
       type: 'WORKFLOW_RUN_STARTED',
-      data: richRun,
+      data: run,
     });
 
     yield* Effect.log(`Started Run ${run.id} for Workflow "${workflow.name}"`);

@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "@effect/platform-bun": "^0.77.0",
-    "@module-federation/enhanced": "^0.17.1",
+    "@module-federation/enhanced": "^0.18.0",
     "@usersdotfun/shared-types": "workspace:*",
     "@usersdotfun/core-sdk": "workspace:*",
     "@usersdotfun/shared-db": "workspace:*",

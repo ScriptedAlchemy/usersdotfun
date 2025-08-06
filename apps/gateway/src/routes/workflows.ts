@@ -20,8 +20,7 @@ import {
   RunWorkflowRequestSchema,
   ToggleWorkflowRequestSchema,
   UpdateWorkflowRequestSchema,
-  UpdateWorkflowResponseSchema,
-  workflowStatusEnum
+  UpdateWorkflowResponseSchema
 } from '@usersdotfun/shared-types/schemas';
 import { QUEUE_NAMES } from '@usersdotfun/shared-types/types';
 import { Effect } from 'effect';
@@ -53,8 +52,6 @@ export const workflowsRouter = new Hono<AppType>()
 
     const program = Effect.gen(function* () {
       const workflowService = yield* WorkflowService;
-      const queueService = yield* QueueService;
-      const stateService = yield* StateService;
 
       const newWorkflow = yield* workflowService.createWorkflow({
         ...body,
@@ -63,24 +60,6 @@ export const workflowsRouter = new Hono<AppType>()
         state: body.state ?? null,
       });
 
-      if (body.status === workflowStatusEnum.enum.ACTIVE) {
-        const run = yield* workflowService.createWorkflowRun({
-          workflowId: newWorkflow.id,
-          status: 'PENDING',
-          triggeredBy: user!.id,
-        });
-        yield* stateService.publish({
-          type: 'WORKFLOW_RUN_CREATED',
-          data: run,
-        });
-        yield* queueService.add(QUEUE_NAMES.WORKFLOW_RUN, 'start-workflow-run', {
-          workflowId: newWorkflow.id,
-          workflowRunId: run.id,
-          data: {
-            triggeredBy: user!.id,
-          }
-        });
-      }
       return { success: true, data: newWorkflow };
     });
 
