@@ -5,7 +5,7 @@ import { workflow } from "./workflow";
 import { pluginRun } from "./plugin-run";
 import { workflowRunStatusValues } from "@usersdotfun/shared-types/schemas";
 
-export const workflowRunStatusEnum = pgEnum("workflow_run_status", workflowRunStatusValues);
+const workflowRunStatusEnum = pgEnum("workflow_run_status", workflowRunStatusValues);
 
 // This is a single execution instance of a workflow.
 export const workflowRun = pgTable("workflow_run", {

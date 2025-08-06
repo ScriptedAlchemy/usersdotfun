@@ -1,4 +1,4 @@
-import type { PluginRun, WebSocketEvent, WorkflowRunInfo } from '@usersdotfun/shared-types/types';
+import type { WebSocketEvent } from '@usersdotfun/shared-types/types';
 import { Context, Effect, Layer, Option, Scope } from 'effect';
 import Redis from 'ioredis';
 import type { RedisKey } from '../constants/keys';

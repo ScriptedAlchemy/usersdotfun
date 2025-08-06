@@ -6,17 +6,13 @@ import { Effect } from 'effect';
 
 const processWorkflowRun = (job: Job<StartWorkflowRunJobData>) =>
   Effect.gen(function* () {
-    const { workflowId, data } = job.data;
+    const { workflowId, workflowRunId, data } = job.data;
     const { triggeredBy } = data;
     const workflowService = yield* WorkflowService;
     const queueService = yield* QueueService;
     const stateService = yield* StateService;
 
-    const run = yield* workflowService.createWorkflowRun({
-      workflowId,
-      status: 'PENDING',
-      triggeredBy: triggeredBy ?? 'system',
-    });
+    const run = yield* workflowService.getWorkflowRunById(workflowRunId);
 
     yield* workflowService.updateWorkflowRun(run.id, { status: 'RUNNING' });
 

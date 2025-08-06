@@ -5,6 +5,8 @@ import { richWorkflowRunSummarySchema, sourceItemSchema } from "./runs";
 
 export const workflowStatusValues = ["ACTIVE", "INACTIVE", "ARCHIVED"] as const;
 
+export const workflowStatusEnum = z.enum(workflowStatusValues);
+
 // Reusable definition for steps that involve a plugin
 export const pluginConfigSchema = z.object({
   pluginId: z.string().min(1, "Plugin ID cannot be empty"),
@@ -37,7 +39,7 @@ export const pipelineSchema = z.object({
 export const workflowSchema = z.object({
   id: z.string(),
   name: z.string(),
-  status: z.enum(workflowStatusValues),
+  status: workflowStatusEnum,
   schedule: z
     .string()
     .refine(
@@ -69,7 +71,7 @@ export const createWorkflowSchema = workflowSchema
     createdBy: true,
   })
   .extend({
-    status: z.enum(workflowStatusValues).default("INACTIVE"),
+    status: workflowStatusEnum.default("INACTIVE"),
   });
 
 // For updating an existing workflow.

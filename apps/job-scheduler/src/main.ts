@@ -126,6 +126,11 @@ const program = Effect.gen(function* () {
     scheduledWorkflows,
     (workflow) =>
       Effect.gen(function* () {
+        const run = yield* workflowService.createWorkflowRun({
+          workflowId: workflow.id,
+          status: 'PENDING',
+          triggeredBy: 'system',
+        });
         yield* queueService.upsertScheduledJob(
           QUEUE_NAMES.WORKFLOW_RUN,
           workflow.id, // Use workflow ID as scheduler ID
@@ -134,6 +139,7 @@ const program = Effect.gen(function* () {
             name: 'scheduled-workflow-run',
             data: {
               workflowId: workflow.id,
+              workflowRunId: run.id,
               data: { triggeredBy: workflow.createdBy },
             },
           }

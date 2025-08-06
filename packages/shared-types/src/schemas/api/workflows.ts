@@ -46,7 +46,7 @@ export const ToggleWorkflowResponseSchema = ApiSuccessResponseSchema(workflowSch
 
 // POST /workflows/:id/run
 export const RunWorkflowRequestSchema = z.object({ params: IdParamSchema });
-export const RunWorkflowResponseSchema = ApiSuccessResponseSchema(SimpleMessageDataSchema);
+export const RunWorkflowResponseSchema = ApiSuccessResponseSchema(workflowRunSchema);
 
 // GET /workflows/:id/runs
 export const GetWorkflowRunsRequestSchema = z.object({ params: IdParamSchema });

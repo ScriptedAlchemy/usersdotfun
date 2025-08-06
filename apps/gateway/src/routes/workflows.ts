@@ -1,6 +1,6 @@
 import { zValidator } from '@hono/zod-validator';
 import { WorkflowService } from '@usersdotfun/shared-db';
-import { QueueService, StateService } from '@usersdotfun/shared-queue';
+import { QueueService } from '@usersdotfun/shared-queue';
 import {
   CreateWorkflowRequestSchema,
   CreateWorkflowResponseSchema,
@@ -20,7 +20,8 @@ import {
   RunWorkflowRequestSchema,
   ToggleWorkflowRequestSchema,
   UpdateWorkflowRequestSchema,
-  UpdateWorkflowResponseSchema
+  UpdateWorkflowResponseSchema,
+  workflowStatusEnum
 } from '@usersdotfun/shared-types/schemas';
 import { QUEUE_NAMES } from '@usersdotfun/shared-types/types';
 import { Effect } from 'effect';
@@ -59,13 +60,20 @@ export const workflowsRouter = new Hono()
         schedule: body.schedule ?? null, // Ensure schedule is not undefined
       });
 
-      yield* queueService.add(QUEUE_NAMES.WORKFLOW_RUN, 'start-workflow-run', {
-        workflowId: newWorkflow.id,
-        data: {
+      if (body.status === workflowStatusEnum.enum.ACTIVE) {
+        const run = yield* workflowService.createWorkflowRun({
+          workflowId: newWorkflow.id,
+          status: 'PENDING',
           triggeredBy: user!.id,
-        }
-      });
-
+        });
+        yield* queueService.add(QUEUE_NAMES.WORKFLOW_RUN, 'start-workflow-run', {
+          workflowId: newWorkflow.id,
+          workflowRunId: run.id,
+          data: {
+            triggeredBy: user!.id,
+          }
+        });
+      }
       return { success: true, data: newWorkflow };
     });
 
@@ -116,25 +124,8 @@ export const workflowsRouter = new Hono()
     const { id } = c.req.valid('param');
     const program = Effect.gen(function* () {
       const workflowService = yield* WorkflowService;
-      const queueService = yield* QueueService;
       const workflow = yield* workflowService.getWorkflowById(id);
       const newStatus = workflow.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
-
-      if (newStatus === 'INACTIVE') {
-        yield* queueService.removeScheduledJob(QUEUE_NAMES.WORKFLOW_RUN, id);
-      } else {
-        if (workflow.schedule) {
-          yield* queueService.upsertScheduledJob(QUEUE_NAMES.WORKFLOW_RUN, id, {
-            pattern: workflow.schedule,
-          }, {
-            name: 'start-workflow-run',
-            data: {
-              workflowId: id,
-              data: { triggeredBy: 'system' }
-            },
-          });
-        }
-      }
 
       const updatedWorkflow = yield* workflowService.updateWorkflow(id, { status: newStatus });
       return { success: true, data: updatedWorkflow };
@@ -152,13 +143,22 @@ export const workflowsRouter = new Hono()
     const user = c.get('user');
     const program = Effect.gen(function* () {
       const queueService = yield* QueueService;
+      const workflowService = yield* WorkflowService;
+
+      const run = yield* workflowService.createWorkflowRun({
+        workflowId: id,
+        status: 'PENDING',
+        triggeredBy: user!.id,
+      });
+
       yield* queueService.add(QUEUE_NAMES.WORKFLOW_RUN, 'start-workflow-run', {
         workflowId: id,
+        workflowRunId: run.id,
         data: {
           triggeredBy: user!.id,
         }
       });
-      return { success: true, data: { id: id, message: `Workflow ${id} has been queued to run.` } };
+      return { success: true, data: run };
     });
     try {
       const result = await AppRuntime.runPromise(program);

@@ -9,6 +9,7 @@ import {
   sourceSchema,
   updateWorkflowSchema,
   workflowSchema,
+  workflowStatusEnum,
   workflowSummarySchema
 } from '../schemas/workflows';
 import type {
@@ -18,6 +19,8 @@ import type {
   WorkflowRun,
   WorkflowRunInfo,
 } from './runs';
+
+export type WorkflowStatusType = z.infer<typeof workflowStatusEnum>;
 
 // Reusable Definition Types
 export type PluginConfig = z.infer<typeof pluginConfigSchema>;

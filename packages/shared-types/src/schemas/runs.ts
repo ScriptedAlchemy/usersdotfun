@@ -4,11 +4,14 @@ import { userSchema } from "./auth";
 export const workflowRunStatusValues = ['PENDING', 'RUNNING', 'COMPLETED', 'FAILED', 'PARTIAL_SUCCESS', 'CANCELLED'] as const;
 export const pluginRunStatusValues = ['PENDING', 'RUNNING', 'COMPLETED', 'FAILED', 'SKIPPED', 'RETRYING'] as const;
 
+export const workflowRunStatusEnum = z.enum(workflowRunStatusValues);
+export const pluginRunStatusEnum = z.enum(pluginRunStatusValues);
+
 // A single execution instance of a Workflow - includes triggeredBy user as it's always returned by the service
 export const workflowRunSchema = z.object({
   id: z.string(),
   workflowId: z.string(),
-  status: z.enum(workflowRunStatusValues),
+  status: workflowRunStatusEnum,
   triggeredBy: z.string().nullable(),
   failureReason: z.string().nullable(),
   itemsProcessed: z.number().int(),
@@ -25,7 +28,7 @@ export const pluginRunSchema = z.object({
   stepId: z.string(),
   pluginId: z.string(),
   config: z.any().nullable(),
-  status: z.enum(pluginRunStatusValues),
+  status: pluginRunStatusEnum,
   input: z.any().nullable(),
   output: z.any().nullable(),
   error: z.any().nullable(),

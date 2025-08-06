@@ -102,6 +102,7 @@ const columns = (
         toast.promise(promise, {
           loading: "Triggering workflow...",
           success: (data) => {
+            console.log("data", data);
             navigate({
               to: "/workflows/$workflowId/runs/$runId",
               params: { workflowId: workflow.id, runId: data.id },

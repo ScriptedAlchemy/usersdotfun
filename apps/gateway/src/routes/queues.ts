@@ -1,11 +1,11 @@
 import { zValidator } from '@hono/zod-validator';
 import { QueueService } from '@usersdotfun/shared-queue';
-import { ClearQueueRequestSchema, DeleteJobRequestSchema, PauseQueueRequestSchema, ResumeQueueRequestSchema, RetryQueueJobRequestSchema } from '@usersdotfun/shared-types/schemas/api/queues';
+import { ClearQueueRequestSchema, DeleteJobRequestSchema, PauseQueueRequestSchema, ResumeQueueRequestSchema } from '@usersdotfun/shared-types/schemas/api/queues';
 import { type QueueName } from '@usersdotfun/shared-types/types';
 import { Effect } from 'effect';
 import { Hono } from 'hono';
 import { requireAuth } from '../middleware/auth';
-import { AppRuntime, type AppContext } from '../runtime';
+import { AppRuntime } from '../runtime';
 import { honoErrorHandler } from '../utils/error-handlers';
 
 import { QueueStatusService } from '@usersdotfun/shared-queue';

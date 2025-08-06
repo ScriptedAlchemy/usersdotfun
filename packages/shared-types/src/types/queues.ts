@@ -23,7 +23,7 @@ export type JobStatus = z.infer<typeof jobStatusSchema>;
 // Base Job Data Wrapper
 export type JobData<T> = {
   workflowId: string;
-  workflowRunId?: string;
+  workflowRunId: string;
   data: T;
 };
 
