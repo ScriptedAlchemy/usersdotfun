@@ -278,10 +278,53 @@
               "properties": {
                 "data": {
                   "type": "object",
-                  "propertyNames": {
-                    "type": "string"
+                  "properties": {
+                    "latestProcessedId": {
+                      "type": "string"
+                    },
+                    "currentAsyncJob": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "workflowId": {
+                              "type": "string"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "submitted",
+                                "pending",
+                                "processing",
+                                "done",
+                                "error",
+                                "timeout"
+                              ]
+                            },
+                            "submittedAt": {
+                              "type": "string"
+                            },
+                            "lastCheckedAt": {
+                              "type": "string"
+                            },
+                            "errorMessage": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "workflowId",
+                            "status",
+                            "submittedAt"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
                   },
-                  "additionalProperties": {}
+                  "additionalProperties": false
                 }
               },
               "required": [
@@ -401,10 +444,53 @@
               "anyOf": [
                 {
                   "type": "object",
-                  "propertyNames": {
-                    "type": "string"
+                  "properties": {
+                    "latestProcessedId": {
+                      "type": "string"
+                    },
+                    "currentAsyncJob": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "workflowId": {
+                              "type": "string"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "submitted",
+                                "pending",
+                                "processing",
+                                "done",
+                                "error",
+                                "timeout"
+                              ]
+                            },
+                            "submittedAt": {
+                              "type": "string"
+                            },
+                            "lastCheckedAt": {
+                              "type": "string"
+                            },
+                            "errorMessage": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "workflowId",
+                            "status",
+                            "submittedAt"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
                   },
-                  "additionalProperties": {}
+                  "additionalProperties": false
                 },
                 {
                   "type": "null"
@@ -450,5 +536,278 @@
     },
     "version": "0.0.1",
     "description": "Masa source plugin for curatedotfun"
+  },
+  "@curatedotfun/telegram-source": {
+    "remoteUrl": "http://localhost:3012/remoteEntry.js",
+    "configSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "variables": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "secrets": {
+          "type": "object",
+          "properties": {
+            "botToken": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "botToken"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "searchOptions": {
+          "type": "object",
+          "properties": {
+            "chatId": {
+              "description": "ID of the specific Telegram chat to listen to.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "chatId"
+          ],
+          "additionalProperties": {}
+        },
+        "lastProcessedState": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "data": {
+                  "type": "object",
+                  "properties": {
+                    "lastUpdateId": {
+                      "description": "The ID of the last update processed.",
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "lastUpdateId"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "data"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "searchOptions"
+      ],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "externalId": {
+                    "type": "string"
+                  },
+                  "content": {
+                    "type": "string"
+                  },
+                  "contentType": {
+                    "type": "string"
+                  },
+                  "createdAt": {
+                    "type": "string"
+                  },
+                  "url": {
+                    "type": "string"
+                  },
+                  "authors": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "username": {
+                          "type": "string"
+                        },
+                        "displayName": {
+                          "type": "string"
+                        },
+                        "url": {
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "raw": {
+                    "type": "object",
+                    "properties": {
+                      "update_id": {
+                        "type": "number"
+                      },
+                      "message": {
+                        "type": "object",
+                        "properties": {
+                          "message_id": {
+                            "type": "number"
+                          },
+                          "date": {
+                            "type": "number"
+                          },
+                          "text": {
+                            "type": "string"
+                          },
+                          "chat": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "number"
+                              },
+                              "username": {
+                                "type": "string"
+                              },
+                              "first_name": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "from": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "number"
+                              },
+                              "is_bot": {
+                                "type": "boolean"
+                              },
+                              "first_name": {
+                                "type": "string"
+                              },
+                              "username": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "is_bot"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": [
+                          "message_id",
+                          "date",
+                          "chat",
+                          "from"
+                        ],
+                        "additionalProperties": {}
+                      }
+                    },
+                    "required": [
+                      "update_id",
+                      "message"
+                    ],
+                    "additionalProperties": {}
+                  }
+                },
+                "required": [
+                  "externalId",
+                  "content",
+                  "raw"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "nextLastProcessedState": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "lastUpdateId": {
+                      "description": "The ID of the last update processed.",
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "lastUpdateId"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "items"
+          ],
+          "additionalProperties": false
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "message": {
+                "type": "string"
+              },
+              "details": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {}
+              },
+              "stack": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "message"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "success"
+      ],
+      "additionalProperties": false
+    },
+    "version": "0.0.1",
+    "description": "Telegram source plugin for curatedotfun"
   }
 }

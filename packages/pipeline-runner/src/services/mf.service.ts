@@ -1,8 +1,8 @@
-import { createInstance, getInstance } from "@module-federation/enhanced/runtime";
+import { init, getInstance } from "@module-federation/enhanced/runtime";
 import { setGlobalFederationInstance } from "@module-federation/runtime-core";
 import { Context, Effect, Layer } from "effect";
 
-type ModuleFederation = ReturnType<typeof createInstance>;
+type ModuleFederation = ReturnType<typeof init>;
 
 export class ModuleFederationTag extends Context.Tag("ModuleFederation")<
   ModuleFederationTag,
@@ -16,13 +16,13 @@ const createModuleFederationInstance = Effect.cached(
       let instance = getInstance();
 
       if (!instance) {
-        instance = createInstance({
+        instance = init({
           name: "host",
           remotes: [],
         });
 
-        // ensure the runtime can locate this instance globally
-        setGlobalFederationInstance(instance);
+        // // ensure the runtime can locate this instance globally
+        // setGlobalFederationInstance(instance);
       }
 
       return instance;

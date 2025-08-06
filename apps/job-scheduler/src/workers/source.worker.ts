@@ -1,4 +1,4 @@
-import { createSourceOutputSchema, type SourcePlugin } from '@usersdotfun/core-sdk';
+import { createSourceOutputSchema, PlatformStateSchema, type SourcePlugin } from '@usersdotfun/core-sdk';
 import { PluginService } from '@usersdotfun/pipeline-runner';
 import { WorkflowService } from '@usersdotfun/shared-db';
 import { QueueService, StateService } from '@usersdotfun/shared-queue';
@@ -8,7 +8,7 @@ import { Effect } from 'effect';
 import { z } from 'zod';
 
 // Create a specific schema for parsing source plugin output
-const GenericPluginSourceOutputSchema = createSourceOutputSchema(z.unknown());
+const GenericPluginSourceOutputSchema = createSourceOutputSchema(z.unknown(), PlatformStateSchema);
 
 const processSourceQueryJob = (job: Job<SourceQueryJobData>) =>
   Effect.gen(function* () {

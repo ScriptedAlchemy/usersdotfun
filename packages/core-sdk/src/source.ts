@@ -91,6 +91,15 @@ export interface AsyncJobProgress {
   // queryDetails?: Record<string, any>;
 }
 
+export const AsyncJobProgressSchema = z.object({
+  workflowId: z.string(),
+  status: z.enum(["submitted", "pending", "processing", "done", "error", "timeout"]),
+  submittedAt: z.string(), // ISO timestamp
+  lastCheckedAt: z.string().optional(), // ISO timestamp
+  errorMessage: z.string().optional(),
+});
+
+
 /**
  * Generic platform-specific state for managing resumable searches and long-running jobs.
  */
@@ -106,6 +115,11 @@ export interface PlatformState {
   // Allows for other platform-specific state variables
   [key: string]: any;
 }
+
+export const PlatformStateSchema = z.object({
+  latestProcessedId: z.union([z.string(), z.number(), z.record(z.string(), z.any())]).optional(),
+  currentAsyncJob: AsyncJobProgressSchema.nullable().optional(),
+}).catchall(z.any());
 
 /**
  * State passed between search calls to enable resumption.
@@ -173,19 +187,26 @@ export interface SourcePlugin<
 }
 
 // Source-specific schema creators
-export const createSourceInputSchema = <TSearchOptions extends z.ZodTypeAny>(
-  searchOptionsSchema: TSearchOptions
+export const createSourceInputSchema = <
+  TSearchOptions extends z.ZodTypeAny,
+  TState extends z.ZodTypeAny
+>(
+  searchOptionsSchema: TSearchOptions,
+  stateSchema: TState,
 ) =>
   z.object({
     searchOptions: searchOptionsSchema,
     lastProcessedState: z.object({
-      data: z.record(z.string(), z.unknown()),
-      // TODO: expand to include a timestamp
+      data: stateSchema.optional().nullable()
     }).optional().nullable(),
   });
 
-export const createSourceOutputSchema = <TItem extends z.ZodTypeAny>(
-  itemData: TItem
+export const createSourceOutputSchema = <
+  TItem extends z.ZodTypeAny,
+  TState extends z.ZodTypeAny
+>(
+  itemData: TItem,
+  stateSchema: TState,
 ) => {
   const pluginSourceItemSchema = z.object({
     externalId: z.string(),
@@ -201,7 +222,7 @@ export const createSourceOutputSchema = <TItem extends z.ZodTypeAny>(
     success: z.boolean(),
     data: z.object({
       items: z.array(pluginSourceItemSchema),
-      nextLastProcessedState: z.record(z.string(), z.unknown()).optional().nullable(),
+      nextLastProcessedState: stateSchema.optional().nullable(),
     }).optional(),
     errors: z.array(ErrorDetailsSchema).optional(),
   });

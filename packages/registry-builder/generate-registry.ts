@@ -3,8 +3,9 @@ import path from 'path';
 import { z } from "zod";
 
 import { MasaSourceConfigSchema, MasaSourceInputSchema, MasaSourceOutputSchema } from "../../plugins/masa-source/src/schemas/index.js";
-import { SimpleTransformerConfigSchema, SimpleTransformerInputSchema, SimpleTransformerOutputSchema } from "../../plugins/simple-transform/src/schemas/index.js";
 import { ObjectTransformerConfigSchema, ObjectTransformerInputSchema, ObjectTransformerOutputSchema } from "../../plugins/object-transform/src/schemas/index.js";
+import { SimpleTransformerConfigSchema, SimpleTransformerInputSchema, SimpleTransformerOutputSchema } from "../../plugins/simple-transform/src/schemas/index.js";
+import { TelegramSourceConfigSchema, TelegramSourceInputSchema, TelegramSourceOutputSchema } from './../../plugins/telegram-source/src/schemas/index.js';
 
 // Plugin schema definitions
 const pluginSchemas = {
@@ -22,6 +23,11 @@ const pluginSchemas = {
     configSchema: MasaSourceConfigSchema,
     inputSchema: MasaSourceInputSchema,
     outputSchema: MasaSourceOutputSchema
+  },
+  'telegram-source': {
+    configSchema: TelegramSourceConfigSchema,
+    inputSchema: TelegramSourceInputSchema,
+    outputSchema: TelegramSourceOutputSchema
   }
 } as const;
 
@@ -29,7 +35,8 @@ const pluginSchemas = {
 const pluginsToRegister = {
   'simple-transform': "SimpleTransformer",
   'object-transform': "ObjectTransformer",
-  'masa-source': "MasaSource"
+  'masa-source': "MasaSource",
+  'telegram-source': "TelegramSource"
 } as const;
 
 const registry: Record<string, any> = {};

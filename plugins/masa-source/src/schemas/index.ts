@@ -14,6 +14,17 @@ export const MasaSearchOptionsSchema = z.object({
   language: z.string().optional(),
 }).catchall(z.unknown());
 
+export const MasaPlatformStateSchema = z.object({
+  latestProcessedId: z.string().optional(),
+  currentAsyncJob: z.object({
+    workflowId: z.string(),
+    status: z.enum(["submitted", "pending", "processing", "done", "error", "timeout"]),
+    submittedAt: z.string(),
+    lastCheckedAt: z.string().optional(),
+    errorMessage: z.string().optional(),
+  }).nullable().optional(),
+});
+
 export const MasaSourceConfigSchema = createConfigSchema(
   z.object({
     baseUrl: z.url().optional(),
@@ -22,8 +33,6 @@ export const MasaSourceConfigSchema = createConfigSchema(
     apiKey: z.string().min(1, "Masa API key is required"),
   })
 );
-
-export const MasaSourceInputSchema = createSourceInputSchema(MasaSearchOptionsSchema);
 
 export const MasaApiResponseSchema = z.object({
   id: z.string(),
@@ -37,7 +46,15 @@ export const MasaApiResponseSchema = z.object({
   }).catchall(z.unknown()).optional(),
 }).catchall(z.unknown());
 
-export const MasaSourceOutputSchema = createSourceOutputSchema(MasaApiResponseSchema);
+export const MasaSourceInputSchema = createSourceInputSchema(
+  MasaSearchOptionsSchema,
+  MasaPlatformStateSchema
+);
+
+export const MasaSourceOutputSchema = createSourceOutputSchema(
+  MasaApiResponseSchema,
+  MasaPlatformStateSchema
+);
 
 // Derived types
 export type MasaSourceConfig = z.infer<typeof MasaSourceConfigSchema>;
