@@ -1,6 +1,12 @@
-import type { LastProcessedState, SourcePlugin } from '@usersdotfun/core-sdk';
-import { ConfigurationError, ContentType } from '@usersdotfun/core-sdk';
-
+import {
+  type SourcePlugin,
+  PluginLoggerTag,
+  ConfigurationError,
+  PluginExecutionError,
+  ContentType,
+  type LastProcessedState,
+} from '@usersdotfun/core-sdk';
+import { Effect } from 'effect';
 import { MasaClient } from './masa-client';
 import {
   MasaSourceConfig,
@@ -33,36 +39,42 @@ export class MasaSourcePlugin
   private masaClient!: MasaClient;
   private serviceManager!: ServiceManager;
 
-  async initialize(config: MasaSourceConfig): Promise<void> {
-    if (!config?.secrets?.apiKey) {
-      throw new ConfigurationError('Masa API key is required.');
-    }
+  initialize(config: MasaSourceConfig): Effect.Effect<void, ConfigurationError, PluginLoggerTag> {
+    const self = this;
+    return Effect.gen(function* () {
+      const logger = yield* PluginLoggerTag;
+      yield* logger.logInfo('Initializing Masa source plugin', { pluginId: self.id });
 
-    this.masaClient = new MasaClient({
-      apiKey: config.secrets.apiKey,
-      baseUrl: config.variables?.baseUrl,
+      if (!config?.secrets?.apiKey) {
+        return yield* Effect.fail(new ConfigurationError('Masa API key is required.'));
+      }
+
+      self.masaClient = new MasaClient({
+        apiKey: config.secrets.apiKey,
+        baseUrl: config.variables?.baseUrl,
+      });
+
+      self.serviceManager = new ServiceManager(self.masaClient);
+      yield* logger.logInfo('Masa source plugin initialized successfully', { pluginId: self.id });
     });
-
-    this.serviceManager = new ServiceManager(this.masaClient);
   }
 
-  async execute(input: MasaSourceInput): Promise<MasaSourceOutput> {
-    const { searchOptions, lastProcessedState } = input;
+  execute(input: MasaSourceInput): Effect.Effect<MasaSourceOutput, PluginExecutionError, PluginLoggerTag> {
+    const self = this;
+    return Effect.gen(function* () {
+      const logger = yield* PluginLoggerTag;
+      const { searchOptions, lastProcessedState } = input;
 
-    console.log('MasaSourcePlugin: execute called with:', {
-      type: searchOptions.type,
-      hasState: !!lastProcessedState
-    });
+      yield* logger.logInfo('MasaSourcePlugin: execute called with:', {
+        type: searchOptions.type,
+        hasState: !!lastProcessedState
+      });
 
-    try {
-      const service = this.serviceManager.getService(searchOptions.type as keyof ServiceMap);
-      const config = this.serviceManager.getConfig(searchOptions.type);
+      const service = self.serviceManager.getService(searchOptions.type as keyof ServiceMap);
+      const config = self.serviceManager.getConfig(searchOptions.type);
 
       if (!service || !config) {
-        return {
-          success: false,
-          errors: [{ message: `Unsupported platform type: ${searchOptions.type}` }],
-        };
+        return yield* Effect.fail(new PluginExecutionError(`Unsupported platform type: ${searchOptions.type}`, false));
       }
 
       // Prepare platform-specific arguments
@@ -75,7 +87,13 @@ export class MasaSourcePlugin
       const typedState = lastProcessedState as LastProcessedState<MasaPlatformState> | null;
 
       // Execute service
-      const result = await service.search(validatedArgs, typedState);
+      const result = yield* Effect.tryPromise({
+        try: () => service.search(validatedArgs, typedState),
+        catch: (error) => new PluginExecutionError(
+          error instanceof Error ? error.message : 'An unknown error occurred while searching',
+          true
+        ),
+      });
 
       // Transform results to plugin items
       const items: MasaPluginSourceItem[] = result.items.map((masaResult: MasaSearchResult) => ({
@@ -99,18 +117,15 @@ export class MasaSourcePlugin
           nextLastProcessedState: result.nextStateData,
         },
       };
-
-    } catch (error) {
-      console.error("MasaSourcePlugin: Error in execute:", error);
-      return {
-        success: false,
-        errors: [{ message: (error as Error).message }],
-      };
-    }
+    });
   }
 
-  async shutdown(): Promise<void> {
-    // No cleanup needed
+  shutdown(): Effect.Effect<void, never, PluginLoggerTag> {
+    const self = this;
+    return Effect.gen(function* () {
+      const logger = yield* PluginLoggerTag;
+      yield* logger.logInfo('Shutting down Masa source plugin', { pluginId: self.id });
+    });
   }
 }
 

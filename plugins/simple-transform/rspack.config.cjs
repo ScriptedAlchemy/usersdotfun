@@ -1,7 +1,7 @@
 const path = require("path");
+const { rspack } = require("@rspack/core");
 const pkg = require("./package.json");
 const { getNormalizedRemoteName } = require("@curatedotfun/utils");
-const { ModuleFederationPlugin } = require("@module-federation/enhanced/rspack");
 
 module.exports = {
   entry: "./src/index",
@@ -36,7 +36,7 @@ module.exports = {
     extensions: [".tsx", ".ts", ".js"],
   },
   plugins: [
-    new ModuleFederationPlugin({
+    new rspack.container.ModuleFederationPlugin({
       name: getNormalizedRemoteName(pkg.name),
       filename: "remoteEntry.js",
       runtimePlugins: [
@@ -46,7 +46,18 @@ module.exports = {
       exposes: {
         "./plugin": "./src/index.ts",
       },
-      shared: {},
+      shared: {
+        effect: {
+          singleton: true,
+          requiredVersion: "^3.17.6",
+          eager: false,
+        },
+        zod: {
+          singleton: true,
+          requiredVersion: "^4.0.8",
+          eager: false,
+        },
+      },
     }),
   ],
 };

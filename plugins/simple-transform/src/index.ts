@@ -1,4 +1,10 @@
-import type { Plugin } from '@usersdotfun/core-sdk';
+import {
+  type Plugin,
+  PluginLoggerTag,
+  ConfigurationError,
+  PluginExecutionError,
+} from '@usersdotfun/core-sdk';
+import { Effect } from 'effect';
 import Mustache from 'mustache';
 import {
   SimpleTransformerConfig,
@@ -24,28 +30,41 @@ export default class SimpleTransformer
   readonly configSchema = SimpleTransformerConfigSchema;
   private template: string = '{{content}}'; // Simple default template
 
-  async initialize(config: SimpleTransformerConfig): Promise<void> {
-    if (config?.variables?.template) {
-      this.template = config.variables.template;
-    }
+  initialize(config: SimpleTransformerConfig): Effect.Effect<void, ConfigurationError, PluginLoggerTag> {
+    const self = this;
+    return Effect.gen(function* () {
+      const logger = yield* PluginLoggerTag;
+      yield* logger.logInfo('Initializing Simple transformer plugin', { pluginId: self.id });
+      if (config?.variables?.template) {
+        self.template = config.variables.template;
+      }
+      yield* Effect.void;
+    });
   }
 
-  async execute(
+  execute(
     input: SimpleTransformerInput,
-  ): Promise<SimpleTransformerOutput> {
-    try {
-      const result = Mustache.render(this.template, input);
-      return { success: true, data: { content: result } };
-    } catch (error: unknown) {
-      const err = error instanceof Error ? error : new Error('Unknown error occurred');
-      return {
-        success: false,
-        errors: [{ message: err.message, stack: err.stack }],
-      };
-    }
+  ): Effect.Effect<SimpleTransformerOutput, PluginExecutionError, PluginLoggerTag> {
+    const self = this;
+    return Effect.gen(function* () {
+      const logger = yield* PluginLoggerTag;
+      yield* logger.logInfo('Executing Simple transformer plugin', { pluginId: self.id });
+      try {
+        const result = Mustache.render(self.template, input);
+        return { success: true, data: { content: result } };
+      } catch (error: unknown) {
+        const err = error instanceof Error ? error : new Error('Unknown error occurred');
+        yield* logger.logError('Error executing Simple transformer plugin', err);
+        return yield* Effect.fail(new PluginExecutionError(err.message, false));
+      }
+    });
   }
 
-  async shutdown(): Promise<void> {
-    // No cleanup needed
+  shutdown(): Effect.Effect<void, never, PluginLoggerTag> {
+    const self = this;
+    return Effect.gen(function* () {
+      const logger = yield* PluginLoggerTag;
+      yield* logger.logInfo('Shutting down Simple transformer plugin', { pluginId: self.id });
+    });
   }
 }

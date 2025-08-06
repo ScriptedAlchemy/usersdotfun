@@ -46,7 +46,18 @@ module.exports = {
       exposes: {
         "./plugin": "./src/index.ts",
       },
-      shared: {},
+      shared: {
+        effect: {
+          singleton: true,
+          requiredVersion: "^3.17.6",
+          eager: false,
+        },
+        zod: {
+          singleton: true,
+          requiredVersion: "^4.0.8",
+          eager: false,
+        },
+      },
     }),
   ],
 };

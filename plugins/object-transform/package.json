@@ -46,12 +46,13 @@
     "vitest": "latest"
   },
   "peerDependencies": {
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "effect": "^3.17.6",
+    "zod": "^4.0.8"
   },
   "dependencies": {
     "@usersdotfun/core-sdk": "workspace:*",
     "date-fns": "^4.1.0",
-    "mustache": "^4.2.0",
-    "zod": "^4.0.8"
+    "mustache": "^4.2.0"
   }
 }

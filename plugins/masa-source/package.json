@@ -40,11 +40,12 @@
     "coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@usersdotfun/core-sdk": "workspace:*",
-    "zod": "^4.0.8"
+    "@usersdotfun/core-sdk": "workspace:*"
   },
   "peerDependencies": {
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "effect": "^3.17.6",
+    "zod": "^4.0.8"
   },
   "devDependencies": {
     "@rspack/cli": "latest",
