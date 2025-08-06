@@ -46,7 +46,11 @@ const processWorkflowRun = (job: Job<StartWorkflowRunJobData>) =>
     return yield* processingEffect.pipe(
       Effect.catchAll(error =>
         Effect.gen(function* () {
-          yield* workflowService.updateWorkflowRun(run.id, { status: 'FAILED', completedAt: new Date() });
+          const updatedRun = yield* workflowService.updateWorkflowRun(run.id, { status: 'FAILED', completedAt: new Date() });
+          yield* stateService.publish({
+            type: 'WORKFLOW_RUN_FAILED',
+            data: updatedRun,
+          });
           yield* Effect.logError(`Run for workflow ${workflowId} failed.`, error);
           return yield* Effect.fail(error); // Allow BullMQ to handle retries
         })

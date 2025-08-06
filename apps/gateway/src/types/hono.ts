@@ -12,8 +12,8 @@ interface User extends BetterAuthUser {
   banned: boolean;
 }
 
-declare module 'hono' {
-  interface ContextVariableMap {
+export type AppType = {
+  Variables: {
     user?: User;
     session?: Session;
     isAuthenticated: boolean;

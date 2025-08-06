@@ -1,12 +1,15 @@
 import { StateService } from "@usersdotfun/shared-queue";
-import type { WebSocketEvent } from "@usersdotfun/shared-types/types";
+import type {
+  WebSocketEvent,
+  WebSocketServerMessage,
+} from "@usersdotfun/shared-types/types";
 import { Context, Effect, Layer, Ref } from "effect";
 
 interface WebSocketConnection {
   id: string;
   userId?: string;
   subscriptions: Set<string>;
-  send: (message: WebSocketEvent) => Effect.Effect<void, Error>;
+  send: (message: WebSocketServerMessage) => Effect.Effect<void, Error>;
 }
 
 export interface WebSocketService {
@@ -87,7 +90,7 @@ export const WebSocketServiceLive = Layer.effect(
     // Helper function to create a resilient send effect
     const resilientSend = (
       connection: WebSocketConnection,
-      event: WebSocketEvent,
+      event: WebSocketServerMessage,
     ) =>
       Effect.catchAll(connection.send(event), (error) =>
         Effect.logError(

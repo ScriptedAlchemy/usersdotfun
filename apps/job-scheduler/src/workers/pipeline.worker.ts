@@ -1,7 +1,7 @@
 import { createOutputSchema } from '@usersdotfun/core-sdk';
 import { PluginService } from '@usersdotfun/pipeline-runner';
 import { WorkflowService } from '@usersdotfun/shared-db';
-import { QueueService } from '@usersdotfun/shared-queue';
+import { QueueService, StateService } from '@usersdotfun/shared-queue';
 import { QUEUE_NAMES, type ExecutePipelineJobData } from '@usersdotfun/shared-types/types';
 import { type Job } from 'bullmq';
 import { Effect } from 'effect';
@@ -19,6 +19,7 @@ const processPipelineJob = (job: Job<ExecutePipelineJobData>) =>
     const { sourceItemId, input } = data;
     const workflowService = yield* WorkflowService;
     const pluginService = yield* PluginService;
+    const stateService = yield* StateService;
 
     const run = yield* workflowService.getWorkflowRunById(workflowRunId);
     const workflow = yield* workflowService.getWorkflowById(workflowId);
@@ -35,6 +36,11 @@ const processPipelineJob = (job: Job<ExecutePipelineJobData>) =>
         status: 'RUNNING',
         input: currentInput,
         startedAt: new Date(),
+      });
+
+      yield* stateService.publish({
+        type: 'PLUGIN_RUN_STARTED',
+        data: pluginRun,
       });
 
       const pluginEffect = Effect.gen(function* () {
@@ -59,10 +65,14 @@ const processPipelineJob = (job: Job<ExecutePipelineJobData>) =>
           const error = new Error(
             `Plugin output validation failed: ${parseResult.error.message}`
           );
-          yield* workflowService.updatePluginRun(pluginRun.id, {
+          const updatedRun = yield* workflowService.updatePluginRun(pluginRun.id, {
             status: 'FAILED',
             error: { message: error.message },
             completedAt: new Date(),
+          });
+          yield* stateService.publish({
+            type: 'PLUGIN_RUN_FAILED',
+            data: updatedRun,
           });
           return yield* Effect.fail(error);
         }
@@ -74,31 +84,44 @@ const processPipelineJob = (job: Job<ExecutePipelineJobData>) =>
             `Plugin ${stepDefinition.pluginId
             } execution failed: ${JSON.stringify(output.errors)}`
           );
-          yield* workflowService.updatePluginRun(pluginRun.id, {
+          const updatedRun = yield* workflowService.updatePluginRun(pluginRun.id, {
             status: 'FAILED',
             error: { message: error.message },
             completedAt: new Date(),
           });
+          yield* stateService.publish({
+            type: 'PLUGIN_RUN_FAILED',
+            data: updatedRun,
+          });
           return yield* Effect.fail(error);
         }
 
-        yield* workflowService.updatePluginRun(pluginRun.id, {
+        const updatedRun = yield* workflowService.updatePluginRun(pluginRun.id, {
           status: 'COMPLETED',
           output,
           completedAt: new Date(),
+        });
+
+        yield* stateService.publish({
+          type: 'PLUGIN_RUN_COMPLETED',
+          data: updatedRun,
         });
 
         return output.data;
       }).pipe(
         Effect.catchAll((error) =>
           Effect.gen(function* () {
-            yield* workflowService.updatePluginRun(pluginRun.id, {
+            const updatedRun = yield* workflowService.updatePluginRun(pluginRun.id, {
               status: 'FAILED',
               error: {
                 message: 'Failed to execute pipeline step',
                 cause: error,
               },
               completedAt: new Date(),
+            });
+            yield* stateService.publish({
+              type: 'PLUGIN_RUN_FAILED',
+              data: updatedRun,
             });
             return yield* Effect.fail(error);
           })

@@ -9,8 +9,9 @@ import { AppRuntime } from '../runtime';
 import { honoErrorHandler } from '../utils/error-handlers';
 
 import { QueueStatusService } from '@usersdotfun/shared-queue';
+import type { AppType } from '../types/hono';
 
-export const queuesRouter = new Hono()
+export const queuesRouter = new Hono<AppType>()
   .get('/', requireAuth, async (c) => {
     const program = Effect.gen(function* () {
       const queueStatusService = yield* QueueStatusService;

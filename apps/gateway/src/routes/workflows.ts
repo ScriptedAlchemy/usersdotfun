@@ -27,12 +27,13 @@ import { QUEUE_NAMES } from '@usersdotfun/shared-types/types';
 import { Effect } from 'effect';
 import { Hono } from 'hono';
 import { requireAdmin, requireAuth } from '../middleware/auth';
-import { AppRuntime, type AppContext } from '../runtime';
+import { AppRuntime } from '../runtime';
+import type { AppType } from '../types/hono';
 import { honoErrorHandler } from '../utils/error-handlers';
 
-export const workflowsRouter = new Hono()
+export const workflowsRouter = new Hono<AppType>()
   .get('/', requireAuth, async (c) => {
-    const program: Effect.Effect<any, Error, AppContext> = Effect.gen(function* () {
+    const program = Effect.gen(function* () {
       const workflowService = yield* WorkflowService;
       const workflows = yield* workflowService.getWorkflows();
       return { success: true, data: workflows };
@@ -47,10 +48,10 @@ export const workflowsRouter = new Hono()
   })
 
   .post('/', zValidator('json', CreateWorkflowRequestSchema.shape.body), requireAdmin, async (c) => {
-    const user = c.get('user');
+    const user = c.var.user;
     const body = c.req.valid('json');
 
-    const program: Effect.Effect<any, Error, AppContext> = Effect.gen(function* () {
+    const program = Effect.gen(function* () {
       const workflowService = yield* WorkflowService;
       const queueService = yield* QueueService;
 
@@ -88,7 +89,7 @@ export const workflowsRouter = new Hono()
   .get('/:id', zValidator('param', GetWorkflowRequestSchema.shape.params), requireAuth, async (c) => {
     const { id } = c.req.valid('param');
 
-    const program: Effect.Effect<any, Error, AppContext> = Effect.gen(function* () {
+    const program = Effect.gen(function* () {
       const workflowService = yield* WorkflowService;
       const workflow = yield* workflowService.getWorkflowById(id);
       return { success: true, data: workflow };
@@ -106,7 +107,7 @@ export const workflowsRouter = new Hono()
     const { id } = c.req.valid('param');
     const body = c.req.valid('json');
 
-    const program: Effect.Effect<any, Error, AppContext> = Effect.gen(function* () {
+    const program = Effect.gen(function* () {
       const workflowService = yield* WorkflowService;
       const updatedWorkflow = yield* workflowService.updateWorkflow(id, body);
       return { success: true, data: updatedWorkflow };
@@ -140,7 +141,7 @@ export const workflowsRouter = new Hono()
 
   .post('/:id/run', zValidator('param', RunWorkflowRequestSchema.shape.params), requireAdmin, async (c) => {
     const { id } = c.req.valid('param');
-    const user = c.get('user');
+    const user = c.var.user;
     const program = Effect.gen(function* () {
       const queueService = yield* QueueService;
       const workflowService = yield* WorkflowService;
@@ -171,7 +172,7 @@ export const workflowsRouter = new Hono()
   .delete('/:id', zValidator('param', DeleteWorkflowRequestSchema.shape.params), requireAdmin, async (c) => {
     const { id } = c.req.valid('param');
 
-    const program: Effect.Effect<any, Error, AppContext> = Effect.gen(function* () {
+    const program = Effect.gen(function* () {
       const workflowService = yield* WorkflowService;
       yield* workflowService.deleteWorkflow(id);
       return { success: true, data: { message: `Workflow ${id} has been deleted.` } };
@@ -188,7 +189,7 @@ export const workflowsRouter = new Hono()
   .get('/:id/runs', zValidator('param', GetWorkflowRunsRequestSchema.shape.params), requireAuth, async (c) => {
     const { id } = c.req.valid('param');
 
-    const program: Effect.Effect<any, Error, AppContext> = Effect.gen(function* () {
+    const program = Effect.gen(function* () {
       const workflowService = yield* WorkflowService;
       const runs = yield* workflowService.getWorkflowRuns(id);
       return { success: true, data: runs };
@@ -205,7 +206,7 @@ export const workflowsRouter = new Hono()
   .get('/:id/items', zValidator('param', GetWorkflowItemsRequestSchema.shape.params), requireAuth, async (c) => {
     const { id } = c.req.valid('param');
 
-    const program: Effect.Effect<any, Error, AppContext> = Effect.gen(function* () {
+    const program = Effect.gen(function* () {
       const workflowService = yield* WorkflowService;
       const items = yield* workflowService.getItemsForWorkflow(id);
       return { success: true, data: items };
@@ -222,7 +223,7 @@ export const workflowsRouter = new Hono()
   .get('/runs/:runId/details', zValidator('param', GetWorkflowRunRequestSchema.shape.params), requireAuth, async (c) => {
     const { runId } = c.req.valid('param');
 
-    const program: Effect.Effect<any, Error, AppContext> = Effect.gen(function* () {
+    const program = Effect.gen(function* () {
       const workflowService = yield* WorkflowService;
       const run = yield* workflowService.getWorkflowRunById(runId);
       return {
@@ -243,7 +244,7 @@ export const workflowsRouter = new Hono()
     const { runId, itemId } = c.req.valid('param');
     const { fromStepId } = c.req.valid('json');
 
-    const program: Effect.Effect<string, Error, AppContext> = Effect.gen(function* () {
+    const program = Effect.gen(function* () {
       const workflowService = yield* WorkflowService;
       const queueService = yield* QueueService;
 

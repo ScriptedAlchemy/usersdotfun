@@ -3,125 +3,129 @@ import {
   webSocketHealthResponseSchema,
   webSocketServerMessageSchema,
 } from '@usersdotfun/shared-types/schemas';
+import type { WebSocketServerMessage } from '@usersdotfun/shared-types/types';
 import type { ServerWebSocket } from 'bun';
+import { Effect } from 'effect';
 import { Hono } from 'hono';
 import { createBunWebSocket } from 'hono/bun';
-import { getWebSocketManager, type WebSocketConnection } from '../services/websocket-manager.service';
+import { AppRuntime } from '../runtime';
+import { WebSocketService } from '../services/websocket.service';
+import type { AppType } from '../types/hono';
 
 const { upgradeWebSocket, websocket } = createBunWebSocket<ServerWebSocket>();
 
-const app = new Hono();
-const wsManager = getWebSocketManager();
+const app = new Hono<AppType>();
 
-app.get('/', upgradeWebSocket((c) => {
-  const connectionId = crypto.randomUUID();
-  let connection: WebSocketConnection | null = null;
+app.get(
+  '/',
+  upgradeWebSocket((c) => {
+    const connectionId = crypto.randomUUID();
+    return {
+      onOpen: async (evt, ws) => {
+        const connection = {
+          id: connectionId,
+          subscriptions: new Set<string>(),
+          send: (message: WebSocketServerMessage) =>
+            Effect.try(() => {
+              ws.send(JSON.stringify(message));
+            }),
+        };
 
-  return {
-    onOpen: async (evt: any, ws: any) => {
-      connection = {
-        id: connectionId,
-        subscriptions: new Set(),
-        send: (message: any) => {
-          ws.send(JSON.stringify(message));
-        }
-      };
+        const program = Effect.gen(function* () {
+          const service = yield* WebSocketService;
+          yield* service.addConnection(connection);
+          yield* connection.send(
+            webSocketServerMessageSchema.parse({
+              type: 'connection:established',
+              data: { connectionId },
+            }),
+          );
+        });
 
-      wsManager.addConnection(connectionId, connection);
+        await AppRuntime.runPromise(program);
+      },
 
-      // Send connection confirmation
-      connection.send(webSocketServerMessageSchema.parse({
-        type: 'connection:established',
-        data: { connectionId }
-      }));
-    },
+      onMessage: async (evt, ws) => {
+        try {
+          const rawMessage = JSON.parse(evt.data.toString());
+          const validationResult = webSocketCommandSchema.safeParse(rawMessage);
 
-    onMessage: async (evt: any, ws: any) => {
-      try {
-        const rawMessage = JSON.parse(evt.data.toString());
-
-        // Validate the incoming command
-        const validationResult = webSocketCommandSchema.safeParse(rawMessage);
-        if (!validationResult.success) {
-          console.error('Invalid WebSocket command:', validationResult.error);
-          connection?.send(webSocketServerMessageSchema.parse({
-            type: 'error',
-            data: {
-              message: 'Invalid command format',
-              details: validationResult.error.issues
-            }
-          }));
-          return;
-        }
-
-        const message = validationResult.data;
-
-        switch (message.type) {
-          case 'subscribe':
-            if (message.eventType && connection) {
-              wsManager.subscribe(connectionId, message.eventType);
-              connection.send(webSocketServerMessageSchema.parse({
-                type: 'subscription:confirmed',
-                data: { eventType: message.eventType }
-              }));
-            }
-            break;
-
-          case 'unsubscribe':
-            if (message.eventType && connection) {
-              wsManager.unsubscribe(connectionId, message.eventType);
-              connection.send(webSocketServerMessageSchema.parse({
-                type: 'subscription:removed',
-                data: { eventType: message.eventType }
-              }));
-            }
-            break;
-
-          case 'ping':
-            connection?.send(webSocketServerMessageSchema.parse({
-              type: 'pong',
-              data: { timestamp: Date.now().toString() }
-            }));
-            break;
-
-          default:
-            console.log('Unknown message type:', (message as any).type);
-        }
-      } catch (error) {
-        console.error('Error processing WebSocket message:', error);
-        connection?.send(webSocketServerMessageSchema.parse({
-          type: 'error',
-          data: {
-            message: 'Failed to process message',
-            details: error instanceof Error ? error.message : 'Unknown error'
+          if (!validationResult.success) {
+            // Handle validation error
+            return;
           }
-        }));
-      }
-    },
 
-    onClose: () => {
-      wsManager.removeConnection(connectionId);
-    },
+          const message = validationResult.data;
 
-    onError: (evt: any, ws: any) => {
-      console.error(`WebSocket error for ${connectionId}:`, evt);
-      wsManager.removeConnection(connectionId);
-    }
-  };
-}));
+          const program = Effect.gen(function* () {
+            const service = yield* WebSocketService;
+            switch (message.type) {
+              case 'subscribe':
+                yield* service.subscribe(connectionId, message.eventType);
+                break;
+              case 'unsubscribe':
+                yield* service.unsubscribe(connectionId, message.eventType);
+                break;
+              case 'ping':
+                ws.send(
+                  JSON.stringify(
+                    webSocketServerMessageSchema.parse({
+                      type: 'pong',
+                      data: { timestamp: Date.now().toString() },
+                    }),
+                  ),
+                );
+                break;
+            }
+          });
 
-// Health check endpoint
-app.get('/health', (c) => {
-  const healthData = {
-    status: 'healthy' as const,
-    connections: wsManager.getConnectionCount(),
-    subscriptions: {
-      'job:status-changed': wsManager.getSubscriptionCount('job:status-changed'),
-      'job:monitoring-update': wsManager.getSubscriptionCount('job:monitoring-update'),
-      'queue:status-update': wsManager.getSubscriptionCount('queue:status-update'),
-    }
-  };
+          await AppRuntime.runPromise(program);
+        } catch (error) {
+          // Handle message processing error
+        }
+      },
 
+      onClose: async () => {
+        const program = Effect.gen(function* () {
+          const service = yield* WebSocketService;
+          yield* service.removeConnection(connectionId);
+        });
+        await AppRuntime.runPromise(program);
+      },
+
+      onError: async (evt) => {
+        const program = Effect.gen(function* () {
+          const service = yield* WebSocketService;
+          yield* service.removeConnection(connectionId);
+        });
+        await AppRuntime.runPromise(program);
+      },
+    };
+  }),
+);
+
+app.get('/health', async (c) => {
+  const program = Effect.gen(function* () {
+    const service = yield* WebSocketService;
+    const [connections, jobStatus, jobMonitoring, queueStatus] = yield* Effect.all([
+      service.getConnectionCount(),
+      service.getSubscriptionCount('job:status-changed'),
+      service.getSubscriptionCount('job:monitoring-update'),
+      service.getSubscriptionCount('queue:status-update'),
+    ]);
+
+    return {
+      status: 'healthy' as const,
+      connections,
+      subscriptions: {
+        'job:status-changed': jobStatus,
+        'job:monitoring-update': jobMonitoring,
+        'queue:status-update': queueStatus,
+      },
+    };
+  });
+
+  const healthData = await AppRuntime.runPromise(program);
   const validatedHealth = webSocketHealthResponseSchema.parse(healthData);
   return c.json(validatedHealth);
 });

@@ -110,3 +110,5 @@ export type AppContext =
   & QueueStatusService
   & QueueService
   & WebSocketService;
+
+export type AppRuntimeType = typeof AppRuntime;
