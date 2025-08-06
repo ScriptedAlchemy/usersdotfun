@@ -6,8 +6,7 @@ import {
   PluginExecutionError,
 } from '@usersdotfun/core-sdk';
 import { Effect } from 'effect';
-import { Telegraf } from 'telegraf';
-import type { Update } from 'telegraf/types';
+import TelegramBot from 'node-telegram-bot-api';
 import {
   TelegramMessageSchema,
   TelegramSourceConfigSchema,
@@ -36,7 +35,7 @@ export class TelegramSourcePlugin implements SourcePlugin<
   readonly outputSchema = TelegramSourceOutputSchema;
   readonly configSchema = TelegramSourceConfigSchema;
 
-  private bot?: Telegraf;
+  private bot?: TelegramBot;
 
   initialize(config: TelegramSourceConfig): Effect.Effect<void, ConfigurationError, PluginLoggerTag> {
     const self = this;
@@ -51,7 +50,7 @@ export class TelegramSourcePlugin implements SourcePlugin<
         return yield* Effect.fail(new ConfigurationError('Telegram bot token is required.'));
       }
 
-      self.bot = new Telegraf(config.secrets.botToken);
+      self.bot = new TelegramBot(config.secrets.botToken);
       yield* logger.logInfo('Telegram bot initialized successfully', { pluginId: self.id });
     });
   }
@@ -90,13 +89,12 @@ export class TelegramSourcePlugin implements SourcePlugin<
             chatId
           });
 
-          const updates: Update[] = yield* Effect.tryPromise({
-            try: () => self.bot!.telegram.getUpdates(
-              30, // timeout
-              POLLING_LIMIT,
-              currentOffset ?? 0,
-              ['message']
-            ),
+          const updates: TelegramBot.Update[] = yield* Effect.tryPromise({
+            try: () => self.bot!.getUpdates({
+              limit: POLLING_LIMIT,
+              offset: currentOffset,
+              // allowed_updates: ['message'],
+            }),
             catch: (error) => {
               const message = error instanceof Error ? error.message : String(error);
               return new PluginExecutionError(`Failed to get Telegram updates: ${message}`, true);

@@ -18,7 +18,7 @@ const ConfigLayer = AppConfigLive.pipe(
 const LoggingLayer = Layer.mergeAll(
   BunTerminal.layer,
   Logger.pretty,
-  Logger.minimumLogLevel(LogLevel.Info)
+  Logger.minimumLogLevel(LogLevel.Debug)
 );
 
 // Step 2: Bridge layers - these depend on ConfigLayer
