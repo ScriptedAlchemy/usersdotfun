@@ -15,6 +15,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "~/components/ui/tabs";
+import { CodePreview } from "~/components/ui/code-preview";
 import {
   runDetailsQueryOptions,
   workflowQueryOptions,
@@ -114,7 +115,6 @@ function RunDetailsPage() {
       isOpen={true}
       onClose={handleClose}
       title={`Run: ${runDetails.id.slice(0, 12)}...`}
-      description="Detailed view of a specific workflow run."
       className="sm:max-w-3xl"
     >
       {runDetails.failureReason && (
@@ -184,24 +184,16 @@ function RunDetailsPage() {
                     <TabsTrigger value="error">Error</TabsTrigger>
                   </TabsList>
                   <TabsContent value="input">
-                    <pre className="p-2 bg-gray-100 rounded-md text-xs">
-                      {JSON.stringify(pluginRun.input, null, 2)}
-                    </pre>
+                    <CodePreview code={pluginRun.input} maxHeight="16rem" />
                   </TabsContent>
                   <TabsContent value="output">
-                    <pre className="p-2 bg-gray-100 rounded-md text-xs">
-                      {JSON.stringify(pluginRun.output, null, 2)}
-                    </pre>
+                    <CodePreview code={pluginRun.output} maxHeight="16rem" />
                   </TabsContent>
                   <TabsContent value="config">
-                    <pre className="p-2 bg-gray-100 rounded-md text-xs">
-                      {JSON.stringify(pluginRun.config, null, 2)}
-                    </pre>
+                    <CodePreview code={pluginRun.config} maxHeight="16rem" />
                   </TabsContent>
                   <TabsContent value="error">
-                    <pre className="p-2 bg-gray-100 rounded-md text-xs">
-                      {JSON.stringify(pluginRun.error, null, 2)}
-                    </pre>
+                    <CodePreview code={pluginRun.error} maxHeight="16rem" />
                   </TabsContent>
                 </Tabs>
               </div>

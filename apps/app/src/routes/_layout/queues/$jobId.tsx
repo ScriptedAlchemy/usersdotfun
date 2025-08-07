@@ -5,6 +5,7 @@ import { allQueueJobsQueryOptions } from "~/lib/queries";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "~/components/ui/button";
+import { CodePreview } from "~/components/ui/code-preview";
 
 export const Route = createFileRoute("/_layout/queues/$jobId")({
   component: JobDetailsPage,
@@ -109,9 +110,7 @@ function JobDetailsPage() {
           )}
           <div>
             <h3 className="font-semibold">Data</h3>
-            <pre className="mt-1 rounded-md bg-muted p-4 text-xs">
-              {JSON.stringify(job.data, null, 2)}
-            </pre>
+            <CodePreview code={job.data} className="mt-1" />
           </div>
         </div>
       )}

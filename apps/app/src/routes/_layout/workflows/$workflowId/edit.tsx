@@ -1,20 +1,16 @@
-import { createFileRoute, useNavigate, useLoaderData } from "@tanstack/react-router";
 import {
-  updateWorkflowSchema,
-} from "@usersdotfun/shared-types/schemas";
+  createFileRoute,
+  useLoaderData,
+  useNavigate,
+} from "@tanstack/react-router";
+import { UpdateWorkflowData } from "@usersdotfun/shared-db/src/services";
+import { updateWorkflowSchema } from "@usersdotfun/shared-types/schemas";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import {
-  EditableWorkflow,
-} from "~/atoms/workflow";
-import { CommonSheet } from "~/components/common/common-sheet";
 import { JsonEditor } from "~/components/common/json-editor";
 import { Button } from "~/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import {
-  useUpdateWorkflowMutation,
-  workflowQueryOptions,
-} from "~/lib/queries";
+import { useUpdateWorkflowMutation, workflowQueryOptions } from "~/lib/queries";
 
 export const Route = createFileRoute("/_layout/workflows/$workflowId/edit")({
   loader: ({ params: { workflowId }, context: { queryClient } }) =>
@@ -23,34 +19,16 @@ export const Route = createFileRoute("/_layout/workflows/$workflowId/edit")({
 });
 
 function EditWorkflowPage() {
-  const navigate = useNavigate({ from: Route.fullPath });
-  const { workflowId } = Route.useParams();
   const workflow = useLoaderData({ from: Route.id });
-
-  const handleClose = () => {
-    navigate({
-      to: "/workflows/$workflowId",
-      params: { workflowId },
-    });
-  };
 
   if (!workflow) {
     return null;
   }
 
-  return (
-    <CommonSheet
-      isOpen={true}
-      onClose={handleClose}
-      title="Edit Workflow"
-      description="Update the workflow configuration."
-    >
-      <WorkflowEdit workflow={workflow} />
-    </CommonSheet>
-  );
+  return <WorkflowEdit workflow={workflow} />;
 }
 
-function WorkflowEdit({ workflow }: { workflow: EditableWorkflow }) {
+function WorkflowEdit({ workflow }: { workflow: UpdateWorkflowData }) {
   const { workflowId } = Route.useParams();
   const updateMutation = useUpdateWorkflowMutation();
   const navigate = useNavigate();
@@ -64,7 +42,7 @@ function WorkflowEdit({ workflow }: { workflow: EditableWorkflow }) {
     toast.error(`Failed to update workflow: ${error.message}`);
   };
 
-  const onSubmit = (data: EditableWorkflow) => {
+  const onSubmit = (data: UpdateWorkflowData) => {
     updateMutation.mutate(
       { id: workflowId, workflow: data },
       { onSuccess: handleSuccess, onError: handleError }
@@ -87,14 +65,15 @@ function JsonEditorWithAtom({
   workflow,
   onSubmit,
 }: {
-  workflow: EditableWorkflow;
+  workflow: UpdateWorkflowData;
   onSubmit: (data: any) => void;
 }) {
-  const [editedWorkflow, setEditedWorkflow] =
-    useState<EditableWorkflow | null>(workflow);
+  const [editedWorkflow, setEditedWorkflow] = useState<UpdateWorkflowData | null>(
+    workflow
+  );
 
   useEffect(() => {
-    setEditedWorkflow(workflow);
+    setEditedWorkflow(updateWorkflowSchema.parse(workflow));
   }, [workflow]);
 
   return (

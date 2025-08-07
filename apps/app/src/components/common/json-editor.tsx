@@ -178,7 +178,7 @@ export function JsonEditor<T>({
             </Button>
           </div>
         </div>
-        <pre className="bg-muted p-3 rounded-md text-sm overflow-auto max-h-96 border">
+        <pre className="bg-muted/50 dark:bg-muted/30 p-3 rounded-md text-sm overflow-auto max-h-96 border text-foreground font-mono">
           {jsonString || "No job definition"}
         </pre>
         {!isValid && validationErrors.length > 0 && (

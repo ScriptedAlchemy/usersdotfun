@@ -1,6 +1,9 @@
-import { createFileRoute, useNavigate, useLoaderData } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  useLoaderData
+} from "@tanstack/react-router";
 import type { RichWorkflow } from "@usersdotfun/shared-types/types";
-import { CommonSheet } from "~/components/common/common-sheet";
+import { CodePreview } from "~/components/ui/code-preview";
 import { workflowQueryOptions } from "~/lib/queries";
 
 export const Route = createFileRoute("/_layout/workflows/$workflowId/view")({
@@ -10,30 +13,13 @@ export const Route = createFileRoute("/_layout/workflows/$workflowId/view")({
 });
 
 function ViewWorkflowPage() {
-  const navigate = useNavigate({ from: Route.fullPath });
-  const { workflowId } = Route.useParams();
   const workflow = useLoaderData({ from: Route.id });
-
-  const handleClose = () => {
-    navigate({
-      to: "/workflows",
-    });
-  };
 
   if (!workflow) {
     return null;
   }
 
-  return (
-    <CommonSheet
-      isOpen={true}
-      onClose={handleClose}
-      title="View Workflow"
-      description="Review the details of the workflow."
-    >
-      <WorkflowView workflow={workflow} />
-    </CommonSheet>
-  );
+  return <WorkflowView workflow={workflow} />;
 }
 
 function WorkflowView({ workflow }: { workflow: RichWorkflow }) {
@@ -43,22 +29,22 @@ function WorkflowView({ workflow }: { workflow: RichWorkflow }) {
         <h5 className="font-semibold">Workflow {workflow.id}</h5>
       </div>
       <div>
-        <div className="bg-gray-50 p-3 rounded">
+        <div className="p-3 rounded">
           <p className="text-sm">
             <strong>Plugin:</strong> {workflow.source.pluginId}
           </p>
           <p className="text-sm mt-2">
             <strong>Config:</strong>
           </p>
-          <pre className="text-xs mt-1 bg-white p-2 rounded border overflow-auto">
-            {JSON.stringify(workflow.source.config, null, 2)}
-          </pre>
+          <div className="mt-1">
+            <CodePreview code={workflow.source.config} maxHeight="12rem" />
+          </div>
           <p className="text-sm mt-2">
             <strong>Search:</strong>
           </p>
-          <pre className="text-xs mt-1 bg-white p-2 rounded border overflow-auto">
-            {JSON.stringify(workflow.source.search, null, 2)}
-          </pre>
+          <div className="mt-1">
+            <CodePreview code={workflow.source.search} maxHeight="12rem" />
+          </div>
         </div>
       </div>
 
@@ -66,7 +52,7 @@ function WorkflowView({ workflow }: { workflow: RichWorkflow }) {
         <h5 className="font-semibold mb-2">Pipeline Steps</h5>
         <div className="space-y-4">
           {workflow.pipeline.steps.map((step, index) => (
-            <div key={index} className="bg-gray-50 p-3 rounded">
+            <div key={index} className="p-3 rounded">
               <p className="text-sm">
                 <strong>Step {index + 1}:</strong> {step.stepId}
               </p>
@@ -76,9 +62,9 @@ function WorkflowView({ workflow }: { workflow: RichWorkflow }) {
               <p className="text-sm mt-2">
                 <strong>Config:</strong>
               </p>
-              <pre className="text-xs mt-1 bg-white p-2 rounded border overflow-auto">
-                {JSON.stringify(step.config, null, 2)}
-              </pre>
+              <div className="mt-1">
+                <CodePreview code={step.config} maxHeight="10rem" />
+              </div>
             </div>
           ))}
         </div>

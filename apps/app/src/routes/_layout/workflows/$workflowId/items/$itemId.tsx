@@ -13,6 +13,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "~/components/ui/tabs";
+import { CodePreview } from "~/components/ui/code-preview";
 import { workflowItemsQueryOptions } from "~/lib/queries";
 
 export const Route = createFileRoute(
@@ -86,7 +87,6 @@ function ItemDetailsPage() {
       isOpen={true}
       onClose={handleClose}
       title={`Item: ${item.id.slice(0, 12)}...`}
-      description="Detailed view of a specific source item."
       className="sm:max-w-3xl"
     >
       <div className="space-y-6">
@@ -111,9 +111,7 @@ function ItemDetailsPage() {
                 <TabsTrigger value="data">Data</TabsTrigger>
               </TabsList>
               <TabsContent value="data">
-                <pre className="p-2 bg-gray-100 rounded-md text-xs">
-                  {JSON.stringify(data.data, null, 2)}
-                </pre>
+                <CodePreview code={data.data} maxHeight="20rem" />
               </TabsContent>
             </Tabs>
           </div>
