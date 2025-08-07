@@ -3,7 +3,7 @@ import {
   useLoaderData
 } from "@tanstack/react-router";
 import type { RichWorkflow } from "@usersdotfun/shared-types/types";
-import { CodePreview } from "~/components/ui/code-preview";
+import { CodePreview } from "~/components/common/code-preview";
 import { workflowQueryOptions } from "~/lib/queries";
 
 export const Route = createFileRoute("/_layout/workflows/$workflowId/view")({

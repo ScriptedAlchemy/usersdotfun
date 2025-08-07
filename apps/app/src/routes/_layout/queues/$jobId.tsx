@@ -5,7 +5,7 @@ import { allQueueJobsQueryOptions } from "~/lib/queries";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "~/components/ui/button";
-import { CodePreview } from "~/components/ui/code-preview";
+import { CodePreview } from "~/components/common/code-preview";
 
 export const Route = createFileRoute("/_layout/queues/$jobId")({
   component: JobDetailsPage,

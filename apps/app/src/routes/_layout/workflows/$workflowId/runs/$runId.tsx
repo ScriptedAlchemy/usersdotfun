@@ -15,7 +15,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "~/components/ui/tabs";
-import { CodePreview } from "~/components/ui/code-preview";
+import { CodePreview } from "~/components/common/code-preview";
 import {
   runDetailsQueryOptions,
   workflowQueryOptions,
