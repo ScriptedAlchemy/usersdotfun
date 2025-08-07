@@ -12,13 +12,13 @@ function WebSocketStatus() {
   return (
     <div className="flex items-center gap-2">
       <div
-        className={`w-2 h-2 rounded-full ${
-          isConnected ? "bg-green-500" : "bg-red-500"
+        className={`w-2 h-2 border-2 ${
+          isConnected ? "bg-primary border-primary animate-pulse" : "bg-destructive border-destructive"
         }`}
         title={isConnected ? "WebSocket Connected" : "WebSocket Disconnected"}
       />
-      <span className="text-sm text-muted-foreground">
-        {isConnected ? "Connected" : "Disconnected"}
+      <span className="text-xs font-mono uppercase text-muted-foreground">
+        {isConnected ? "Online" : "Offline"}
       </span>
     </div>
   );
@@ -31,7 +31,7 @@ function UserSection() {
   const [isLoading, setLoading] = useState(false);
 
   if (isPending) {
-    return <div className="text-sm text-muted-foreground">Loading...</div>;
+    return <div className="text-xs font-mono uppercase text-muted-foreground">Loading...</div>;
   }
 
   if (!session?.user) {
@@ -40,10 +40,10 @@ function UserSection() {
 
   return (
     <div className="flex items-center gap-4">
-      <div className="text-sm">
-        <span className="text-muted-foreground">Welcome, </span>
-        <span className="font-medium">
-          {session.user.isAnonymous ? "Anonymous" : session.user.name}
+      <div className="text-sm font-mono">
+        <span className="text-muted-foreground uppercase">User: </span>
+        <span className="font-bold text-primary">
+          {session.user.isAnonymous ? "Guest" : session.user.name}
         </span>
       </div>
       <Button
@@ -57,7 +57,7 @@ function UserSection() {
         variant="outline"
         size="sm"
       >
-        {isLoading ? "Signing out..." : "Sign Out"}
+        {isLoading ? "..." : "Logout"}
       </Button>
     </div>
   );
@@ -65,47 +65,47 @@ function UserSection() {
 
 export function Header() {
   return (
-    <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto px-4 py-3">
+    <header className="border-b-2 border-border bg-background relative z-10">
+      <div className="container mx-auto px-4 py-4">
         <div className="flex justify-between items-center">
-          <div className="flex gap-6 text-sm font-medium">
+          <nav className="flex gap-6">
             <Link
               to="/"
+              className="text-sm font-mono font-bold uppercase tracking-wide transition-all hover:text-primary hover:translate-x-1"
               activeProps={{
-                className: "text-foreground",
+                className: "text-primary",
               }}
               inactiveProps={{
-                className:
-                  "text-muted-foreground hover:text-foreground transition-colors",
+                className: "text-foreground",
               }}
             >
               Home
             </Link>
             <Link
               to="/workflows"
+              className="text-sm font-mono font-bold uppercase tracking-wide transition-all hover:text-primary hover:translate-x-1"
               activeProps={{
-                className: "text-foreground",
+                className: "text-primary",
               }}
               inactiveProps={{
-                className:
-                  "text-muted-foreground hover:text-foreground transition-colors",
+                className: "text-foreground",
               }}
             >
               Workflows
             </Link>
             <Link
               to="/queues"
+              className="text-sm font-mono font-bold uppercase tracking-wide transition-all hover:text-primary hover:translate-x-1"
               activeProps={{
-                className: "text-foreground",
+                className: "text-primary",
               }}
               inactiveProps={{
-                className:
-                  "text-muted-foreground hover:text-foreground transition-colors",
+                className: "text-foreground",
               }}
             >
               Queues
             </Link>
-          </div>
+          </nav>
           <div className="flex items-center gap-4">
             <WebSocketStatus />
             <UserSection />
