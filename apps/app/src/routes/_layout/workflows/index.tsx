@@ -1,6 +1,6 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useNavigate } from "@tanstack/react-router";
 import type { ColumnDef, RowSelectionState } from "@tanstack/react-table";
-import { RichWorkflow } from "@usersdotfun/shared-types/types";
+import type { RichWorkflow } from "@usersdotfun/shared-types/types";
 import { Play, PlusCircle, Power, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -19,16 +19,13 @@ import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { workflowStatusColors } from "~/lib/status-colors";
-import { WorkflowSheet } from "~/components/workflows/workflow-sheet";
 import { useDeleteWorkflowMutation, useRunWorkflowNowMutation, useToggleWorkflowStatusMutation, useWorkflowsQuery } from "~/lib/queries";
 
 export const Route = createFileRoute("/_layout/workflows/")({
   component: WorkflowsPage,
 });
 
-const columns = (
-  openSheet: (mode: "view" | "edit", workflowId: string) => void
-): ColumnDef<RichWorkflow>[] => [
+const columns: ColumnDef<RichWorkflow>[] = [
   {
     id: "select",
     header: ({ table }) => (
@@ -149,19 +146,21 @@ const columns = (
               View Items
             </Link>
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => openSheet("view", workflow.id)}
-          >
-            Inspect
+          <Button asChild variant="outline" size="sm">
+            <Link
+              to="/workflows/$workflowId/view"
+              params={{ workflowId: workflow.id }}
+            >
+              Inspect
+            </Link>
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => openSheet("edit", workflow.id)}
-          >
-            Edit
+          <Button asChild variant="outline" size="sm">
+            <Link
+              to="/workflows/$workflowId/edit"
+              params={{ workflowId: workflow.id }}
+            >
+              Edit
+            </Link>
           </Button>
         </div>
       );
@@ -171,25 +170,9 @@ const columns = (
 
 function WorkflowsPage() {
   const { data: workflows, isLoading } = useWorkflowsQuery();
-  const [sheetState, setSheetState] = useState<{
-    mode: "create" | "view" | "edit";
-    workflowId?: string;
-    isOpen: boolean;
-  }>({
-    mode: "create",
-    isOpen: false,
-  });
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const deleteMutation = useDeleteWorkflowMutation();
-
-  const openSheet = (mode: "create" | "view" | "edit", workflowId?: string) => {
-    setSheetState({ mode, workflowId, isOpen: true });
-  };
-
-  const closeSheet = () => {
-    setSheetState((prev) => ({ ...prev, isOpen: false }));
-  };
 
   const handleDelete = async () => {
     const idsToDelete = Object.keys(rowSelection);
@@ -204,8 +187,6 @@ function WorkflowsPage() {
     setRowSelection({});
     setDeleteDialogOpen(false);
   };
-
-  const pageColumns = columns(openSheet);
 
   return (
     <div className="container mx-auto p-4 sm:p-6 lg:p-8">
@@ -226,15 +207,17 @@ function WorkflowsPage() {
               Delete ({Object.keys(rowSelection).length})
             </Button>
           )}
-          <Button onClick={() => openSheet("create")}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Create Workflow
+          <Button asChild>
+            <Link to="/workflows/create">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Create Workflow
+            </Link>
           </Button>
         </div>
       </div>
 
       <DataTable
-        columns={pageColumns as ColumnDef<any>[]}
+        columns={columns as ColumnDef<any>[]}
         data={workflows || []}
         isLoading={isLoading}
         filterColumnId="name"
@@ -242,15 +225,9 @@ function WorkflowsPage() {
         rowSelection={rowSelection}
         setRowSelection={setRowSelection}
         getRowId={(row) => row.id}
-        // onRowClick={(row) => openSheet("view", row)}
       />
 
-      <WorkflowSheet
-        mode={sheetState.mode}
-        isOpen={sheetState.isOpen}
-        onClose={closeSheet}
-        workflowId={sheetState.workflowId}
-      />
+      <Outlet />
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>

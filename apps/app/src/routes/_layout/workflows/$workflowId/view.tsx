@@ -1,12 +1,44 @@
+import { createFileRoute, useNavigate, useLoaderData } from "@tanstack/react-router";
 import type { RichWorkflow } from "@usersdotfun/shared-types/types";
+import { CommonSheet } from "~/components/common/common-sheet";
+import { workflowQueryOptions } from "~/lib/queries";
 
-interface WorkflowViewProps {
-  workflow: RichWorkflow;
+export const Route = createFileRoute("/_layout/workflows/$workflowId/view")({
+  loader: ({ params: { workflowId }, context: { queryClient } }) =>
+    queryClient.ensureQueryData(workflowQueryOptions(workflowId)),
+  component: ViewWorkflowPage,
+});
+
+function ViewWorkflowPage() {
+  const navigate = useNavigate({ from: Route.fullPath });
+  const { workflowId } = Route.useParams();
+  const workflow = useLoaderData({ from: Route.id });
+
+  const handleClose = () => {
+    navigate({
+      to: "/workflows",
+    });
+  };
+
+  if (!workflow) {
+    return null;
+  }
+
+  return (
+    <CommonSheet
+      isOpen={true}
+      onClose={handleClose}
+      title="View Workflow"
+      description="Review the details of the workflow."
+    >
+      <WorkflowView workflow={workflow} />
+    </CommonSheet>
+  );
 }
 
-export function WorkflowView({ workflow }: WorkflowViewProps) {
+function WorkflowView({ workflow }: { workflow: RichWorkflow }) {
   return (
-    <div className="space-y-6 py-4">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h5 className="font-semibold">Workflow {workflow.id}</h5>
       </div>

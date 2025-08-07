@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useNavigate } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { JobStatus } from "@usersdotfun/shared-types/types";
 import { MoreHorizontal, Pause, Play, Trash2, XCircle } from "lucide-react";
@@ -6,7 +6,6 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { DataTable } from "~/components/common/data-table";
-import { JobSheet } from "~/components/queues/job-sheet";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -50,9 +49,7 @@ export const Route = createFileRoute("/_layout/queues/")({
   },
 });
 
-const columns = (
-  openSheet: (job: JobStatus) => void
-): ColumnDef<JobStatus>[] => [
+const columns: ColumnDef<JobStatus>[] = [
   {
     id: "select",
     header: ({ table }) => (
@@ -146,8 +143,10 @@ const columns = (
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => openSheet(job)}>
-              View
+            <DropdownMenuItem asChild>
+              <Link to="/queues/$jobId" params={{ jobId: job.id }}>
+                View
+              </Link>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -218,23 +217,11 @@ function QueuesPage() {
     initialData: initialJobs,
   });
   const [rowSelection, setRowSelection] = useState({});
-  const [selectedJob, setSelectedJob] = useState<JobStatus | null>(null);
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const deleteMutation = useRemoveQueueJobMutation();
   const pauseMutation = usePauseQueueMutation();
   const resumeMutation = useResumeQueueMutation();
   const clearMutation = useClearQueueMutation();
-
-  const openSheet = (job: JobStatus) => {
-    setSelectedJob(job);
-    setIsSheetOpen(true);
-  };
-
-  const closeSheet = () => {
-    setIsSheetOpen(false);
-    setSelectedJob(null);
-  };
 
   const handleQueueSelect = (queueName: string) => {
     navigate({
@@ -276,13 +263,10 @@ function QueuesPage() {
     );
   };
 
-  const pageColumns = columns(openSheet);
-
   return (
     <>
-      <JobSheet job={selectedJob} isOpen={isSheetOpen} onClose={closeSheet} />
+      <Outlet />
       <div className="container mx-auto p-4 sm:p-6 lg:p-8">
-
         <div className="mb-8">
           <h2 className="text-xl font-semibold mb-4">Queue Status</h2>
           {isLoadingStatus ? (
@@ -387,7 +371,7 @@ function QueuesPage() {
             </div>
           </div>
           <DataTable
-            columns={pageColumns}
+            columns={columns}
             data={jobs?.items || []}
             isLoading={isLoadingJobs}
             filterColumnId="id"
