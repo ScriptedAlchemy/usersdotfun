@@ -88,7 +88,7 @@ function RunDetailsPage() {
   const stopMutation = useCancelWorkflowRunMutation();
   const deleteMutation = useDeleteWorkflowRunMutation();
 
-  const onStop = () => {
+  const onCancel = () => {
     if (runDetails) {
       stopMutation.mutate(runDetails.id, {
         onSuccess: () => handleClose(),
@@ -152,8 +152,8 @@ function RunDetailsPage() {
           <h3 className="font-medium">Run Overview</h3>
           <div className="flex gap-2">
             {runDetails.status === "RUNNING" && (
-              <Button variant="destructive" size="sm" onClick={onStop}>
-                Stop
+              <Button variant="destructive" size="sm" onClick={onCancel}>
+                Cancel
               </Button>
             )}
             {runDetails.status === "PENDING" && (

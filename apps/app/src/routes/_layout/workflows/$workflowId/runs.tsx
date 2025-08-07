@@ -11,8 +11,8 @@ import { DataTable } from "~/components/common/data-table";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
-  useDeleteWorkflowRunMutation,
   useCancelWorkflowRunMutation,
+  useDeleteWorkflowRunMutation,
   workflowQueryOptions,
   workflowRunsQueryOptions,
 } from "~/lib/queries";
@@ -77,18 +77,17 @@ const columns: ColumnDef<WorkflowRun>[] = [
     id: "actions",
     cell: function Cell({ row }) {
       const run = row.original;
-      const { workflowId } = useParams({ from: "/_layout/workflows/$workflowId/runs" });
       const stopMutation = useCancelWorkflowRunMutation();
       const deleteMutation = useDeleteWorkflowRunMutation();
 
-      const onStop = () => stopMutation.mutate(run.id);
+      const onCancel = () => stopMutation.mutate(run.id);
       const onDelete = () => deleteMutation.mutate(run.id);
 
       return (
         <div className="flex gap-2">
           {run.status === "RUNNING" && (
-            <Button variant="destructive" size="sm" onClick={onStop}>
-              Stop
+            <Button variant="destructive" size="sm" onClick={onCancel}>
+              Cancel
             </Button>
           )}
           {run.status === "PENDING" && (

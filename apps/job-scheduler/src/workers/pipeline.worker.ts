@@ -131,6 +131,7 @@ const processPipelineJob = (job: Job<ExecutePipelineJobData>) =>
       currentInput = yield* pluginEffect;
     }
 
+    yield* workflowService.updateWorkflowRun(workflowRunId!, { status: 'COMPLETED' });
     yield* Effect.log(`Pipeline completed for Item ${sourceItemId}`);
   }).pipe(
     Effect.catchAll(error =>

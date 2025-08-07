@@ -4,9 +4,14 @@ import { Header } from "~/components/header";
 
 export const Route = createFileRoute("/_layout")({
   component: MainLayout,
-  beforeLoad: async ({ context }) => {
+  beforeLoad: async ({ context, location }) => {
     if (!context.user) {
-      throw redirect({ to: "/login" });
+      throw redirect({
+        to: "/login",
+        search: {
+          redirect: location.href,
+        },
+      });
     }
   },
 });

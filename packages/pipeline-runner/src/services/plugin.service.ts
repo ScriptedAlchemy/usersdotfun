@@ -336,7 +336,7 @@ export const PluginServiceLive = Layer.effect(
         // Now, load and initialize
         const plugin = yield* internalPluginLoader(pluginId, finalValidatedConfig);
 
-        yield* logger.logInfo(`Successfully initialized plugin ${pluginId}`, { contextDescription });
+        yield* logger.logDebug(`Successfully initialized plugin ${pluginId}`, { contextDescription });
 
         return plugin as T;
       }),
@@ -348,7 +348,7 @@ export const PluginServiceLive = Layer.effect(
           input: z.infer<TInputSchema>,
           contextDescription: string
         ): Effect.Effect<z.infer<TOutputSchema>, PluginError> => Effect.gen(function* () {
-          yield* logger.logInfo(`Executing plugin ${plugin.id}`, { contextDescription });
+          yield* logger.logDebug(`Executing plugin ${plugin.id}`, { contextDescription });
 
           const pluginMetadata = yield* getPlugin(plugin.id);
 

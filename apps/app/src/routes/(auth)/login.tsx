@@ -1,33 +1,40 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  useNavigate
+} from "@tanstack/react-router";
 import { useState } from "react";
+import z from "zod";
 import { Button } from "~/components/ui/button";
 import { authClient } from "~/lib/auth-client";
 
+const searchSchema = z.object({
+  redirect: z.string().optional(),
+});
+
 export const Route = createFileRoute("/(auth)/login")({
   component: LoginForm,
+  validateSearch: searchSchema,
 });
 
 function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { redirect } = Route.useSearch();
 
   const handleAnonymousSignIn = async () => {
     setIsLoading(true);
-    authClient.signIn.anonymous(
-      undefined,
-      {
-        onError: (ctx) => {
-          console.error("Anonymous sign in failed:", ctx);
-          setIsLoading(false);
-        },
-        onSuccess: async () => {
-          await queryClient.invalidateQueries({ queryKey: ["user"] });
-          navigate({ to: "/" });
-        },
-      }
-    );
+    authClient.signIn.anonymous(undefined, {
+      onError: (ctx) => {
+        console.error("Anonymous sign in failed:", ctx);
+        setIsLoading(false);
+      },
+      onSuccess: async () => {
+        await queryClient.invalidateQueries({ queryKey: ["user"] });
+        navigate({ to: redirect || "/" });
+      },
+    });
   };
 
   return (

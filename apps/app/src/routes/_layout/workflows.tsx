@@ -34,7 +34,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarProvider,
-  SidebarTrigger
+  SidebarTrigger,
 } from "~/components/ui/sidebar";
 import { Skeleton } from "~/components/ui/skeleton";
 import {
