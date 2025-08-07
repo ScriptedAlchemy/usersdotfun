@@ -10,13 +10,9 @@ import {
   GetWorkflowItemsResponseSchema,
   GetWorkflowRequestSchema,
   GetWorkflowResponseSchema,
-  GetWorkflowRunRequestSchema,
-  GetWorkflowRunResponseSchema,
   GetWorkflowRunsRequestSchema,
   GetWorkflowRunsResponseSchema,
   GetWorkflowsResponseSchema,
-  RetryFromStepRequestSchema,
-  RetryFromStepResponseSchema,
   RunWorkflowRequestSchema,
   ToggleWorkflowRequestSchema,
   UpdateWorkflowRequestSchema,
@@ -206,60 +202,6 @@ export const workflowsRouter = new Hono<AppType>()
     try {
       const result = await AppRuntime.runPromise(program);
       return c.json(GetWorkflowItemsResponseSchema.parse(result));
-    } catch (err) {
-      return honoErrorHandler(c, err);
-    }
-  })
-
-  .get('/runs/:runId/details', zValidator('param', GetWorkflowRunRequestSchema.shape.params), requireAuth, async (c) => {
-    const { runId } = c.req.valid('param');
-
-    const program = Effect.gen(function* () {
-      const workflowService = yield* WorkflowService;
-      const run = yield* workflowService.getWorkflowRunById(runId);
-      return {
-        success: true,
-        data: run,
-      };
-    });
-
-    try {
-      const result = await AppRuntime.runPromise(program);
-      return c.json(GetWorkflowRunResponseSchema.parse(result));
-    } catch (err) {
-      return honoErrorHandler(c, err);
-    }
-  })
-
-  .post('/runs/:runId/items/:itemId/retry', zValidator('param', RetryFromStepRequestSchema.shape.params), zValidator('json', RetryFromStepRequestSchema.shape.body), requireAdmin, async (c) => {
-    const { runId, itemId } = c.req.valid('param');
-    const { fromStepId } = c.req.valid('json');
-
-    const program = Effect.gen(function* () {
-      const workflowService = yield* WorkflowService;
-      const queueService = yield* QueueService;
-
-      const failedRun = yield* workflowService.getPluginRunByStep(runId, itemId, fromStepId);
-      const run = yield* workflowService.getWorkflowRunById(runId);
-      yield* queueService.add(QUEUE_NAMES.PIPELINE_EXECUTION, 'retry-pipeline-step', {
-        workflowId: run.workflowId,
-        workflowRunId: runId,
-        data: {
-          sourceItemId: itemId,
-          input: failedRun.input as Record<string, unknown>,
-          startAtStepId: fromStepId,
-        }
-      });
-
-      return `Retrying item ${itemId} from step ${fromStepId}.`;
-    });
-
-    try {
-      const message = await AppRuntime.runPromise(program);
-      return c.json(RetryFromStepResponseSchema.parse({
-        success: true,
-        data: { message },
-      }));
     } catch (err) {
       return honoErrorHandler(c, err);
     }

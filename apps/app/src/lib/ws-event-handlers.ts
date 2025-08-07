@@ -29,6 +29,14 @@ export const eventHandlers: Record<WebSocketEvent['type'], (queryClient: QueryCl
     queryClient.invalidateQueries({ queryKey: queryKeys.workflows.runs(data.workflowId) });
     queryClient.invalidateQueries({ queryKey: queryKeys.workflows.all() });
   },
+  WORKFLOW_RUN_CANCELLED: (queryClient, data) => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.workflows.runs(data.workflowId) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.workflows.all() });
+  },
+  WORKFLOW_RUN_DELETED: (queryClient, data) => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.workflows.runs(data.workflowId) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.workflows.all() });
+  },
   WORKFLOW_RUN_POLLING: (queryClient, data) => {
     queryClient.invalidateQueries({ queryKey: queryKeys.workflows.runs(data.workflowId) });
   },

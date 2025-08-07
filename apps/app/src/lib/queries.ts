@@ -82,7 +82,7 @@ export const runDetailsQueryOptions = (runId: string) => ({
   queryFn: () =>
     extractData(
       callApi({
-        data: { path: `/workflows/runs/${runId}/details`, method: "GET" },
+        data: { path: `/runs/${runId}/details`, method: "GET" },
       }).then((data) => GetWorkflowRunResponseSchema.parse(data))
     ),
   enabled: !!runId,
@@ -236,6 +236,42 @@ export const useRunWorkflowNowMutation = () => {
     onSuccess: (_, workflowId) => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.workflows.runs(workflowId),
+      });
+    },
+  });
+};
+
+export const useCancelWorkflowRunMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (runId: string) =>
+      callApi({
+        data: {
+          path: `/runs/${runId}/cancel`,
+          method: "POST",
+        },
+      }),
+    onSuccess: (_data, runId) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.runs.detail(runId),
+      });
+    },
+  });
+};
+
+export const useDeleteWorkflowRunMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (runId: string) =>
+      callApi({
+        data: {
+          path: `/runs/${runId}`,
+          method: "DELETE",
+        },
+      }),
+    onSuccess: (_data, runId) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.runs.detail(runId),
       });
     },
   });

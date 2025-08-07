@@ -81,28 +81,6 @@ function Dashboard() {
             </div>
           </CardContent>
         </Card>
-
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <Activity className="h-5 w-5 text-primary" />
-              <CardTitle className="text-lg">System Status</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">
-              Overall system health and activity
-            </p>
-            <div className="flex items-center justify-between">
-              <Badge variant="default" className="bg-green-500">
-                Operational
-              </Badge>
-              <div className="text-sm text-muted-foreground">
-                All systems running
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Recent Activity */}

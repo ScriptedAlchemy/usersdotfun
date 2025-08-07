@@ -6,6 +6,7 @@ import { authMiddleware } from './middleware/auth'
 import { queuesRouter } from './routes/queues'
 import websocketRoutes, { websocket } from './routes/websocket'
 import { workflowsRouter } from './routes/workflows'
+import { runsRouter } from './routes/runs'
 import './types/hono'
 import type { AppType } from './types/hono'
 
@@ -37,6 +38,7 @@ app.use('*', rateLimiter({
 // Routes
 app.get('/', (c) => c.text('Gateway API'))
 app.route('/api/workflows', workflowsRouter)
+app.route('/api/runs', runsRouter)
 app.route('/api/queues', queuesRouter)
 app.route('/api/ws', websocketRoutes)
 

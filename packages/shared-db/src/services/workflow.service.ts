@@ -113,6 +113,9 @@ export interface WorkflowService {
     id: string,
     data: UpdateWorkflowRunData
   ) => Effect.Effect<WorkflowRun, WorkflowRunNotFoundError | DbError>;
+  readonly deleteWorkflowRun: (
+    id: string
+  ) => Effect.Effect<void, WorkflowRunNotFoundError | DbError>;
 
   // Source item methods
   readonly upsertSourceItem: (
@@ -311,6 +314,18 @@ export const WorkflowServiceLive = Layer.effect(
           )
         ),
         Effect.flatMap(entity => parseEntity<WorkflowRun>(entity, workflowRunSchema, 'workflow run'))
+      );
+
+    const deleteWorkflowRun = (id: string): Effect.Effect<void, WorkflowRunNotFoundError | DbError> =>
+      Effect.tryPromise({
+        try: () =>
+          db.delete(schema.workflowRun).where(eq(schema.workflowRun.id, id)).returning(),
+        catch: (cause) =>
+          new DbError({ cause, message: "Failed to delete workflow run" }),
+      }).pipe(
+        Effect.flatMap((result) =>
+          requireNonEmptyArray(result, new WorkflowRunNotFoundError({ runId: id }))
+        )
       );
 
     const getWorkflowRuns = (
@@ -604,6 +619,7 @@ export const WorkflowServiceLive = Layer.effect(
       getWorkflowRuns,
       getActiveWorkflowRun,
       updateWorkflowRun,
+      deleteWorkflowRun,
       upsertSourceItem,
       getItemsForWorkflow,
       createPluginRun,

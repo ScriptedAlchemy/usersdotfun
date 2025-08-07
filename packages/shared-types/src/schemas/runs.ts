@@ -78,3 +78,15 @@ export const workflowErrorSchema = z.object({
   bullmqJobId: z.string().optional(),
   attemptsMade: z.number(),
 });
+
+export const CancelWorkflowRunRequestSchema = z.object({
+  params: z.object({
+    runId: z.string(),
+  }),
+});
+
+export const DeleteWorkflowRunRequestSchema = z.object({
+  params: z.object({
+    runId: z.string(),
+  }),
+});

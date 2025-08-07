@@ -3,12 +3,17 @@ import {
   Link,
   useLoaderData,
   useNavigate,
+  useParams,
 } from "@tanstack/react-router";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { CommonSheet } from "~/components/common/common-sheet";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
+import {
+  useDeleteWorkflowRunMutation,
+  useCancelWorkflowRunMutation,
+} from "~/lib/queries";
 import {
   Tabs,
   TabsContent,
@@ -80,6 +85,24 @@ export const Route = createFileRoute(
 function RunDetailsPage() {
   const navigate = useNavigate({ from: Route.fullPath });
   const { runDetails } = useLoaderData({ from: Route.id });
+  const stopMutation = useCancelWorkflowRunMutation();
+  const deleteMutation = useDeleteWorkflowRunMutation();
+
+  const onStop = () => {
+    if (runDetails) {
+      stopMutation.mutate(runDetails.id, {
+        onSuccess: () => handleClose(),
+      });
+    }
+  };
+
+  const onDelete = () => {
+    if (runDetails) {
+      deleteMutation.mutate(runDetails.id, {
+        onSuccess: () => handleClose(),
+      });
+    }
+  };
 
   if (!runDetails) {
     return (
@@ -127,14 +150,26 @@ function RunDetailsPage() {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h3 className="font-medium">Run Overview</h3>
-          <Button asChild variant="outline">
-            <Link
-              to="/workflows/$workflowId/items"
-              params={{ workflowId: data.workflowId }}
-            >
-              View Items
-            </Link>
-          </Button>
+          <div className="flex gap-2">
+            {runDetails.status === "RUNNING" && (
+              <Button variant="destructive" size="sm" onClick={onStop}>
+                Stop
+              </Button>
+            )}
+            {runDetails.status === "PENDING" && (
+              <Button variant="destructive" size="sm" onClick={onDelete}>
+                Delete
+              </Button>
+            )}
+            <Button asChild variant="outline">
+              <Link
+                to="/workflows/$workflowId/items"
+                params={{ workflowId: data.workflowId }}
+              >
+                View Items
+              </Link>
+            </Button>
+          </div>
         </div>
         <div>
           <div className="mt-2 grid grid-cols-2 gap-4 text-sm">
