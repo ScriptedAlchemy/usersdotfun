@@ -37,10 +37,7 @@
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "cron-parser": "^5.3.0",
-        "jotai": "^2.12.5",
-        "jotai-tanstack-query": "^0.11.0",
         "json5": "^2.2.3",
-        "ky": "^1.8.2",
         "lucide-react": "^0.525.0",
         "next-themes": "^0.4.6",
         "pg": "^8.16.3",
@@ -2034,10 +2031,6 @@
 
     "jose": ["jose@5.10.0", "", {}, "sha512-s+3Al/p9g32Iq+oqXxkW//7jk2Vig6FF1CFqzVXoTUXt2qz89YWbL+OwS17NFYEvxC35n0FKeGO2LGYSxeM2Gg=="],
 
-    "jotai": ["jotai@2.13.0", "", { "peerDependencies": { "@babel/core": ">=7.0.0", "@babel/template": ">=7.0.0", "@types/react": ">=17.0.0", "react": ">=17.0.0" }, "optionalPeers": ["@babel/core", "@babel/template", "@types/react", "react"] }, "sha512-H43zXdanNTdpfOEJ4NVbm4hgmrctpXLZagjJNcqAywhUv+sTE7esvFjwm5oBg/ywT9Qw63lIkM6fjrhFuW8UDg=="],
-
-    "jotai-tanstack-query": ["jotai-tanstack-query@0.11.0", "", { "peerDependencies": { "@tanstack/query-core": "*", "@tanstack/react-query": "*", "jotai": ">=2.0.0", "react": "^18.0.0 || ^19.0.0" }, "optionalPeers": ["@tanstack/react-query", "react"] }, "sha512-Ys0u0IuuS6/okUJOulFTdCVfVaeKbm1+lKVSN9zHhIxtrAXl9FM4yu7fNvxM6fSz/NCE9tZOKR0MQ3hvplaH8A=="],
-
     "js-tokens": ["js-tokens@9.0.1", "", {}, "sha512-mxa9E9ITFOt0ban3j6L5MpjwegGz6lBQmM1IJkWeBZGcMxto50+eWdjC/52xDbS2vy0k7vIMK0Fe2wfL9OQSpQ=="],
 
     "js-yaml": ["js-yaml@4.1.0", "", { "dependencies": { "argparse": "^2.0.1" }, "bin": { "js-yaml": "bin/js-yaml.js" } }, "sha512-wpxZs9NoxZaJESJGIZTyDEaYpl0FKSA+FB9aJiyemKhMwkxQg63h4T1KJgUGHpTqPDNRcmmYLugrRjJlBtWvRA=="],
@@ -2083,8 +2076,6 @@
     "koa-compose": ["koa-compose@4.1.0", "", {}, "sha512-8ODW8TrDuMYvXRwra/Kh7/rJo9BtOfPc6qO8eAfC80CnCvSjSl0bkRM24X6/XBBEyj0v1nRUQ1LyOy3dbqOWXw=="],
 
     "kuler": ["kuler@2.0.0", "", {}, "sha512-Xq9nH7KlWZmXAtodXDDRE7vs6DU1gTU8zYDHDiWLSip45Egwq3plLHzPn27NgvzL2r1LMPC1vdqh98sQxtqj4A=="],
-
-    "ky": ["ky@1.8.2", "", {}, "sha512-XybQJ3d4Ea1kI27DoelE5ZCT3bSJlibYTtQuMsyzKox3TMyayw1asgQdl54WroAm+fIA3ZCr8zXW2RpR7qWVpA=="],
 
     "kysely": ["kysely@0.28.4", "", {}, "sha512-pfQj8/Bo3KSzC1HIZB5MeeYRWcDmx1ZZv8H25LsyeygqXE+gfsbUAgPT1GSYZFctB1cdOVlv+OifuCls2mQSnw=="],
 

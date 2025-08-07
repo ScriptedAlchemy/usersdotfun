@@ -4,15 +4,11 @@ import {
   HeadContent,
   Outlet,
   Scripts,
-  createRootRouteWithContext,
-  useRouteContext,
+  createRootRouteWithContext
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { createServerFn } from "@tanstack/react-start";
 import { getWebRequest } from "@tanstack/react-start/server";
-import { useHydrateAtoms } from "jotai/utils";
-import { queryClientAtom } from "jotai-tanstack-query";
-import { Provider } from "jotai";
 import { ThemeProvider } from "next-themes";
 import * as React from "react";
 import { DefaultCatchBoundary } from "~/components/default-catch-boundary";
@@ -45,31 +41,23 @@ export const Route = createRootRouteWithContext<{
     return { user };
   },
   component: function Root() {
-    const queryClient = useRouteContext({
-      from: "__root__",
-      select: (s) => s.queryClient,
-    });
-
-    const HydrateAtoms = ({ children }: { children: React.ReactNode }) => {
-      useHydrateAtoms([[queryClientAtom, queryClient]]);
-      return children;
-    };
-
+    // const queryClient = useRouteContext({
+    //   from: "__root__",
+    //   select: (s) => s.queryClient,
+    // });
     return (
-      <Provider>
-        <HydrateAtoms>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="light"
-            enableSystem
-            disableTransitionOnChange
-          >
-            <Outlet />
-          </ThemeProvider>
-          <Toaster />
-          <TanStackRouterDevtools />
-        </HydrateAtoms>
-      </Provider>
+      <>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <Outlet />
+        </ThemeProvider>
+        <Toaster />
+        <TanStackRouterDevtools />
+      </>
     );
   },
   head: () => ({
