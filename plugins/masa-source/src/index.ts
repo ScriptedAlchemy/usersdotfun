@@ -43,7 +43,6 @@ export class MasaSourcePlugin
     const self = this;
     return Effect.gen(function* () {
       const logger = yield* PluginLoggerTag;
-      yield* logger.logInfo('Initializing Masa source plugin', { pluginId: self.id });
 
       if (!config?.secrets?.apiKey) {
         const error = new ConfigurationError('Masa API key is required.');
@@ -61,61 +60,77 @@ export class MasaSourcePlugin
     });
   }
 
-  execute(input: MasaSourceInput): Effect.Effect<MasaSourceOutput, PluginExecutionError, PluginLoggerTag> {
+  execute(
+    input: MasaSourceInput
+  ): Effect.Effect<MasaSourceOutput, PluginExecutionError, PluginLoggerTag> {
     const self = this;
     return Effect.gen(function* () {
       const logger = yield* PluginLoggerTag;
       const { searchOptions, lastProcessedState } = input;
 
-      yield* logger.logInfo('MasaSourcePlugin: execute called with:', {
-        type: searchOptions.type,
-        hasState: !!lastProcessedState
-      });
-
-      const service = self.serviceManager.getService(searchOptions.type as keyof ServiceMap);
+      const service = self.serviceManager.getService(
+        searchOptions.type as keyof ServiceMap
+      );
       const config = self.serviceManager.getConfig(searchOptions.type);
 
       if (!service || !config) {
-        return yield* Effect.fail(new PluginExecutionError(`Unsupported platform type: ${searchOptions.type}`, false));
+        return yield* Effect.fail(
+          new PluginExecutionError(
+            `Unsupported platform type: ${searchOptions.type}`,
+            false
+          )
+        );
       }
 
-      // Prepare platform-specific arguments
       const platformArgs = config.preparePlatformArgs(searchOptions);
 
       const validatedArgs = yield* Effect.try({
         try: () => config.optionsSchema.parse(platformArgs),
         catch: (error) => {
-          const message = error instanceof Error ? error.message : 'Unknown validation error';
-          return new PluginExecutionError(`Invalid platform arguments: ${message}`, false);
-        }
+          const message =
+            error instanceof Error ? error.message : 'Unknown validation error';
+          return new PluginExecutionError(
+            `Invalid platform arguments: ${message}`,
+            false
+          );
+        },
       });
 
-      // Cast the state to our specific type
-      const typedState = lastProcessedState as LastProcessedState<MasaPlatformState> | null;
+      const typedState =
+        lastProcessedState as LastProcessedState<MasaPlatformState> | null;
 
-      // Execute service
-      const result = yield* Effect.tryPromise({
-        try: () => service.search(validatedArgs, typedState),
-        catch: (error) => new PluginExecutionError(
-          error instanceof Error ? error.message : 'An unknown error occurred while searching',
-          true
-        ),
-      });
+      const result = yield* service.search(validatedArgs, typedState).pipe(
+        Effect.mapError(
+          (error) =>
+            new PluginExecutionError(
+              error.message,
+              true // Assuming polling errors are retryable
+            )
+        )
+      );
 
-      // Transform results to plugin items
-      const items: MasaPluginSourceItem[] = result.items.map((masaResult: MasaSearchResult) => ({
-        externalId: masaResult.id,
-        content: masaResult.content,
-        contentType: searchOptions.type === 'twitter-scraper' ? ContentType.POST : ContentType.UNKNOWN,
-        createdAt: masaResult.Metadata?.created_at || masaResult.created_at,
-        url: masaResult.Metadata?.url,
-        authors: masaResult.Metadata?.username ? [{
-          id: masaResult.Metadata?.user_id,
-          username: masaResult.Metadata?.username,
-          displayName: masaResult.Metadata?.username,
-        }] : undefined,
-        raw: masaResult,
-      }));
+      const items: MasaPluginSourceItem[] = result.items.map(
+        (masaResult: MasaSearchResult) => ({
+          externalId: masaResult.id,
+          content: masaResult.content,
+          contentType:
+            searchOptions.type === 'twitter-scraper'
+              ? ContentType.POST
+              : ContentType.UNKNOWN,
+          createdAt: masaResult.metadata?.created_at || masaResult.created_at,
+          url: masaResult.metadata?.url,
+          authors: masaResult.metadata?.username
+            ? [
+                {
+                  id: masaResult.metadata?.user_id,
+                  username: masaResult.metadata?.username,
+                  displayName: masaResult.metadata?.username,
+                },
+              ]
+            : undefined,
+          raw: masaResult,
+        })
+      );
 
       return {
         success: true,

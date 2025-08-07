@@ -107,6 +107,143 @@ export function buildTwitterQuery(options: TwitterQueryOptions): string {
     queryParts.push(`lang:${options.language}`);
   }
 
+  // Add all the other operators
+  if (options.url) {
+    queryParts.push(`url:${options.url}`);
+  }
+  if (options.list) {
+    queryParts.push(`list:${options.list}`);
+  }
+  if (options.fromVerified) {
+    queryParts.push('filter:verified');
+  }
+  if (options.fromBlueVerified) {
+    queryParts.push('filter:blue_verified');
+  }
+  if (options.fromFollows) {
+    queryParts.push('filter:follows');
+  }
+  if (options.near) {
+    queryParts.push(`near:${options.near}`);
+  }
+  if (options.within) {
+    queryParts.push(`within:${options.within}`);
+  }
+  if (options.geocode) {
+    queryParts.push(`geocode:${options.geocode}`);
+  }
+  if (options.place) {
+    queryParts.push(`place:${options.place}`);
+  }
+  if (options.sinceTime) {
+    queryParts.push(`since:${options.sinceTime}`);
+  }
+  if (options.untilTime) {
+    queryParts.push(`until:${options.untilTime}`);
+  }
+  if (options.sinceTimeUnix) {
+    queryParts.push(`since_time:${options.sinceTimeUnix}`);
+  }
+  if (options.untilTimeUnix) {
+    queryParts.push(`until_time:${options.untilTimeUnix}`);
+  }
+  if (options.maxId) {
+    queryParts.push(`max_id:${options.maxId}`);
+  }
+  if (options.withinTime) {
+    queryParts.push(`within_time:${options.withinTime}`);
+  }
+  if (options.nativeRetweets) {
+    queryParts.push('filter:nativeretweets');
+  }
+  if (options.includeNativeRetweets) {
+    queryParts.push('include:nativeretweets');
+  }
+  if (options.retweets) {
+    queryParts.push('filter:retweets');
+  }
+  if (options.selfThreads) {
+    queryParts.push('filter:self_threads');
+  }
+  if (options.conversationId) {
+    queryParts.push(`conversation_id:${options.conversationId}`);
+  }
+  if (options.quoteTweets) {
+    queryParts.push('filter:quote');
+  }
+  if (options.quotedTweetId) {
+    queryParts.push(`quoted_tweet_id:${options.quotedTweetId}`);
+  }
+  if (options.quotedUserId) {
+    queryParts.push(`quoted_user_id:${options.quotedUserId}`);
+  }
+  if (options.cardName) {
+    queryParts.push(`card_name:${options.cardName}`);
+  }
+  if (options.hasEngagement) {
+    queryParts.push('filter:has_engagement');
+  }
+  if (options.maxRetweets) {
+    queryParts.push(`-min_retweets:${options.maxRetweets}`);
+  }
+  if (options.maxLikes) {
+    queryParts.push(`-min_faves:${options.maxLikes}`);
+  }
+  if (options.maxReplies) {
+    queryParts.push(`-min_replies:${options.maxReplies}`);
+  }
+  if (options.hasMedia) {
+    queryParts.push('filter:media');
+  }
+  if (options.hasTwitterImage) {
+    queryParts.push('filter:twimg');
+  }
+  if (options.hasImages) {
+    queryParts.push('filter:images');
+  }
+  if (options.hasVideos) {
+    queryParts.push('filter:videos');
+  }
+  if (options.hasPeriscope) {
+    queryParts.push('filter:periscope');
+  }
+  if (options.hasNativeVideo) {
+    queryParts.push('filter:native_video');
+  }
+  if (options.hasVine) {
+    queryParts.push('filter:vine');
+  }
+  if (options.hasConsumerVideo) {
+    queryParts.push('filter:consumer_video');
+  }
+  if (options.hasProVideo) {
+    queryParts.push('filter:pro_video');
+  }
+  if (options.hasSpaces) {
+    queryParts.push('filter:spaces');
+  }
+  if (options.hasMentions) {
+    queryParts.push('filter:mentions');
+  }
+  if (options.hasNews) {
+    queryParts.push('filter:news');
+  }
+  if (options.isSafe) {
+    queryParts.push('filter:safe');
+  }
+  if (options.hasHashtags) {
+    queryParts.push('filter:hashtags');
+  }
+  if (options.source) {
+    queryParts.push(`source:${options.source}`);
+  }
+  if (options.cardDomain) {
+    queryParts.push(`card_domain:${options.cardDomain}`);
+  }
+  if (options.cardUrl) {
+    queryParts.push(`card_url:${options.cardUrl}`);
+  }
+
   // Join all parts and return
   const query = queryParts.filter(part => part.length > 0).join(' ');
 

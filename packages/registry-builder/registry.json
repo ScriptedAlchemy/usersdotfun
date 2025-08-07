@@ -30,15 +30,8 @@
     "inputSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
-      "properties": {
-        "content": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "content"
-      ],
-      "additionalProperties": false
+      "properties": {},
+      "additionalProperties": {}
     },
     "outputSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -410,7 +403,7 @@
                       "created_at": {
                         "type": "string"
                       },
-                      "Metadata": {
+                      "metadata": {
                         "type": "object",
                         "properties": {
                           "created_at": {

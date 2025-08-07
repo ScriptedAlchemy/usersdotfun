@@ -1,6 +1,7 @@
-import { MasaClient } from '../masa-client';
+import type { MasaClient } from '../masa-client';
 import type { IPlatformSearchService, PlatformConfig } from '../types';
-import { TwitterSearchService, twitterServiceConfig } from './twitter';
+import { TwitterSearchService } from './twitter';
+import { twitterServiceConfig } from './twitter/config';
 
 export interface ServiceRegistryEntry<TService extends IPlatformSearchService = IPlatformSearchService> {
   platformType: string;

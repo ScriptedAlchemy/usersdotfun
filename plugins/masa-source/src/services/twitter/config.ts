@@ -24,10 +24,57 @@ export const TwitterOptionsSchema = z.object({
   pageSize: z.number().optional(),
   query: z.string().optional(),
   sortOrder: z.enum(['asc', 'desc']).optional().default('asc'), // past-to-present (ascending) and present-to-past (descending)
+
+  // Add all the other operators
+  url: z.string().optional(),
+  list: z.string().optional(),
+  fromVerified: z.boolean().optional(),
+  fromBlueVerified: z.boolean().optional(),
+  fromFollows: z.boolean().optional(),
+  near: z.string().optional(),
+  within: z.string().optional(),
+  geocode: z.string().optional(),
+  place: z.string().optional(),
+  sinceTime: z.string().optional(),
+  untilTime: z.string().optional(),
+  sinceTimeUnix: z.number().optional(),
+  untilTimeUnix: z.number().optional(),
+  maxId: z.string().optional(),
+  withinTime: z.string().optional(),
+  nativeRetweets: z.boolean().optional(),
+  includeNativeRetweets: z.boolean().optional(),
+  retweets: z.boolean().optional(),
+  selfThreads: z.boolean().optional(),
+  conversationId: z.string().optional(),
+  quoteTweets: z.boolean().optional(),
+  quotedTweetId: z.string().optional(),
+  quotedUserId: z.string().optional(),
+  cardName: z.string().optional(),
+  hasEngagement: z.boolean().optional(),
+  maxRetweets: z.number().int().positive().optional(),
+  maxLikes: z.number().int().positive().optional(),
+  maxReplies: z.number().int().positive().optional(),
+  hasMedia: z.boolean().optional(),
+  hasTwitterImage: z.boolean().optional(),
+  hasImages: z.boolean().optional(),
+  hasVideos: z.boolean().optional(),
+  hasPeriscope: z.boolean().optional(),
+  hasNativeVideo: z.boolean().optional(),
+  hasVine: z.boolean().optional(),
+  hasConsumerVideo: z.boolean().optional(),
+  hasProVideo: z.boolean().optional(),
+  hasSpaces: z.boolean().optional(),
+  hasMentions: z.boolean().optional(),
+  hasNews: z.boolean().optional(),
+  isSafe: z.boolean().optional(),
+  hasHashtags: z.boolean().optional(),
+  source: z.string().optional(),
+  cardDomain: z.string().optional(),
+  cardUrl: z.string().optional(),
 }).strict();
 
 // Prepare Twitter arguments from generic search options
-const prepareTwitterArgs = (options: MasaSearchOptions): Record<string, unknown> => {
+export const prepareTwitterArgs = (options: MasaSearchOptions): Record<string, unknown> => {
   const { query, pageSize, platformArgs, type, ...rest } = options;
 
   // Safely handle platformArgs as it could be unknown

@@ -290,7 +290,7 @@ export const PluginServiceLive = Layer.effect(
         const { pluginId, config } = pluginConfig;
         const pluginMetadata = yield* getPlugin(pluginId);
 
-        yield* logger.logInfo(`Initializing plugin ${pluginId}`, { contextDescription });
+        yield* logger.logInfo(`Initializing plugin ${pluginId}`);
 
         const validatedRawConfig = yield* SchemaValidator.validate(
           pluginMetadata.configSchema,

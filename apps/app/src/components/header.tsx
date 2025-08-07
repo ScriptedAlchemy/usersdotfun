@@ -42,10 +42,9 @@ function UserSection() {
     <div className="flex items-center gap-4">
       <div className="text-sm">
         <span className="text-muted-foreground">Welcome, </span>
-        <span className="font-medium">{session.user.name}</span>
-        {session.user.isAnonymous && (
-          <span className="text-muted-foreground ml-1">(Anonymous)</span>
-        )}
+        <span className="font-medium">
+          {session.user.isAnonymous ? "Anonymous" : session.user.name}
+        </span>
       </div>
       <Button
         onClick={async () => {

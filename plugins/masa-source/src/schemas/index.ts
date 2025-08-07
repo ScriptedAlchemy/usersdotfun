@@ -2,6 +2,7 @@ import {
   createConfigSchema,
   createSourceInputSchema,
   createSourceOutputSchema,
+  AsyncJobProgressSchema,
 } from '@usersdotfun/core-sdk';
 import { z } from 'zod';
 
@@ -16,13 +17,7 @@ export const MasaSearchOptionsSchema = z.object({
 
 export const MasaPlatformStateSchema = z.object({
   latestProcessedId: z.string().optional(),
-  currentAsyncJob: z.object({
-    workflowId: z.string(),
-    status: z.enum(["submitted", "pending", "processing", "done", "error", "timeout"]),
-    submittedAt: z.string(),
-    lastCheckedAt: z.string().optional(),
-    errorMessage: z.string().optional(),
-  }).nullable().optional(),
+  currentAsyncJob: AsyncJobProgressSchema.nullable().optional(),
 });
 
 export const MasaSourceConfigSchema = createConfigSchema(

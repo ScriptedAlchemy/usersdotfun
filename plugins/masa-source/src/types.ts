@@ -1,11 +1,15 @@
-import type { 
-  PlatformState, 
-  AsyncJobProgress, 
+import type {
+  PlatformState,
+  AsyncJobProgress,
   PluginSourceItem,
-  LastProcessedState 
+  LastProcessedState,
 } from '@usersdotfun/core-sdk';
+import { Effect } from 'effect';
 import { z } from 'zod';
-import { MasaSearchOptionsSchema, MasaApiResponseSchema } from './schemas';
+import {
+  MasaSearchOptionsSchema,
+  MasaApiResponseSchema,
+} from './schemas';
 
 // Masa-specific platform state
 export interface MasaPlatformState extends PlatformState {
@@ -21,11 +25,11 @@ export type MasaPluginSourceItem = PluginSourceItem<MasaSearchResult>;
 export interface IPlatformSearchService {
   search(
     options: MasaSearchOptions,
-    currentState: LastProcessedState<MasaPlatformState> | null,
-  ): Promise<{
+    currentState: LastProcessedState<MasaPlatformState> | null
+  ): Effect.Effect<{
     items: MasaSearchResult[];
     nextStateData: MasaPlatformState | null;
-  }>;
+  }, Error>;
 }
 
 // Platform configuration
