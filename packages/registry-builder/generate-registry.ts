@@ -8,6 +8,7 @@ import { SimpleTransformerConfigSchema, SimpleTransformerInputSchema, SimpleTran
 import { AITransformerConfigSchema, AITransformerInputSchema, AITransformerOutputSchema } from './../../plugins/ai-transform/src/schemas/index';
 import { NotionDistributorConfigSchema, NotionDistributorInputSchema, NotionDistributorOutputSchema } from './../../plugins/notion/src/schemas/index.js';
 import { TelegramSourceConfigSchema, TelegramSourceInputSchema, TelegramSourceOutputSchema } from './../../plugins/telegram-source/src/schemas/index.js';
+import { X23SourceConfigSchema, X23SourceInputSchema, X23SourceOutputSchema } from './../../plugins/x23-source/src/schemas/index.js';
 
 // Plugin schema definitions
 const pluginSchemas = {
@@ -36,6 +37,11 @@ const pluginSchemas = {
     inputSchema: TelegramSourceInputSchema,
     outputSchema: TelegramSourceOutputSchema
   },
+  'x23-source': {
+    configSchema: X23SourceConfigSchema,
+    inputSchema: X23SourceInputSchema,
+    outputSchema: X23SourceOutputSchema
+  },
   'notion-distributor': {
     configSchema: NotionDistributorConfigSchema,
     inputSchema: NotionDistributorInputSchema,
@@ -50,6 +56,7 @@ const pluginsToRegister = {
   'ai-transform': "AITransformer",
   'masa-source': "MasaSource",
   'telegram-source': "TelegramSource",
+  'x23-source': "X23Source",
   'notion-distributor': "NotionDistributor"
 } as const;
 

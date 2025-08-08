@@ -18,7 +18,7 @@ module.exports = {
   devServer: {
     static: path.join(__dirname, "dist"),
     hot: true,
-    port: 3013,
+    port: 3007, // Unique port for x23-source plugin
     devMiddleware: {
       writeToDisk: true,
     },
