@@ -5,15 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1754457100701,
-      "tag": "0000_soft_susan_delgado",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1754614311414,
-      "tag": "0001_huge_next_avengers",
+      "when": 1754617011967,
+      "tag": "0000_striped_quicksilver",
       "breakpoints": true
     }
   ]

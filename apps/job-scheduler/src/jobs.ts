@@ -141,7 +141,7 @@ export const discoverAndScheduleWorkflows = Effect.gen(function* () {
             name: 'scheduled-workflow-run',
             data: {
               workflowId: workflow.id,
-              data: { triggeredBy: 'system' },
+              data: { triggeredBy: null }, // system
             },
           }
         );

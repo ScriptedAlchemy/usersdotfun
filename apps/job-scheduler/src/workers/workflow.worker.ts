@@ -26,7 +26,7 @@ const processWorkflowRun = (job: Job<StartWorkflowRunJobData>) =>
       : yield* workflowService.createWorkflowRun({
         workflowId,
         status: 'RUNNING',
-        triggeredBy: triggeredBy ?? 'system',
+        triggeredBy: triggeredBy ?? null,
       });
 
     yield* stateService.publish({

@@ -4,6 +4,7 @@ import {
   Outlet,
   useNavigate,
   useParams,
+  useRouterState,
 } from "@tanstack/react-router";
 import {
   Edit,
@@ -59,6 +60,8 @@ function WorkflowsLayout() {
   const { data: workflows, isLoading } = useWorkflowsQuery();
   const runMutation = useRunWorkflowNowMutation();
   const toggleMutation = useToggleWorkflowStatusMutation();
+  const router = useRouterState();
+  const currentPath = router.location.pathname;
 
   // Extract workflowId from any nested route
   const workflowId = (params as any).workflowId;
@@ -217,9 +220,7 @@ function WorkflowsLayout() {
                             <SidebarMenuSubItem>
                               <SidebarMenuSubButton
                                 asChild
-                                isActive={window.location.pathname.includes(
-                                  "/view"
-                                )}
+                                isActive={currentPath.includes("/view")}
                               >
                                 <Link
                                   to="/workflows/$workflowId/view"
@@ -235,9 +236,7 @@ function WorkflowsLayout() {
                             <SidebarMenuSubItem>
                               <SidebarMenuSubButton
                                 asChild
-                                isActive={window.location.pathname.includes(
-                                  "/edit"
-                                )}
+                                isActive={currentPath.includes("/edit")}
                               >
                                 <Link
                                   to="/workflows/$workflowId/edit"
@@ -253,9 +252,7 @@ function WorkflowsLayout() {
                             <SidebarMenuSubItem>
                               <SidebarMenuSubButton
                                 asChild
-                                isActive={window.location.pathname.includes(
-                                  "/runs"
-                                )}
+                                isActive={currentPath.includes("/runs")}
                               >
                                 <Link
                                   to="/workflows/$workflowId/runs"
@@ -271,9 +268,7 @@ function WorkflowsLayout() {
                             <SidebarMenuSubItem>
                               <SidebarMenuSubButton
                                 asChild
-                                isActive={window.location.pathname.includes(
-                                  "/items"
-                                )}
+                                isActive={currentPath.includes("/items")}
                               >
                                 <Link
                                   to="/workflows/$workflowId/items"

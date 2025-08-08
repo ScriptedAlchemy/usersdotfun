@@ -1,6 +1,7 @@
 CREATE TYPE "public"."workflow_status" AS ENUM('ACTIVE', 'INACTIVE', 'ARCHIVED');--> statement-breakpoint
 CREATE TYPE "public"."workflow_run_status" AS ENUM('PENDING', 'RUNNING', 'COMPLETED', 'FAILED', 'PARTIAL_SUCCESS', 'CANCELLED');--> statement-breakpoint
 CREATE TYPE "public"."plugin_run_status" AS ENUM('PENDING', 'RUNNING', 'COMPLETED', 'FAILED', 'SKIPPED', 'RETRYING');--> statement-breakpoint
+CREATE TYPE "public"."plugin_run_type" AS ENUM('SOURCE', 'PIPELINE');--> statement-breakpoint
 CREATE TABLE "account" (
 	"id" text PRIMARY KEY NOT NULL,
 	"account_id" text NOT NULL,
@@ -103,13 +104,15 @@ CREATE TABLE "plugin_run" (
 	"source_item_id" varchar(255),
 	"step_id" varchar(255) NOT NULL,
 	"plugin_id" varchar(255) NOT NULL,
+	"type" "plugin_run_type" DEFAULT 'PIPELINE' NOT NULL,
 	"config" json,
 	"input" json,
 	"output" json,
 	"error" json,
 	"status" "plugin_run_status" DEFAULT 'PENDING' NOT NULL,
 	"started_at" timestamp with time zone,
-	"completed_at" timestamp with time zone
+	"completed_at" timestamp with time zone,
+	"retry_count" varchar(10) DEFAULT '0'
 );
 --> statement-breakpoint
 CREATE TABLE "workflows_to_source_items" (
@@ -117,6 +120,14 @@ CREATE TABLE "workflows_to_source_items" (
 	"source_item_id" varchar(255) NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "workflows_to_source_items_workflow_id_source_item_id_pk" PRIMARY KEY("workflow_id","source_item_id")
+);
+--> statement-breakpoint
+CREATE TABLE "workflow_runs_to_source_items" (
+	"workflow_run_id" varchar(255) NOT NULL,
+	"source_item_id" varchar(255) NOT NULL,
+	"processed_at" timestamp with time zone,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "workflow_runs_to_source_items_workflow_run_id_source_item_id_pk" PRIMARY KEY("workflow_run_id","source_item_id")
 );
 --> statement-breakpoint
 ALTER TABLE "account" ADD CONSTRAINT "account_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -128,4 +139,15 @@ ALTER TABLE "plugin_run" ADD CONSTRAINT "plugin_run_workflow_run_id_workflow_run
 ALTER TABLE "plugin_run" ADD CONSTRAINT "plugin_run_source_item_id_source_item_id_fk" FOREIGN KEY ("source_item_id") REFERENCES "public"."source_item"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "workflows_to_source_items" ADD CONSTRAINT "workflows_to_source_items_workflow_id_workflow_id_fk" FOREIGN KEY ("workflow_id") REFERENCES "public"."workflow"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "workflows_to_source_items" ADD CONSTRAINT "workflows_to_source_items_source_item_id_source_item_id_fk" FOREIGN KEY ("source_item_id") REFERENCES "public"."source_item"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-CREATE UNIQUE INDEX "external_id_idx" ON "source_item" USING btree ("external_id");
+ALTER TABLE "workflow_runs_to_source_items" ADD CONSTRAINT "workflow_runs_to_source_items_workflow_run_id_workflow_run_id_fk" FOREIGN KEY ("workflow_run_id") REFERENCES "public"."workflow_run"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "workflow_runs_to_source_items" ADD CONSTRAINT "workflow_runs_to_source_items_source_item_id_source_item_id_fk" FOREIGN KEY ("source_item_id") REFERENCES "public"."source_item"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "workflow_run_workflow_idx" ON "workflow_run" USING btree ("workflow_id");--> statement-breakpoint
+CREATE INDEX "workflow_run_status_idx" ON "workflow_run" USING btree ("status");--> statement-breakpoint
+CREATE INDEX "workflow_run_started_at_idx" ON "workflow_run" USING btree ("started_at");--> statement-breakpoint
+CREATE UNIQUE INDEX "external_id_idx" ON "source_item" USING btree ("external_id");--> statement-breakpoint
+CREATE INDEX "source_item_created_at_idx" ON "source_item" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX "source_item_processed_at_idx" ON "source_item" USING btree ("processed_at");--> statement-breakpoint
+CREATE INDEX "plugin_run_workflow_run_idx" ON "plugin_run" USING btree ("workflow_run_id");--> statement-breakpoint
+CREATE INDEX "plugin_run_source_item_idx" ON "plugin_run" USING btree ("source_item_id");--> statement-breakpoint
+CREATE INDEX "plugin_run_step_idx" ON "plugin_run" USING btree ("step_id");--> statement-breakpoint
+CREATE INDEX "plugin_run_type_idx" ON "plugin_run" USING btree ("type");

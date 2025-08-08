@@ -125,6 +125,8 @@ export class TelegramSourcePlugin implements SourcePlugin<
 
             const { message } = parseResult.data;
 
+            yield* logger.logInfo('received message', { message });
+
             // If a chatId is specified, filter out messages from other chats
             if (chatId && message.chat.id.toString() !== chatId) {
               continue;

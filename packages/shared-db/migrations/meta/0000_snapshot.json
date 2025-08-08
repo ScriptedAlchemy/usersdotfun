@@ -1,5 +1,5 @@
 {
-  "id": "1b9d9ba1-904e-4a4e-b73d-4cb1bf0efe76",
+  "id": "a98ac0a3-564f-4622-a783-adb50aecc21e",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -534,7 +534,53 @@
           "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "workflow_run_workflow_idx": {
+          "name": "workflow_run_workflow_idx",
+          "columns": [
+            {
+              "expression": "workflow_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "workflow_run_status_idx": {
+          "name": "workflow_run_status_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "workflow_run_started_at_idx": {
+          "name": "workflow_run_started_at_idx",
+          "columns": [
+            {
+              "expression": "started_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "workflow_run_workflow_id_workflow_id_fk": {
           "name": "workflow_run_workflow_id_workflow_id_fk",
@@ -627,6 +673,36 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "source_item_created_at_idx": {
+          "name": "source_item_created_at_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "source_item_processed_at_idx": {
+          "name": "source_item_processed_at_idx",
+          "columns": [
+            {
+              "expression": "processed_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {},
@@ -678,6 +754,14 @@
           "primaryKey": false,
           "notNull": true
         },
+        "type": {
+          "name": "type",
+          "type": "plugin_run_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'PIPELINE'"
+        },
         "config": {
           "name": "config",
           "type": "json",
@@ -721,9 +805,77 @@
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
+        },
+        "retry_count": {
+          "name": "retry_count",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'0'"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "plugin_run_workflow_run_idx": {
+          "name": "plugin_run_workflow_run_idx",
+          "columns": [
+            {
+              "expression": "workflow_run_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "plugin_run_source_item_idx": {
+          "name": "plugin_run_source_item_idx",
+          "columns": [
+            {
+              "expression": "source_item_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "plugin_run_step_idx": {
+          "name": "plugin_run_step_idx",
+          "columns": [
+            {
+              "expression": "step_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "plugin_run_type_idx": {
+          "name": "plugin_run_type_idx",
+          "columns": [
+            {
+              "expression": "type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "plugin_run_workflow_run_id_workflow_run_id_fk": {
           "name": "plugin_run_workflow_run_id_workflow_run_id_fk",
@@ -824,6 +976,79 @@
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
+    },
+    "public.workflow_runs_to_source_items": {
+      "name": "workflow_runs_to_source_items",
+      "schema": "",
+      "columns": {
+        "workflow_run_id": {
+          "name": "workflow_run_id",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_item_id": {
+          "name": "source_item_id",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "processed_at": {
+          "name": "processed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "workflow_runs_to_source_items_workflow_run_id_workflow_run_id_fk": {
+          "name": "workflow_runs_to_source_items_workflow_run_id_workflow_run_id_fk",
+          "tableFrom": "workflow_runs_to_source_items",
+          "tableTo": "workflow_run",
+          "columnsFrom": [
+            "workflow_run_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "workflow_runs_to_source_items_source_item_id_source_item_id_fk": {
+          "name": "workflow_runs_to_source_items_source_item_id_source_item_id_fk",
+          "tableFrom": "workflow_runs_to_source_items",
+          "tableTo": "source_item",
+          "columnsFrom": [
+            "source_item_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "workflow_runs_to_source_items_workflow_run_id_source_item_id_pk": {
+          "name": "workflow_runs_to_source_items_workflow_run_id_source_item_id_pk",
+          "columns": [
+            "workflow_run_id",
+            "source_item_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     }
   },
   "enums": {
@@ -858,6 +1083,14 @@
         "FAILED",
         "SKIPPED",
         "RETRYING"
+      ]
+    },
+    "public.plugin_run_type": {
+      "name": "plugin_run_type",
+      "schema": "public",
+      "values": [
+        "SOURCE",
+        "PIPELINE"
       ]
     }
   },
