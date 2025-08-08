@@ -209,29 +209,82 @@ const processSourceQueryJob = (job: Job<SourceQueryJobData>) =>
     );
 
 
-    if (nextLastProcessedState) {
-      yield* Effect.log(`More data available. Enqueueing follow-up source query for workflow ${workflowId}`);
+    if (nextLastProcessedState?.currentAsyncJob) {
+      const job = nextLastProcessedState.currentAsyncJob;
+      
+      if (job.status === "done") {
+        yield* Effect.log(`Async job completed for workflow ${workflowId}. Clearing job from state.`);
+        
+        // Clear the async job from workflow state so future runs aren't blocked
+        yield* workflowService.updateWorkflow(workflowId, {
+          state: { 
+            data: { 
+              ...nextLastProcessedState, 
+              currentAsyncJob: null 
+            } 
+          },
+        });
 
-      yield* workflowService.updateWorkflow(workflowId, {
-        state: { data: nextLastProcessedState },
-      });
+        const updatedRun = yield* workflowService.updateWorkflowRun(workflowRunId, {
+          status: 'COMPLETED',
+          completedAt: new Date()
+        });
+        yield* stateService.publish({
+          type: 'WORKFLOW_RUN_COMPLETED',
+          data: updatedRun,
+        });
+        yield* Effect.log(`Source query completed for workflow ${workflowId}, processed ${items.length} items.`);
+        
+      } else if (job.status === "error" || job.status === "timeout") {
+        yield* Effect.log(`Async job ${job.status} for workflow ${workflowId}. Failing plugin run.`);
+        
+        const updatedPluginRun = yield* workflowService.updatePluginRun(pluginRun.id, {
+          status: 'FAILED',
+          error: { 
+            message: `Async job ${job.status}`, 
+            details: { errorMessage: job.errorMessage } 
+          },
+          completedAt: new Date(),
+        });
+        yield* stateService.publish({
+          type: 'PLUGIN_RUN_FAILED',
+          data: updatedPluginRun,
+        });
 
-      yield* workflowService.updateWorkflowRun(workflowRunId, {
-        status: 'RUNNING'
-      });
+        const updatedRun = yield* workflowService.updateWorkflowRun(workflowRunId, {
+          status: 'FAILED',
+          completedAt: new Date(),
+          failureReason: `Async job ${job.status}: ${job.errorMessage || 'Unknown error'}`,
+        });
+        yield* stateService.publish({
+          type: 'WORKFLOW_RUN_FAILED',
+          data: updatedRun,
+        });
+        
+      } else if (["submitted", "pending", "processing"].includes(job.status)) {
+        yield* Effect.log(`Async job still ${job.status} for workflow ${workflowId}. Enqueueing follow-up source query.`);
 
-      const followUpJobData: SourceQueryJobData = {
-        workflowId,
-        workflowRunId,
-        data: {
-          lastProcessedState: { data: nextLastProcessedState }
-        }
-      };
+        yield* workflowService.updateWorkflow(workflowId, {
+          state: { data: nextLastProcessedState },
+        });
 
-      const delay = nextLastProcessedState.currentAsyncJob ? 60000 : 300000;
-      yield* queueService.add(QUEUE_NAMES.SOURCE_QUERY, `continue-source-query`, followUpJobData, { delay });
+        yield* workflowService.updateWorkflowRun(workflowRunId, {
+          status: 'RUNNING'
+        });
 
-      yield* Effect.log(`Enqueued follow-up source query for workflow ${workflowId} with ${delay}ms delay`);
+        const followUpJobData: SourceQueryJobData = {
+          workflowId,
+          workflowRunId,
+          data: {
+            lastProcessedState: { data: nextLastProcessedState }
+          }
+        };
+
+        const delay = 60000;
+        yield* queueService.add(QUEUE_NAMES.SOURCE_QUERY, `continue-source-query`, followUpJobData, { delay });
+
+        yield* Effect.log(`Enqueued follow-up source query for workflow ${workflowId} with ${delay}ms delay`);
+      }
     } else {
       const updatedRun = yield* workflowService.updateWorkflowRun(workflowRunId, {
         status: 'COMPLETED',
