@@ -1,0 +1,1430 @@
+# Complete Plugin Development Guide for curate.fun
+
+## Table of Contents
+1. [Architecture Overview](#architecture-overview)
+2. [Plugin Types](#plugin-types)
+3. [Core Interfaces](#core-interfaces)
+4. [Schema Patterns](#schema-patterns)
+5. [Build System](#build-system)
+6. [Source Plugin Implementation](#source-plugin-implementation)
+7. [Transform Plugin Implementation](#transform-plugin-implementation)
+8. [Distributor Plugin Implementation](#distributor-plugin-implementation)
+9. [State Management](#state-management)
+10. [Error Handling](#error-handling)
+11. [Registry Integration](#registry-integration)
+12. [Complete Examples](#complete-examples)
+
+## Architecture Overview
+
+The curate.fun plugin system is built on:
+- **Module Federation** for remote plugin loading and hot-swapping
+- **Effect-ts** for functional error handling and composability
+- **Zod** for runtime schema validation and type safety
+- **TypeScript** for compile-time type checking
+- **Rspack** for fast builds and module federation
+
+### Key Architectural Principles
+- **Type Safety**: All inputs, outputs, and configs are validated at runtime
+- **Error Handling**: Functional error handling with Effect-ts
+- **State Management**: Resumable operations for long-running tasks
+- **Modularity**: Plugins are completely isolated and dynamically loaded
+- **Security**: Secrets are hydrated at runtime, never stored in code
+
+## Plugin Types
+
+### 1. Source Plugins
+**Purpose**: Fetch data from external APIs and services
+**Key Features**:
+- State management for resumable operations
+- Support for async job polling (e.g., Masa API jobs)
+- Pagination and cursor-based fetching
+- Rate limiting and retry logic
+
+**Examples**: Masa Source, Telegram Source
+
+### 2. Transform Plugins  
+**Purpose**: Transform data between pipeline steps
+**Key Features**:
+- Template-based transformations (Mustache)
+- Object-to-object mapping
+- AI-powered transformations
+- Data validation and sanitization
+
+**Examples**: Simple Transform, Object Transform, AI Transform
+
+### 3. Distributor Plugins
+**Purpose**: Send processed data to external systems
+**Key Features**:
+- Batch operations
+- Error recovery
+- Format conversion
+- API integration
+
+**Examples**: Notion Distributor
+
+## Core Interfaces
+
+### Base Plugin Interface
+```typescript
+import { Plugin, PluginLoggerTag, ConfigurationError, PluginExecutionError } from '@usersdotfun/core-sdk';
+import { Effect } from 'effect';
+import { z } from 'zod';
+
+export interface Plugin<
+  TInputSchema extends z.ZodTypeAny,
+  TOutputSchema extends z.ZodTypeAny,
+  TConfigSchema extends z.ZodTypeAny,
+> {
+  readonly id: string;
+  readonly type: PluginType;
+  readonly inputSchema: TInputSchema;
+  readonly outputSchema: TOutputSchema;
+  readonly configSchema: TConfigSchema;
+  
+  initialize(config?: z.infer<TConfigSchema>): Effect.Effect<void, ConfigurationError, PluginLoggerTag>;
+  execute(input: z.infer<TInputSchema>): Effect.Effect<z.infer<TOutputSchema>, PluginExecutionError, PluginLoggerTag>;
+  shutdown(): Effect.Effect<void, never, PluginLoggerTag>;
+}
+
+export type PluginType = "transformer" | "distributor" | "source";
+```
+
+### Source Plugin Interface
+```typescript
+import { SourcePlugin, LastProcessedState, PlatformState } from '@usersdotfun/core-sdk';
+
+export interface SourcePlugin<
+  TInputSchema extends z.ZodTypeAny = z.ZodTypeAny,
+  TOutputSchema extends z.ZodTypeAny = z.ZodTypeAny,
+  TConfigSchema extends z.ZodTypeAny = z.ZodTypeAny
+> extends Plugin<TInputSchema, TOutputSchema, TConfigSchema> {
+  readonly type: 'source';
+}
+
+// Source plugins receive search options and state
+export interface SourceInput<TSearchOptions extends z.ZodTypeAny = z.ZodTypeAny> {
+  searchOptions: TSearchOptions;
+  lastProcessedState?: LastProcessedState<PlatformState> | null;
+}
+
+// Source plugins return items and next state
+export interface SourceOutput<TItem extends PluginSourceItem = PluginSourceItem> {
+  success: boolean;
+  data?: {
+    items: TItem[];
+    nextLastProcessedState?: PlatformState | null;
+  };
+  errors?: Array<{ message: string; details?: Record<string, unknown>; stack?: string }>;
+}
+```
+
+## Schema Patterns
+
+### Basic Plugin Schemas
+```typescript
+import { 
+  createConfigSchema, 
+  createInputSchema, 
+  createOutputSchema 
+} from '@usersdotfun/core-sdk';
+import { z } from 'zod';
+
+// Config schema with variables and secrets
+export const YourConfigSchema = createConfigSchema(
+  // Variables (non-sensitive config)
+  z.object({
+    baseUrl: z.string().url().optional(),
+    timeout: z.number().optional(),
+    retries: z.number().optional(),
+  }),
+  // Secrets (sensitive config, hydrated at runtime)
+  z.object({
+    apiKey: z.string().min(1, "API key is required"),
+    token: z.string().optional(),
+  })
+);
+
+// Input schema
+export const YourInputSchema = createInputSchema(
+  z.object({
+    query: z.string(),
+    filters: z.record(z.string(), z.unknown()).optional(),
+    options: z.object({
+      limit: z.number().optional(),
+      offset: z.number().optional(),
+    }).optional(),
+  })
+);
+
+// Output schema
+export const YourOutputSchema = createOutputSchema(
+  z.object({
+    results: z.array(z.object({
+      id: z.string(),
+      title: z.string(),
+      content: z.string(),
+      metadata: z.record(z.string(), z.unknown()).optional(),
+    })),
+    totalCount: z.number(),
+    hasMore: z.boolean(),
+  })
+);
+
+// Derived types
+export type YourConfig = z.infer<typeof YourConfigSchema>;
+export type YourInput = z.infer<typeof YourInputSchema>;
+export type YourOutput = z.infer<typeof YourOutputSchema>;
+```
+
+### Source Plugin Schemas
+```typescript
+import { 
+  createSourceInputSchema, 
+  createSourceOutputSchema,
+  AsyncJobProgressSchema,
+  PlatformStateSchema 
+} from '@usersdotfun/core-sdk';
+
+// Search options specific to your source
+export const YourSearchOptionsSchema = z.object({
+  type: z.string(), // Platform type (e.g., "twitter", "reddit")
+  query: z.string().optional(),
+  pageSize: z.number().min(1).max(100).optional(),
+  language: z.string().optional(),
+  platformArgs: z.record(z.string(), z.unknown()).optional(),
+});
+
+// Platform-specific state for resumable operations
+export const YourPlatformStateSchema = z.object({
+  latestProcessedId: z.string().optional(),
+  currentAsyncJob: AsyncJobProgressSchema.nullable().optional(),
+  cursor: z.string().optional(),
+  lastFetchTime: z.string().optional(),
+}).catchall(z.unknown());
+
+// API response schema
+export const YourApiResponseSchema = z.object({
+  id: z.string(),
+  content: z.string(),
+  created_at: z.string().optional(),
+  metadata: z.object({
+    author: z.string().optional(),
+    url: z.string().optional(),
+    engagement: z.object({
+      likes: z.number().optional(),
+      shares: z.number().optional(),
+    }).optional(),
+  }).catchall(z.unknown()).optional(),
+}).catchall(z.unknown());
+
+// Source input/output schemas
+export const YourSourceInputSchema = createSourceInputSchema(
+  YourSearchOptionsSchema,
+  YourPlatformStateSchema
+);
+
+export const YourSourceOutputSchema = createSourceOutputSchema(
+  YourApiResponseSchema,
+  YourPlatformStateSchema
+);
+```
+
+## Build System
+
+### Package.json Structure
+```json
+{
+  "name": "@curatedotfun/your-plugin",
+  "version": "0.0.1",
+  "description": "Your plugin description",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "package.json"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/potlock/curatedotfun-plugins.git",
+    "directory": "packages/your-plugin"
+  },
+  "keywords": [
+    "curatedotfun",
+    "your-category",
+    "plugin"
+  ],
+  "scripts": {
+    "build": "rspack build && tsc -p tsconfig.build.json",
+    "dev": "rspack serve",
+    "lint": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@usersdotfun/core-sdk": "workspace:*"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0",
+    "effect": "^3.17.6",
+    "zod": "^4.0.8"
+  },
+  "devDependencies": {
+    "@rspack/cli": "latest",
+    "@types/node": "^20.0.0",
+    "@vitest/coverage-v8": "^1.6.0",
+    "typescript": "^5.0.0",
+    "vitest": "^1.6.0"
+  }
+}
+```
+
+### Rspack Configuration
+```javascript
+const path = require("path");
+const { rspack } = require("@rspack/core");
+const pkg = require("./package.json");
+const { getNormalizedRemoteName } = require("@curatedotfun/utils");
+
+module.exports = {
+  entry: "./src/index",
+  mode: process.env.NODE_ENV === "development" ? "development" : "production",
+  target: "async-node",
+  devtool: "source-map",
+  output: {
+    uniqueName: getNormalizedRemoteName(pkg.name),
+    publicPath: "auto",
+    path: path.resolve(__dirname, "dist"),
+    clean: true,
+    library: { type: "commonjs-module" },
+  },
+  devServer: {
+    static: path.join(__dirname, "dist"),
+    hot: true,
+    port: 3XXX, // Use unique port for each plugin
+    devMiddleware: {
+      writeToDisk: true,
+    },
+  },
+  module: {
+    rules: [
+      {
+        test: /\.tsx?$/,
+        use: "builtin:swc-loader",
+        exclude: /node_modules/,
+      },
+    ],
+  },
+  resolve: {
+    extensions: [".tsx", ".ts", ".js"],
+  },
+  plugins: [
+    new rspack.container.ModuleFederationPlugin({
+      name: getNormalizedRemoteName(pkg.name),
+      filename: "remoteEntry.js",
+      runtimePlugins: [
+        require.resolve("@module-federation/node/runtimePlugin"),
+      ],
+      library: { type: "commonjs-module" },
+      exposes: {
+        "./plugin": "./src/index.ts",
+      },
+      shared: {
+        effect: {
+          singleton: true,
+          requiredVersion: "^3.17.6",
+          eager: false,
+        },
+        zod: {
+          singleton: true,
+          requiredVersion: "^4.0.8",
+          eager: false,
+        },
+      },
+    }),
+  ],
+};
+```
+
+### TypeScript Configuration
+```json
+// tsconfig.json
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "declaration": true,
+    "outDir": "./dist",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": "."
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
+
+// tsconfig.build.json
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "emitDeclarationOnly": true,
+    "noEmit": false
+  }
+}
+```
+
+## Source Plugin Implementation
+
+### Complete Source Plugin Example
+```typescript
+import {
+  type SourcePlugin,
+  PluginLoggerTag,
+  ConfigurationError,
+  PluginExecutionError,
+  ContentType,
+  type LastProcessedState,
+  type PluginSourceItem,
+} from '@usersdotfun/core-sdk';
+import { Effect } from 'effect';
+import {
+  YourSourceConfig,
+  YourSourceConfigSchema,
+  YourSourceInput,
+  YourSourceInputSchema,
+  YourSourceOutput,
+  YourSourceOutputSchema,
+} from './schemas';
+import type { YourPlatformState, YourApiResponse } from './types';
+
+export class YourSourcePlugin
+  implements SourcePlugin<
+    typeof YourSourceInputSchema,
+    typeof YourSourceOutputSchema,
+    typeof YourSourceConfigSchema
+  > {
+  readonly id = '@curatedotfun/your-source' as const;
+  readonly type = 'source' as const;
+  readonly inputSchema = YourSourceInputSchema;
+  readonly outputSchema = YourSourceOutputSchema;
+  readonly configSchema = YourSourceConfigSchema;
+
+  private apiClient!: YourApiClient;
+
+  initialize(config: YourSourceConfig): Effect.Effect<void, ConfigurationError, PluginLoggerTag> {
+    const self = this;
+    return Effect.gen(function* () {
+      const logger = yield* PluginLoggerTag;
+
+      if (!config?.secrets?.apiKey) {
+        const error = new ConfigurationError('API key is required.');
+        yield* logger.logError('Configuration error: API key is missing.', error);
+        return yield* Effect.fail(error);
+      }
+
+      self.apiClient = new YourApiClient({
+        apiKey: config.secrets.apiKey,
+        baseUrl: config.variables?.baseUrl,
+        timeout: config.variables?.timeout,
+      });
+
+      yield* logger.logInfo('Source plugin initialized successfully', { pluginId: self.id });
+    });
+  }
+
+  execute(input: YourSourceInput): Effect.Effect<YourSourceOutput, PluginExecutionError, PluginLoggerTag> {
+    const self = this;
+    return Effect.gen(function* () {
+      const logger = yield* PluginLoggerTag;
+      const { searchOptions, lastProcessedState } = input;
+
+      yield* logger.logDebug('Executing source plugin', { 
+        searchOptions, 
+        hasState: !!lastProcessedState 
+      });
+
+      // Handle resumable state
+      const typedState = lastProcessedState as LastProcessedState<YourPlatformState> | null;
+      
+      // Check for ongoing async job
+      if (typedState?.data?.currentAsyncJob) {
+        const job = typedState.data.currentAsyncJob;
+        
+        if (['submitted', 'pending', 'processing'].includes(job.status)) {
+          // Poll job status
+          const jobStatus = yield* self.pollJobStatus(job.workflowId).pipe(
+            Effect.mapError(error => new PluginExecutionError(error.message, true))
+          );
+          
+          if (jobStatus.status === 'done') {
+            // Job completed, fetch results
+            const results = yield* self.fetchJobResults(job.workflowId).pipe(
+              Effect.mapError(error => new PluginExecutionError(error.message, true))
+            );
+            
+            return self.formatResults(results, null); // Clear async job state
+          } else if (jobStatus.status === 'error') {
+            return yield* Effect.fail(new PluginExecutionError(
+              `Async job failed: ${jobStatus.errorMessage}`, 
+              false
+            ));
+          } else {
+            // Job still in progress, return updated state
+            return {
+              success: true,
+              data: {
+                items: [],
+                nextLastProcessedState: {
+                  ...typedState.data,
+                  currentAsyncJob: jobStatus
+                }
+              }
+            };
+          }
+        }
+      }
+
+      // Start new search
+      const searchResult = yield* self.performSearch(searchOptions, typedState?.data).pipe(
+        Effect.mapError(error => new PluginExecutionError(error.message, true))
+      );
+
+      return self.formatResults(searchResult.items, searchResult.nextState);
+    });
+  }
+
+  private performSearch(
+    options: any, 
+    state?: YourPlatformState
+  ): Effect.Effect<{ items: YourApiResponse[]; nextState: YourPlatformState }, Error> {
+    const self = this;
+    return Effect.gen(function* () {
+      // Build search parameters
+      const params = {
+        query: options.query,
+        limit: options.pageSize || 20,
+        cursor: state?.cursor,
+        since_id: state?.latestProcessedId,
+        ...options.platformArgs,
+      };
+
+      // Make API call
+      const response = yield* Effect.tryPromise({
+        try: () => self.apiClient.search(params),
+        catch: (error) => new Error(`API call failed: ${error}`)
+      });
+
+      // Handle async job submission
+      if (response.jobId) {
+        const nextState: YourPlatformState = {
+          ...state,
+          currentAsyncJob: {
+            workflowId: response.jobId,
+            status: 'submitted',
+            submittedAt: new Date().toISOString(),
+          }
+        };
+        
+        return { items: [], nextState };
+      }
+
+      // Handle direct results
+      const nextState: YourPlatformState = {
+        ...state,
+        latestProcessedId: response.items[0]?.id,
+        cursor: response.nextCursor,
+        lastFetchTime: new Date().toISOString(),
+        currentAsyncJob: null,
+      };
+
+      return { items: response.items, nextState };
+    });
+  }
+
+  private formatResults(
+    items: YourApiResponse[], 
+    nextState: YourPlatformState | null
+  ): YourSourceOutput {
+    const pluginItems: PluginSourceItem[] = items.map(item => ({
+      externalId: item.id,
+      content: item.content,
+      contentType: ContentType.POST,
+      createdAt: item.created_at,
+      url: item.metadata?.url,
+      authors: item.metadata?.author ? [{
+        id: item.metadata.author,
+        username: item.metadata.author,
+        displayName: item.metadata.author,
+      }] : undefined,
+      raw: item,
+    }));
+
+    return {
+      success: true,
+      data: {
+        items: pluginItems,
+        nextLastProcessedState: nextState,
+      },
+    };
+  }
+
+  shutdown(): Effect.Effect<void, never, PluginLoggerTag> {
+    const self = this;
+    return Effect.gen(function* () {
+      const logger = yield* PluginLoggerTag;
+      yield* logger.logInfo('Shutting down source plugin', { pluginId: self.id });
+    });
+  }
+}
+
+export default YourSourcePlugin;
+```
+
+## Transform Plugin Implementation
+
+### Object Transform Plugin Pattern
+```typescript
+import {
+  type Plugin,
+  PluginLoggerTag,
+  ConfigurationError,
+  PluginExecutionError,
+} from '@usersdotfun/core-sdk';
+import { Effect } from 'effect';
+import Mustache from 'mustache';
+import {
+  YourTransformConfig,
+  YourTransformConfigSchema,
+  YourTransformInput,
+  YourTransformInputSchema,
+  YourTransformOutput,
+  YourTransformOutputSchema,
+} from './schemas';
+
+export default class YourTransformPlugin
+  implements Plugin<
+    typeof YourTransformInputSchema,
+    typeof YourTransformOutputSchema,
+    typeof YourTransformConfigSchema
+  > {
+  readonly id = '@curatedotfun/your-transform' as const;
+  readonly type = 'transformer' as const;
+  readonly inputSchema = YourTransformInputSchema;
+  readonly outputSchema = YourTransformOutputSchema;
+  readonly configSchema = YourTransformConfigSchema;
+  
+  private config: YourTransformConfig | null = null;
+
+  initialize(config: YourTransformConfig): Effect.Effect<void, ConfigurationError, PluginLoggerTag> {
+    const self = this;
+    return Effect.gen(function* () {
+      const logger = yield* PluginLoggerTag;
+      yield* logger.logInfo('Initializing transform plugin', { pluginId: self.id });
+      
+      // Validate configuration
+      if (!config.variables?.mappings) {
+        return yield* Effect.fail(new ConfigurationError('Mappings configuration is required'));
+      }
+      
+      self.config = config;
+    });
+  }
+
+  execute(input: YourTransformInput): Effect.Effect<YourTransformOutput, PluginExecutionError, PluginLoggerTag> {
+    const self = this;
+    return Effect.gen(function* () {
+      const logger = yield* PluginLoggerTag;
+
+      if (!self.config) {
+        return yield* Effect.fail(new PluginExecutionError('Plugin not initialized', false));
+      }
+
+      const output: Record<string, unknown> = {};
+      const mappings = self.config.variables!.mappings;
+
+      // Process each mapping
+      for (const [outputField, template] of Object.entries(mappings)) {
+        try {
+          output[outputField] = self.processTemplate(template, input);
+        } catch (error) {
+          yield* logger.logWarning(`Failed to process template for field ${outputField}`, error);
+          output[outputField] = null;
+        }
+      }
+
+      return { success: true, data: output };
+    });
+  }
+
+  private processTemplate(template: any, input: Record<string, unknown>): unknown {
+    if (typeof template === 'string') {
+      // Disable HTML escaping for data processing
+      const originalEscape = Mustache.escape;
+      Mustache.escape = (text) => text;
+      const result = Mustache.render(template, input);
+      Mustache.escape = originalEscape;
+      return result;
+    }
+    
+    if (Array.isArray(template)) {
+      return template.map(item => this.processTemplate(item, input)).flat();
+    }
+    
+    if (typeof template === 'object' && template !== null) {
+      const result: Record<string, unknown> = {};
+      for (const [key, value] of Object.entries(template)) {
+        result[key] = this.processTemplate(value, input);
+      }
+      return result;
+    }
+    
+    return template;
+  }
+
+  shutdown(): Effect.Effect<void, never, PluginLoggerTag> {
+    const self = this;
+    return Effect.gen(function* () {
+      const logger = yield* PluginLoggerTag;
+      yield* logger.logInfo('Shutting down transform plugin', { pluginId: self.id });
+    });
+  }
+}
+```
+
+## Distributor Plugin Implementation
+
+### API Integration Pattern
+```typescript
+import {
+  type Plugin,
+  PluginLoggerTag,
+  ConfigurationError,
+  PluginExecutionError,
+} from '@usersdotfun/core-sdk';
+import { Effect } from 'effect';
+import {
+  YourDistributorConfig,
+  YourDistributorConfigSchema,
+  YourDistributorInput,
+  YourDistributorInputSchema,
+  YourDistributorOutput,
+  YourDistributorOutputSchema,
+} from './schemas';
+
+export default class YourDistributorPlugin
+  implements Plugin<
+    typeof YourDistributorInputSchema,
+    typeof YourDistributorOutputSchema,
+    typeof YourDistributorConfigSchema
+  > {
+  readonly id = '@curatedotfun/your-distributor' as const;
+  readonly type = 'distributor' as const;
+  readonly inputSchema = YourDistributorInputSchema;
+  readonly outputSchema = YourDistributorOutputSchema;
+  readonly configSchema = YourDistributorConfigSchema;
+  
+  private config: YourDistributorConfig | null = null;
+  private apiClient: YourApiClient | null = null;
+
+  initialize(config: YourDistributorConfig): Effect.Effect<void, ConfigurationError, PluginLoggerTag> {
+    const self = this;
+    return Effect.gen(function* () {
+      const logger = yield* PluginLoggerTag;
+
+      if (!config.secrets?.apiKey) {
+        return yield* Effect.fail(new ConfigurationError('API key is required'));
+      }
+
+      self.config = config;
+      self.apiClient = new YourApiClient({
+        apiKey: config.secrets.apiKey,
+        baseUrl: config.variables?.baseUrl,
+      });
+
+      // Validate credentials
+      yield* Effect.tryPromise({
+        try: () => self.apiClient!.validateCredentials(),
+        catch: (error) => new ConfigurationError(
+          `Failed to validate credentials: ${error instanceof Error ? error.message : 'Unknown error'}`
+        ),
+      });
+
+      yield* logger.logInfo('Distributor plugin initialized successfully', { pluginId: self.id });
+    });
+  }
+
+  execute(input: YourDistributorInput): Effect.Effect<YourDistributorOutput, PluginExecutionError, PluginLoggerTag> {
+    const self = this;
+    return Effect.gen(function* () {
+      const logger = yield* PluginLoggerTag;
+
+      if (!self.config || !self.apiClient) {
+        return yield* Effect.fail(new PluginExecutionError('Plugin not initialized', false));
+      }
+
+      yield* logger.logDebug('Executing distributor plugin', { pluginId: self.id });
+
+      try {
+        // Transform input data to API format
+        const apiData = self.transformInputToApiFormat(input);
+        
+        // Send to external API
+        const result = yield* Effect.tryPromise({
+          try: () => self.apiClient!.createItem(apiData),
+          catch: (error) => new PluginExecutionError(
+            `Failed to create item: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            true // Retryable
+          ),
+        });
+
+        yield* logger.logInfo('Successfully created item', { 
+          pluginId: self.id, 
+          itemId: result.id 
+        });
+
+        return { 
+          success: true, 
+          data: { 
+            id: result.id,
+            url: result.url,
+            createdAt: result.createdAt,
+          } 
+        };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        yield* logger.logError('Failed to execute distributor plugin', error);
+        return yield* Effect.fail(new PluginExecutionError(errorMessage, true));
+      }
+    });
+  }
+
+  private transformInputToApiFormat(input: YourDistributorInput): any {
+    // Transform the input data to match the external API's expected format
+    return {
+      title: input.title,
+      content: input.content,
+      metadata: {
+        source: input.source,
+        tags: input.tags,
+        createdAt: input.createdAt,
+      },
+      // Apply any field mappings from config
+      ...this.applyFieldMappings(input),
+    };
+  }
+
+  private applyFieldMappings(input: any): any {
+    const mappings = this.config?.variables?.fieldMappings || {};
+    const result: any = {};
+    
+    for (const [apiField, inputField] of Object.entries(mappings)) {
+      if (inputField in input) {
+        result[apiField] = input[inputField];
+      }
+    }
+    
+    return result;
+  }
+
+  shutdown(): Effect.Effect<void, never, PluginLoggerTag> {
+    const self = this;
+    return Effect.gen(function* () {
+      const logger = yield* PluginLoggerTag;
+      yield* logger.logInfo('Shutting down distributor plugin', { pluginId: self.id });
+      self.config = null;
+      self.apiClient = null;
+    });
+  }
+}
+```
+
+## State Management
+
+### Source Plugin State Patterns
+```typescript
+// Platform-specific state interface
+export interface YourPlatformState extends PlatformState {
+  latestProcessedId?: string;
+  currentAsyncJob?: AsyncJobProgress | null;
+  cursor?: string;
+  lastFetchTime?: string;
+  batchId?: string;
+  totalProcessed?: number;
+}
+
+// Async job progress tracking
+export interface AsyncJobProgress {
+  workflowId: string;
+  status: "submitted" | "pending" | "processing" | "done" | "error" | "timeout";
+  submittedAt: string;
+  lastCheckedAt?: string;
+  errorMessage?: string;
+}
+
+// State management in execute method
+execute(input: YourSourceInput): Effect.Effect<YourSourceOutput, PluginExecutionError, PluginLoggerTag> {
+  return Effect.gen(function* () {
+    const { searchOptions, lastProcessedState } = input;
+    const typedState = lastProcessedState as LastProcessedState<YourPlatformState> | null;
+    
+    // Handle resumable operations
+    if (typedState?.data?.currentAsyncJob) {
+      const job = typedState.data.currentAsyncJob;
+      
+      // Poll job status for async operations
+      if (['submitted', 'pending', 'processing'].includes(job.status)) {
+        const updatedJob = yield* this.pollJobStatus(job.workflowId);
+        
+        if (updatedJob.status === 'done') {
+          // Fetch and return results
+          const results = yield* this.fetchJobResults(job.workflowId);
+          return this.formatResults(results, { 
+            ...typedState.data, 
+            currentAsyncJob: null 
+          });
+        } else if (updatedJob.status === 'error') {
+          return yield* Effect.fail(new PluginExecutionError(
+            `Job failed: ${updatedJob.errorMessage}`, 
+            false
+          ));
+        } else {
+          // Job still in progress
+          return {
+            success: true,
+            data: {
+              items: [],
+              nextLastProcessedState: {
+                ...typedState.data,
+                currentAsyncJob: updatedJob
+              }
+            }
+          };
+        }
+      }
+    }
+    
+    // Continue with normal processing...
+  });
+}
+```
+
+## Error Handling
+
+### Error Types and Patterns
+```typescript
+import { ConfigurationError, PluginExecutionError } from '@usersdotfun/core-sdk';
+
+// Configuration errors (non-retryable)
+if (!config?.secrets?.apiKey) {
+  return yield* Effect.fail(new ConfigurationError('API key is required'));
+}
+
+// Execution errors (retryable vs non-retryable)
+try {
+  const result = yield* Effect.tryPromise({
+    try: () => this.apiClient.makeRequest(),
+    catch: (error) => {
+      if (error.status === 401) {
+        // Authentication error - not retryable
+        return new PluginExecutionError('Invalid credentials', false);
+      } else if (error.status >= 500) {
+        // Server error - retryable
+        return new PluginExecutionError('Server error', true);
+      } else {
+        // Client error - not retryable
+        return new PluginExecutionError(`Client error: ${error.message}`, false);
+      }
+    },
+  });
+} catch (error) {
+  yield* logger.logError('Unexpected error', error);
+  return yield* Effect.fail(new PluginExecutionError('Unexpected error occurred', true));
+}
+
+// Graceful error handling with logging
+const handleApiError = (error: unknown): PluginExecutionError => {
+  if (error instanceof Error) {
+    if (error.message.includes('timeout')) {
+      return new PluginExecutionError('Request timeout', true);
+    } else if (error.message.includes('network')) {
+      return new PluginExecutionError('Network error', true);
+    }
+  }
+  return new PluginExecutionError('Unknown error', false);
+};
+```
+
+## Registry Integration
+
+### Adding Plugin to Registry Builder
+```typescript
+// packages/registry-builder/generate-registry.ts
+
+import { YourPluginConfigSchema, YourPluginInputSchema, YourPluginOutputSchema } from "../../plugins/your-plugin/src/schemas/index.js";
+
+// Add to plugin schemas
+const pluginSchemas = {
+  'your-plugin': {
+    configSchema: YourPluginConfigSchema,
+    inputSchema: YourPluginInputSchema,
+    outputSchema: YourPluginOutputSchema
+  },
+  // ... existing plugins
+} as const;
+
+// Add to plugins to register
+const pluginsToRegister = {
+  'your-plugin': "YourPlugin",
+  // ... existing plugins
+} as const;
+```
+
+### Registry JSON Structure
+The registry builder generates a JSON file with this structure:
+```json
+{
+  "@curatedotfun/your-plugin": {
+    "remoteUrl": "http://localhost:3XXX/remoteEntry.js",
+    "configSchema": { /* JSON Schema */ },
+    "inputSchema": { /* JSON Schema */ },
+    "outputSchema": { /* JSON Schema */ },
+    "version": "0.0.1",
+    "description": "Your plugin description"
+  }
+}
+```
+
+## Complete Examples
+
+### Simple Source Plugin (RSS Feed)
+```typescript
+// plugins/rss-source/src/index.ts
+import {
+  type SourcePlugin,
+  PluginLoggerTag,
+  ConfigurationError,
+  PluginExecutionError,
+  ContentType,
+  type LastProcessedState,
+  type PluginSourceItem,
+} from '@usersdotfun/core-sdk';
+import { Effect } from 'effect';
+import Parser from 'rss-parser';
+import {
+  RSSSourceConfig,
+  RSSSourceConfigSchema,
+  RSSSourceInput,
+  RSSSourceInputSchema,
+  RSSSourceOutput,
+  RSSSourceOutputSchema,
+} from './schemas';
+
+export class RSSSourcePlugin implements SourcePlugin<
+  typeof RSSSourceInputSchema,
+  typeof RSSSourceOutputSchema,
+  typeof RSSSourceConfigSchema
+> {
+  readonly id = '@curatedotfun/rss-source' as const;
+  readonly type = 'source' as const;
+  readonly inputSchema = RSSSourceInputSchema;
+  readonly outputSchema = RSSSourceOutputSchema;
+  readonly configSchema = RSSSourceConfigSchema;
+
+  private parser!: Parser;
+
+  initialize(config: RSSSourceConfig): Effect.Effect<void, ConfigurationError, PluginLoggerTag> {
+    const self = this;
+    return Effect.gen(function* () {
+      const logger = yield* PluginLoggerTag;
+      
+      self.parser = new Parser({
+        timeout: config.variables?.timeout || 10000,
+        headers: {
+          'User-Agent': config.variables?.userAgent || 'curate.fun RSS Source Plugin',
+        },
+      });
+
+      yield* logger.logInfo('RSS source plugin initialized', { pluginId: self.id });
+    });
+  }
+
+  execute(input: RSSSourceInput): Effect.Effect<RSSSourceOutput, PluginExecutionError, PluginLoggerTag> {
+    const self = this;
+    return Effect.gen(function* () {
+      const logger = yield* PluginLoggerTag;
+      const { searchOptions, lastProcessedState } = input;
+
+      const feed = yield* Effect.tryPromise({
+        try: () => self.parser.parseURL(searchOptions.url),
+        catch: (error) => new PluginExecutionError(
+          `Failed to fetch RSS feed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          true
+        ),
+      });
+
+      const lastProcessedDate = lastProcessedState?.data?.lastProcessedDate 
+        ? new Date(lastProcessedState.data.lastProcessedDate)
+        : null;
+
+      const newItems = feed.items.filter(item => {
+        if (!item.pubDate) return true;
+        const itemDate = new Date(item.pubDate);
+        return !lastProcessedDate || itemDate > lastProcessedDate;
+      });
+
+      const pluginItems: PluginSourceItem[] = newItems.map(item => ({
+        externalId: item.guid || item.link || item.title || '',
+        content: item.contentSnippet || item.content || item.title || '',
+        contentType: ContentType.ARTICLE,
+        createdAt: item.pubDate,
+        url: item.link,
+        authors: item.creator ? [{
+          displayName: item.creator,
+        }] : undefined,
+        raw: item,
+      }));
+
+      const nextState = newItems.length > 0 ? {
+        lastProcessedDate: new Date().toISOString(),
+        latestProcessedId: newItems[0].guid || newItems[0].link,
+      } : lastProcessedState?.data;
+
+      return {
+        success: true,
+        data: {
+          items: pluginItems,
+          nextLastProcessedState: nextState,
+        },
+      };
+    });
+  }
+
+  shutdown(): Effect.Effect<void, never, PluginLoggerTag> {
+    const self = this;
+    return Effect.gen(function* () {
+      const logger = yield* PluginLoggerTag;
+      yield* logger.logInfo('Shutting down RSS source plugin', { pluginId: self.id });
+    });
+  }
+}
+
+export default RSSSourcePlugin;
+```
+
+### Simple Transform Plugin (Text Formatter)
+```typescript
+// plugins/text-format/src/index.ts
+import {
+  type Plugin,
+  PluginLoggerTag,
+  ConfigurationError,
+  PluginExecutionError,
+} from '@usersdotfun/core-sdk';
+import { Effect } from 'effect';
+import {
+  TextFormatConfig,
+  TextFormatConfigSchema,
+  TextFormatInput,
+  TextFormatInputSchema,
+  TextFormatOutput,
+  TextFormatOutputSchema,
+} from './schemas';
+
+export default class TextFormatPlugin implements Plugin<
+  typeof TextFormatInputSchema,
+  typeof TextFormatOutputSchema,
+  typeof TextFormatConfigSchema
+> {
+  readonly id = '@curatedotfun/text-format' as const;
+  readonly type = 'transformer' as const;
+  readonly inputSchema = TextFormatInputSchema;
+  readonly outputSchema = TextFormatOutputSchema;
+  readonly configSchema = TextFormatConfigSchema;
+  
+  private config: TextFormatConfig | null = null;
+
+  initialize(config: TextFormatConfig): Effect.Effect<void, ConfigurationError, PluginLoggerTag> {
+    const self = this;
+    return Effect.gen(function* () {
+      const logger = yield* PluginLoggerTag;
+      self.config = config;
+      yield* logger.logInfo('Text format plugin initialized', { pluginId: self.id });
+    });
+  }
+
+  execute(input: TextFormatInput): Effect.Effect<TextFormatOutput, PluginExecutionError, PluginLoggerTag> {
+    const self = this;
+    return Effect.gen(function* () {
+      const logger = yield* PluginLoggerTag;
+
+      if (!self.config) {
+        return yield* Effect.fail(new PluginExecutionError('Plugin not initialized', false));
+      }
+
+      let formattedText = input.text;
+      const operations = self.config.variables?.operations || [];
+
+      for (const operation of operations) {
+        switch (operation.type) {
+          case 'uppercase':
+            formattedText = formattedText.toUpperCase();
+            break;
+          case 'lowercase':
+            formattedText = formattedText.toLowerCase();
+            break;
+          case 'trim':
+            formattedText = formattedText.trim();
+            break;
+          case 'replace':
+            if (operation.find && operation.replace !== undefined) {
+              formattedText = formattedText.replace(
+                new RegExp(operation.find, operation.flags || 'g'),
+                operation.replace
+              );
+            }
+            break;
+          case 'truncate':
+            if (operation.length && formattedText.length > operation.length) {
+              formattedText = formattedText.substring(0, operation.length) + '...';
+            }
+            break;
+        }
+      }
+
+      return {
+        success: true,
+        data: {
+          originalText: input.text,
+          formattedText,
+          operations: operations.map(op => op.type),
+        },
+      };
+    });
+  }
+
+  shutdown(): Effect.Effect<void, never, PluginLoggerTag> {
+    const self = this;
+    return Effect.gen(function* () {
+      const logger = yield* PluginLoggerTag;
+      yield* logger.logInfo('Shutting down text format plugin', { pluginId: self.id });
+    });
+  }
+}
+```
+
+### Simple Distributor Plugin (Webhook)
+```typescript
+// plugins/webhook-distributor/src/index.ts
+import {
+  type Plugin,
+  PluginLoggerTag,
+  ConfigurationError,
+  PluginExecutionError,
+} from '@usersdotfun/core-sdk';
+import { Effect } from 'effect';
+import {
+  WebhookDistributorConfig,
+  WebhookDistributorConfigSchema,
+  WebhookDistributorInput,
+  WebhookDistributorInputSchema,
+  WebhookDistributorOutput,
+  WebhookDistributorOutputSchema,
+} from './schemas';
+
+export default class WebhookDistributorPlugin implements Plugin<
+  typeof WebhookDistributorInputSchema,
+  typeof WebhookDistributorOutputSchema,
+  typeof WebhookDistributorConfigSchema
+> {
+  readonly id = '@curatedotfun/webhook-distributor' as const;
+  readonly type = 'distributor' as const;
+  readonly inputSchema = WebhookDistributorInputSchema;
+  readonly outputSchema = WebhookDistributorOutputSchema;
+  readonly configSchema = WebhookDistributorConfigSchema;
+  
+  private config: WebhookDistributorConfig | null = null;
+
+  initialize(config: WebhookDistributorConfig): Effect.Effect<void, ConfigurationError, PluginLoggerTag> {
+    const self = this;
+    return Effect.gen(function* () {
+      const logger = yield* PluginLoggerTag;
+
+      if (!config.variables?.webhookUrl) {
+        return yield* Effect.fail(new ConfigurationError('Webhook URL is required'));
+      }
+
+      // Validate webhook URL
+      try {
+        new URL(config.variables.webhookUrl);
+      } catch {
+        return yield* Effect.fail(new ConfigurationError('Invalid webhook URL'));
+      }
+
+      self.config = config;
+      yield* logger.logInfo('Webhook distributor plugin initialized', { 
+        pluginId: self.id,
+        webhookUrl: config.variables.webhookUrl 
+      });
+    });
+  }
+
+  execute(input: WebhookDistributorInput): Effect.Effect<WebhookDistributorOutput, PluginExecutionError, PluginLoggerTag> {
+    const self = this;
+    return Effect.gen(function* () {
+      const logger = yield* PluginLoggerTag;
+
+      if (!self.config) {
+        return yield* Effect.fail(new PluginExecutionError('Plugin not initialized', false));
+      }
+
+      const payload = {
+        timestamp: new Date().toISOString(),
+        source: 'curate.fun',
+        data: input,
+        ...self.config.variables?.additionalData,
+      };
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'User-Agent': 'curate.fun-webhook-distributor',
+      };
+
+      // Add authentication if provided
+      if (self.config.secrets?.authToken) {
+        headers['Authorization'] = `Bearer ${self.config.secrets.authToken}`;
+      }
+
+      const response = yield* Effect.tryPromise({
+        try: () => fetch(self.config!.variables!.webhookUrl, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(payload),
+        }),
+        catch: (error) => new PluginExecutionError(
+          `Webhook request failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          true
+        ),
+      });
+
+      if (!response.ok) {
+        return yield* Effect.fail(new PluginExecutionError(
+          `Webhook returned ${response.status}: ${response.statusText}`,
+          response.status >= 500 // Retry server errors
+        ));
+      }
+
+      const responseData = yield* Effect.tryPromise({
+        try: () => response.text(),
+        catch: () => new PluginExecutionError('Failed to read response', false),
+      });
+
+      yield* logger.logInfo('Webhook sent successfully', {
+        pluginId: self.id,
+        status: response.status,
+        responseLength: responseData.length,
+      });
+
+      return {
+        success: true,
+        data: {
+          status: response.status,
+          response: responseData,
+          sentAt: new Date().toISOString(),
+        },
+      };
+    });
+  }
+
+  shutdown(): Effect.Effect<void, never, PluginLoggerTag> {
+    const self = this;
+    return Effect.gen(function* () {
+      const logger = yield* PluginLoggerTag;
+      yield* logger.logInfo('Shutting down webhook distributor plugin', { pluginId: self.id });
+    });
+  }
+}
+```
+
+## Development Workflow
+
+### 1. Plugin Development Steps
+1. **Create plugin directory structure**
+2. **Define schemas in `src/schemas/index.ts`**
+3. **Implement plugin class in `src/index.ts`**
+4. **Configure build system (package.json, rspack.config.cjs, tsconfig)**
+5. **Add to registry builder**
+6. **Test locally with `bun run dev`**
+7. **Build for production with `bun run build`**
+
+### 2. Testing Patterns
+```typescript
+// src/__tests__/plugin.test.ts
+import { describe, it, expect } from 'vitest';
+import { Effect } from 'effect';
+import YourPlugin from '../index';
+
+describe('YourPlugin', () => {
+  it('should initialize successfully', async () => {
+    const plugin = new YourPlugin();
+    const config = {
+      variables: { /* test config */ },
+      secrets: { /* test secrets */ },
+    };
+
+    const result = await Effect.runPromise(
+      plugin.initialize(config).pipe(
+        Effect.provide(/* mock logger */)
+      )
+    );
+
+    expect(result).toBeUndefined(); // Success returns void
+  });
+
+  it('should execute successfully', async () => {
+    const plugin = new YourPlugin();
+    // Initialize first...
+    
+    const input = { /* test input */ };
+    const result = await Effect.runPromise(
+      plugin.execute(input).pipe(
+        Effect.provide(/* mock logger */)
+      )
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.data).toBeDefined();
+  });
+});
+```
+
+### 3. Debugging Tips
+- Use `yield* logger.logDebug()` for detailed logging
+- Test schemas separately with `schema.safeParse()`
+- Use Effect.runPromise for testing individual effects
+- Check network requests with browser dev tools when using `bun run dev`
+- Validate JSON schemas at [jsonschemavalidator.net](https://www.jsonschemavalidator.net/)
+
+### 4. Common Pitfalls
+- **Forgetting to export default**: Module Federation requires default export
+- **Port conflicts**: Each plugin needs a unique dev server port
+- **Schema mismatches**: Input/output must match exactly between pipeline steps
+- **State management**: Source plugins must handle null/undefined state gracefully
+- **Error handling**: Always specify if errors are retryable
+- **Secret hydration**: Use `secrets` for sensitive data, `variables` for non-sensitive config
+
+This comprehensive guide covers all aspects of plugin development for the curate.fun system. Use the LLM.txt for quick reference and this LLM-full.txt for detailed implementation guidance.

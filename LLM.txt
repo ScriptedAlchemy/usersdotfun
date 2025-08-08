@@ -1,0 +1,182 @@
+# Plugin Development Guide for curate.fun
+
+## Plugin Types
+- **source**: Fetch data from external APIs (with state management for resumable operations)
+- **transformer**: Transform data between pipeline steps
+- **distributor**: Send data to external systems
+
+## Core Plugin Interface
+```typescript
+export class YourPlugin implements Plugin<InputSchema, OutputSchema, ConfigSchema> {
+  readonly id = '@curatedotfun/your-plugin' as const;
+  readonly type = 'source' | 'transformer' | 'distributor';
+  readonly inputSchema = YourInputSchema;
+  readonly outputSchema = YourOutputSchema;
+  readonly configSchema = YourConfigSchema;
+
+  initialize(config: YourConfig): Effect.Effect<void, ConfigurationError, PluginLoggerTag>
+  execute(input: YourInput): Effect.Effect<YourOutput, PluginExecutionError, PluginLoggerTag>
+  shutdown(): Effect.Effect<void, never, PluginLoggerTag>
+}
+```
+
+## Schema Patterns
+
+### Basic Plugin Schemas
+```typescript
+import { createConfigSchema, createInputSchema, createOutputSchema } from '@usersdotfun/core-sdk';
+
+export const YourConfigSchema = createConfigSchema(
+  z.object({ /* variables */ }),
+  z.object({ /* secrets */ })
+);
+
+export const YourInputSchema = createInputSchema(
+  z.object({ /* input fields */ })
+);
+
+export const YourOutputSchema = createOutputSchema(
+  z.object({ /* output data */ })
+);
+```
+
+### Source Plugin Schemas (with state management)
+```typescript
+import { createSourceInputSchema, createSourceOutputSchema, PlatformStateSchema } from '@usersdotfun/core-sdk';
+
+export const YourStateSchema = z.object({
+  latestProcessedId: z.string().optional(),
+  currentAsyncJob: AsyncJobProgressSchema.nullable().optional(),
+});
+
+export const YourSourceInputSchema = createSourceInputSchema(
+  YourSearchOptionsSchema,
+  YourStateSchema
+);
+
+export const YourSourceOutputSchema = createSourceOutputSchema(
+  YourApiResponseSchema,
+  YourStateSchema
+);
+```
+
+## Required Files Structure
+```
+your-plugin/
+├── package.json          # Plugin metadata and dependencies
+├── rspack.config.cjs     # Module Federation build config
+├── tsconfig.json         # TypeScript config
+├── tsconfig.build.json   # Build-specific TypeScript config
+└── src/
+    ├── index.ts          # Main plugin class
+    └── schemas/
+        └── index.ts      # Zod schemas and types
+```
+
+## Package.json Template
+```json
+{
+  "name": "@curatedotfun/your-plugin",
+  "version": "0.0.1",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "dependencies": {
+    "@usersdotfun/core-sdk": "workspace:*"
+  },
+  "peerDependencies": {
+    "effect": "^3.17.6",
+    "zod": "^4.0.8",
+    "typescript": "^5.0.0"
+  },
+  "scripts": {
+    "build": "rspack build && tsc -p tsconfig.build.json",
+    "dev": "rspack serve"
+  }
+}
+```
+
+## Rspack Config Template
+```javascript
+const path = require("path");
+const { rspack } = require("@rspack/core");
+const pkg = require("./package.json");
+const { getNormalizedRemoteName } = require("@curatedotfun/utils");
+
+module.exports = {
+  entry: "./src/index",
+  mode: process.env.NODE_ENV === "development" ? "development" : "production",
+  target: "async-node",
+  output: {
+    uniqueName: getNormalizedRemoteName(pkg.name),
+    publicPath: "auto",
+    path: path.resolve(__dirname, "dist"),
+    clean: true,
+    library: { type: "commonjs-module" },
+  },
+  devServer: {
+    port: 3XXX, // Use unique port
+  },
+  plugins: [
+    new rspack.container.ModuleFederationPlugin({
+      name: getNormalizedRemoteName(pkg.name),
+      filename: "remoteEntry.js",
+      exposes: {
+        "./plugin": "./src/index.ts",
+      },
+      shared: {
+        effect: { singleton: true, requiredVersion: "^3.17.6" },
+        zod: { singleton: true, requiredVersion: "^4.0.8" },
+      },
+    }),
+  ],
+};
+```
+
+## Source Plugin State Management
+Source plugins must handle resumable operations and async jobs:
+
+```typescript
+// Return state for resumption
+return {
+  success: true,
+  data: {
+    items: processedItems,
+    nextLastProcessedState: {
+      latestProcessedId: lastId,
+      currentAsyncJob: jobInProgress ? jobStatus : null
+    }
+  }
+};
+```
+
+## Registry Integration
+Add your plugin to `packages/registry-builder/generate-registry.ts`:
+
+```typescript
+const pluginSchemas = {
+  'your-plugin': {
+    configSchema: YourConfigSchema,
+    inputSchema: YourInputSchema,
+    outputSchema: YourOutputSchema
+  }
+};
+
+const pluginsToRegister = {
+  'your-plugin': "YourPlugin"
+};
+```
+
+## Error Handling
+- Use `ConfigurationError` for initialization issues
+- Use `PluginExecutionError` for runtime issues
+- Set `retryable: true/false` based on error type
+- Use Effect.gen for proper error propagation
+
+## Quick Start Steps
+1. Copy plugin template structure
+2. Define Zod schemas in `src/schemas/index.ts`
+3. Implement plugin class in `src/index.ts`
+4. Configure unique port in rspack.config.cjs
+5. Add to registry builder
+6. Run `bun run build` to test
