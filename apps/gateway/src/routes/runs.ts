@@ -12,6 +12,7 @@ import {
 import { QUEUE_NAMES } from '@usersdotfun/shared-types/types';
 import { Effect } from 'effect';
 import { Hono } from 'hono';
+import { z } from 'zod';
 import { requireAdmin, requireAuth } from '../middleware/auth';
 import { AppRuntime } from '../runtime';
 import type { AppType } from '../types/hono';
@@ -114,4 +115,51 @@ export const runsRouter = new Hono<AppType>()
     } catch (err) {
       return honoErrorHandler(c, err);
     }
-  });
+  })
+
+  .get('/:runId/items', 
+    zValidator('param', z.object({ runId: z.string() })), 
+    requireAuth, 
+    async (c) => {
+      const { runId } = c.req.valid('param');
+
+      const program = Effect.gen(function* () {
+        const workflowService = yield* WorkflowService;
+        const items = yield* workflowService.getItemsForWorkflowRun(runId);
+        return { success: true, data: items };
+      });
+
+      try {
+        const result = await AppRuntime.runPromise(program);
+        return c.json(result);
+      } catch (err) {
+        return honoErrorHandler(c, err);
+      }
+    })
+
+  .get('/:runId/plugin-runs', 
+    zValidator('param', z.object({ runId: z.string() })),
+    zValidator('query', z.object({
+      type: z.enum(['SOURCE', 'PIPELINE']).optional()
+    })),
+    requireAuth, 
+    async (c) => {
+      const { runId } = c.req.valid('param');
+      const { type } = c.req.valid('query');
+
+      const program = Effect.gen(function* () {
+        const workflowService = yield* WorkflowService;
+        const pluginRuns = yield* workflowService.getPluginRunsForWorkflowRun(runId, type);
+        return { success: true, data: { 
+          type: type || 'ALL',
+          pluginRuns 
+        } };
+      });
+
+      try {
+        const result = await AppRuntime.runPromise(program);
+        return c.json(result);
+      } catch (err) {
+        return honoErrorHandler(c, err);
+      }
+    });

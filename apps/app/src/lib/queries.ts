@@ -24,9 +24,18 @@ export const queryKeys = {
     detail: (workflowId: string) => ["workflows", workflowId] as const,
     runs: (workflowId: string) => ["workflows", workflowId, "runs"] as const,
     items: (workflowId: string) => ["workflows", workflowId, "items"] as const,
+    runItems: (workflowId: string, runId: string) => ["workflows", workflowId, "runs", runId, "items"] as const,
+    runPluginRuns: (workflowId: string, runId: string, type?: string) => ["workflows", workflowId, "runs", runId, "plugin-runs", type] as const,
+    itemPluginRuns: (workflowId: string, itemId: string) => ["workflows", workflowId, "items", itemId, "plugin-runs"] as const,
   },
   runs: {
     detail: (runId: string) => ["runs", runId, "details"] as const,
+    items: (runId: string) => ["runs", runId, "items"] as const,
+    pluginRuns: (runId: string, type?: string) => ["runs", runId, "plugin-runs", type] as const,
+  },
+  items: {
+    pluginRuns: (itemId: string, workflowId?: string) => ["items", itemId, "plugin-runs", workflowId] as const,
+    workflowRuns: (itemId: string) => ["items", itemId, "workflow-runs"] as const,
   },
   queues: {
     all: () => ["queues"] as const,
@@ -419,6 +428,92 @@ export const useClearQueueMutation = () => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.queues.jobs(variables.queueName),
       });
+    },
+  });
+};
+
+// Enhanced query options
+export const workflowRunItemsQueryOptions = (runId: string) => ({
+  queryKey: queryKeys.runs.items(runId),
+  queryFn: () =>
+    extractData(
+      callApi({
+        data: { path: `/runs/${runId}/items`, method: "GET" },
+      })
+    ),
+  enabled: !!runId,
+});
+
+export const useWorkflowRunItemsQuery = (runId: string) =>
+  useQuery(workflowRunItemsQueryOptions(runId));
+
+export const itemPluginRunsQueryOptions = (itemId: string, workflowId?: string) => ({
+  queryKey: queryKeys.items.pluginRuns(itemId, workflowId),
+  queryFn: () => {
+    const url = workflowId 
+      ? `/workflows/${workflowId}/items/${itemId}/plugin-runs`
+      : `/items/${itemId}/plugin-runs`;
+    return extractData(
+      callApi({
+        data: { path: url, method: "GET" },
+      })
+    );
+  },
+  enabled: !!itemId,
+});
+
+export const useItemPluginRunsQuery = (itemId: string, workflowId?: string) =>
+  useQuery(itemPluginRunsQueryOptions(itemId, workflowId));
+
+export const itemWorkflowRunsQueryOptions = (itemId: string) => ({
+  queryKey: queryKeys.items.workflowRuns(itemId),
+  queryFn: () =>
+    extractData(
+      callApi({
+        data: { path: `/items/${itemId}/workflow-runs`, method: "GET" },
+      })
+    ),
+  enabled: !!itemId,
+});
+
+export const useItemWorkflowRunsQuery = (itemId: string) =>
+  useQuery(itemWorkflowRunsQueryOptions(itemId));
+
+export const workflowRunPluginRunsQueryOptions = (runId: string, type?: 'SOURCE' | 'PIPELINE') => ({
+  queryKey: queryKeys.runs.pluginRuns(runId, type),
+  queryFn: () => {
+    const url = `/runs/${runId}/plugin-runs${type ? `?type=${type}` : ''}`;
+    return extractData(
+      callApi({
+        data: { path: url, method: "GET" },
+      })
+    );
+  },
+  enabled: !!runId,
+});
+
+export const useWorkflowRunPluginRunsQuery = (runId: string, type?: 'SOURCE' | 'PIPELINE') =>
+  useQuery(workflowRunPluginRunsQueryOptions(runId, type));
+
+// Retry mutation
+export const useRetryPluginRunMutation = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ itemId, pluginRunId }: { itemId: string; pluginRunId: string }) =>
+      extractData(
+        callApi({
+          data: {
+            path: `/items/${itemId}/plugin-runs/${pluginRunId}/retry`,
+            method: "POST",
+          },
+        })
+      ),
+    onSuccess: () => {
+      // Invalidate related queries
+      queryClient.invalidateQueries({ queryKey: ["items"] });
+      queryClient.invalidateQueries({ queryKey: ["runs"] });
+      queryClient.invalidateQueries({ queryKey: ["workflows"] });
     },
   });
 };

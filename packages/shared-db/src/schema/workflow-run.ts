@@ -1,9 +1,10 @@
 import { workflowRunStatusValues } from "@usersdotfun/shared-types/schemas";
 import { relations } from "drizzle-orm";
-import { integer, pgEnum, pgTable, text, timestamp, varchar } from "drizzle-orm/pg-core";
+import { index, integer, pgEnum, pgTable, text, timestamp, varchar } from "drizzle-orm/pg-core";
 import { user } from "./auth";
 import { pluginRun } from "./plugin-run";
 import { workflow } from "./workflow";
+import { workflowRunsToSourceItems } from "./workflow-runs-to-source-items";
 
 export const workflowRunStatusEnum = pgEnum("workflow_run_status", workflowRunStatusValues);
 
@@ -22,7 +23,11 @@ export const workflowRun = pgTable("workflow_run", {
   itemsTotal: integer("items_total").default(0),
   startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),
   completedAt: timestamp("completed_at", { withTimezone: true }),
-});
+}, (table) => [
+  index("workflow_run_workflow_idx").on(table.workflowId),
+  index("workflow_run_status_idx").on(table.status),
+  index("workflow_run_started_at_idx").on(table.startedAt),
+]);
 
 export const workflowRunRelations = relations(workflowRun, ({ one, many }) => ({
   workflow: one(workflow, {
@@ -35,6 +40,7 @@ export const workflowRunRelations = relations(workflowRun, ({ one, many }) => ({
     relationName: "triggeredByUser",
   }),
   pluginRuns: many(pluginRun),
+  workflowRunsToSourceItems: many(workflowRunsToSourceItems),
 }));
 
 export type WorkflowRunEntity = typeof workflowRun.$inferSelect;

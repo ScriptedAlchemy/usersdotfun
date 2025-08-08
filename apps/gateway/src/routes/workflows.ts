@@ -21,6 +21,7 @@ import {
 import { QUEUE_NAMES } from '@usersdotfun/shared-types/types';
 import { Effect } from 'effect';
 import { Hono } from 'hono';
+import { z } from 'zod';
 import { requireAdmin, requireAuth } from '../middleware/auth';
 import { AppRuntime } from '../runtime';
 import type { AppType } from '../types/hono';
@@ -205,4 +206,27 @@ export const workflowsRouter = new Hono<AppType>()
     } catch (err) {
       return honoErrorHandler(c, err);
     }
-  });
+  })
+
+  .get('/:id/items/:itemId/plugin-runs', 
+    zValidator('param', z.object({
+      id: z.string(),
+      itemId: z.string()
+    })),
+    requireAuth, 
+    async (c) => {
+      const { id: workflowId, itemId } = c.req.valid('param');
+
+      const program = Effect.gen(function* () {
+        const workflowService = yield* WorkflowService;
+        const pluginRuns = yield* workflowService.getPluginRunsForItem(itemId, workflowId);
+        return { success: true, data: pluginRuns };
+      });
+
+      try {
+        const result = await AppRuntime.runPromise(program);
+        return c.json(result);
+      } catch (err) {
+        return honoErrorHandler(c, err);
+      }
+    });

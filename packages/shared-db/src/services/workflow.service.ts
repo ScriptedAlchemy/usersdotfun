@@ -76,6 +76,12 @@ export interface CreatePluginRunData extends Omit<PluginRunEntity, 'id' | 'outpu
 
 export interface UpdatePluginRunData extends Partial<Pick<PluginRunEntity, 'status' | 'output' | 'error' | 'completedAt'>> { }
 
+export interface CreateWorkflowRunToSourceItemData {
+  workflowRunId: string;
+  sourceItemId: string;
+  processedAt?: Date;
+}
+
 export interface WorkflowService {
   // Workflow methods
   readonly createWorkflow: (
@@ -141,6 +147,40 @@ export interface WorkflowService {
     itemId: string,
     stepId: string
   ) => Effect.Effect<PluginRun, DbError | PluginRunNotFoundError>;
+
+  // Enhanced item querying
+  readonly getItemsForWorkflowRun: (
+    workflowRunId: string
+  ) => Effect.Effect<Array<SourceItem>, DbError>;
+  
+  readonly getPluginRunsForItem: (
+    itemId: string,
+    workflowId?: string
+  ) => Effect.Effect<Array<PluginRun>, DbError>;
+  
+  readonly getWorkflowRunsForItem: (
+    itemId: string
+  ) => Effect.Effect<Array<RichWorkflowRunSummary>, DbError>;
+  
+  readonly getPluginRunsForWorkflowRun: (
+    workflowRunId: string,
+    type?: 'SOURCE' | 'PIPELINE'
+  ) => Effect.Effect<Array<PluginRun>, DbError>;
+  
+  // Item processing tracking
+  readonly addItemToWorkflowRun: (
+    data: CreateWorkflowRunToSourceItemData
+  ) => Effect.Effect<void, DbError>;
+  
+  readonly markItemProcessedInRun: (
+    workflowRunId: string,
+    sourceItemId: string
+  ) => Effect.Effect<void, DbError>;
+  
+  // Retry functionality
+  readonly retryPluginRun: (
+    pluginRunId: string
+  ) => Effect.Effect<PluginRun, PluginRunNotFoundError | DbError>;
 }
 
 export const WorkflowService = Context.GenericTag<WorkflowService>("WorkflowService");
@@ -608,6 +648,215 @@ export const WorkflowServiceLive = Layer.effect(
         Effect.flatMap(entity => parseEntity<PluginRun>(entity, pluginRunSchema, 'plugin run'))
       );
 
+    // Enhanced methods implementations
+    const getItemsForWorkflowRun = (
+      workflowRunId: string
+    ): Effect.Effect<Array<SourceItem>, DbError> =>
+      Effect.tryPromise({
+        try: () =>
+          db.query.workflowRunsToSourceItems
+            .findMany({
+              where: eq(schema.workflowRunsToSourceItems.workflowRunId, workflowRunId),
+              with: {
+                sourceItem: true,
+              },
+              orderBy: (items, { desc }) => desc(items.createdAt),
+            })
+            .then((results) => results.map((r) => r.sourceItem)),
+        catch: (cause) =>
+          new DbError({
+            cause,
+            message: "Failed to get items for workflow run",
+          }),
+      }).pipe(
+        Effect.flatMap(items =>
+          Effect.forEach(items, item =>
+            parseEntity<SourceItem>(item, sourceItemSchema, 'source item')
+          )
+        )
+      );
+
+    const getPluginRunsForItem = (
+      itemId: string,
+      workflowId?: string
+    ): Effect.Effect<Array<PluginRun>, DbError> =>
+      Effect.tryPromise({
+        try: () => {
+          return db.query.pluginRun.findMany({
+            where: eq(schema.pluginRun.sourceItemId, itemId),
+            with: {
+              workflowRun: {
+                with: {
+                  workflow: true,
+                },
+              },
+            },
+            orderBy: (runs, { desc }) => desc(runs.startedAt),
+          });
+        },
+        catch: (cause) =>
+          new DbError({
+            cause,
+            message: "Failed to get plugin runs for item",
+          }),
+      }).pipe(
+        Effect.flatMap(runs => {
+          const filteredRuns = workflowId 
+            ? runs.filter(run => run.workflowRun?.workflowId === workflowId)
+            : runs;
+          
+          return Effect.forEach(filteredRuns, run =>
+            parseEntity<PluginRun>(run, pluginRunSchema, 'plugin run')
+          );
+        })
+      );
+
+    const getWorkflowRunsForItem = (
+      itemId: string
+    ): Effect.Effect<Array<RichWorkflowRunSummary>, DbError> =>
+      Effect.tryPromise({
+        try: () =>
+          db.query.workflowRunsToSourceItems
+            .findMany({
+              where: eq(schema.workflowRunsToSourceItems.sourceItemId, itemId),
+              with: {
+                workflowRun: {
+                  with: {
+                    user: true,
+                    workflow: true,
+                  },
+                },
+              },
+              orderBy: (items, { desc }) => desc(items.createdAt),
+            })
+            .then((results) => results.map((r) => r.workflowRun)),
+        catch: (cause) =>
+          new DbError({
+            cause,
+            message: "Failed to get workflow runs for item",
+          }),
+      }).pipe(
+        Effect.flatMap(runs =>
+          Effect.forEach(runs, run =>
+            parseEntity(run, richWorkflowRunSummarySchema, "workflow run summary")
+          )
+        )
+      );
+
+    const getPluginRunsForWorkflowRun = (
+      workflowRunId: string,
+      type?: 'SOURCE' | 'PIPELINE'
+    ): Effect.Effect<Array<PluginRun>, DbError> =>
+      Effect.tryPromise({
+        try: () => {
+          const whereConditions = [eq(schema.pluginRun.workflowRunId, workflowRunId)];
+          if (type) {
+            whereConditions.push(eq(schema.pluginRun.type, type));
+          }
+          
+          return db.query.pluginRun.findMany({
+            where: and(...whereConditions),
+            with: {
+              sourceItem: true,
+            },
+            orderBy: (runs, { asc }) => asc(runs.startedAt),
+          });
+        },
+        catch: (cause) =>
+          new DbError({
+            cause,
+            message: "Failed to get plugin runs for workflow run",
+          }),
+      }).pipe(
+        Effect.flatMap(runs =>
+          Effect.forEach(runs, run =>
+            parseEntity<PluginRun>(run, pluginRunSchema, 'plugin run')
+          )
+        )
+      );
+
+    const addItemToWorkflowRun = (
+      data: CreateWorkflowRunToSourceItemData
+    ): Effect.Effect<void, DbError> =>
+      Effect.tryPromise({
+        try: () =>
+          db
+            .insert(schema.workflowRunsToSourceItems)
+            .values({
+              ...data,
+              createdAt: new Date(),
+            })
+            .onConflictDoNothing()
+            .returning(),
+        catch: (cause) =>
+          new DbError({
+            cause,
+            message: "Failed to add item to workflow run",
+          }),
+      }).pipe(Effect.asVoid);
+
+    const markItemProcessedInRun = (
+      workflowRunId: string,
+      sourceItemId: string
+    ): Effect.Effect<void, DbError> =>
+      Effect.tryPromise({
+        try: () =>
+          db
+            .update(schema.workflowRunsToSourceItems)
+            .set({ processedAt: new Date() })
+            .where(
+              and(
+                eq(schema.workflowRunsToSourceItems.workflowRunId, workflowRunId),
+                eq(schema.workflowRunsToSourceItems.sourceItemId, sourceItemId)
+              )
+            )
+            .returning(),
+        catch: (cause) =>
+          new DbError({
+            cause,
+            message: "Failed to mark item as processed in run",
+          }),
+      }).pipe(Effect.asVoid);
+
+    const retryPluginRun = (
+      pluginRunId: string
+    ): Effect.Effect<PluginRun, PluginRunNotFoundError | DbError> =>
+      Effect.tryPromise({
+        try: async () => {
+          // First get the current retry count
+          const current = await db.query.pluginRun.findFirst({
+            where: eq(schema.pluginRun.id, pluginRunId),
+            columns: { retryCount: true }
+          });
+          
+          const currentRetryCount = current?.retryCount ? parseInt(current.retryCount) : 0;
+          
+          return db
+            .update(schema.pluginRun)
+            .set({
+              status: 'PENDING',
+              error: null,
+              output: null,
+              retryCount: (currentRetryCount + 1).toString(),
+            })
+            .where(eq(schema.pluginRun.id, pluginRunId))
+            .returning();
+        },
+        catch: (cause) =>
+          new DbError({
+            cause,
+            message: "Failed to retry plugin run",
+          }),
+      }).pipe(
+        Effect.flatMap((result) =>
+          requireRecord(
+            result[0],
+            new PluginRunNotFoundError({ stepId: pluginRunId })
+          )
+        ),
+        Effect.flatMap(entity => parseEntity<PluginRun>(entity, pluginRunSchema, 'plugin run'))
+      );
+
     return {
       createWorkflow,
       getWorkflowById,
@@ -625,7 +874,14 @@ export const WorkflowServiceLive = Layer.effect(
       createPluginRun,
       updatePluginRun,
       getPluginRunsForRun,
-      getPluginRunByStep
+      getPluginRunByStep,
+      getItemsForWorkflowRun,
+      getPluginRunsForItem,
+      getWorkflowRunsForItem,
+      getPluginRunsForWorkflowRun,
+      addItemToWorkflowRun,
+      markItemProcessedInRun,
+      retryPluginRun
     };
   })
 );

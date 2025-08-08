@@ -47,6 +47,8 @@ const processSourceQueryJob = (job: Job<SourceQueryJobData>) =>
       startedAt: new Date(),
       stepId: 'source',
       sourceItemId: null,
+      type: 'SOURCE',
+      retryCount: '0',
     });
 
     yield* stateService.publish({
@@ -150,7 +152,7 @@ const processSourceQueryJob = (job: Job<SourceQueryJobData>) =>
       if (items.length > 0) {
         yield* Effect.log(`Enqueuing ${items.length} items for pipeline processing`);
 
-        yield* Effect.forEach(
+        const processedItems = yield* Effect.forEach(
           items,
           (item) =>
             Effect.gen(function* () {
@@ -159,6 +161,11 @@ const processSourceQueryJob = (job: Job<SourceQueryJobData>) =>
                 externalId: item.externalId,
                 data: item,
                 processedAt: null,
+              });
+
+              yield* workflowService.addItemToWorkflowRun({
+                workflowRunId,
+                sourceItemId: sourceItem.id,
               });
 
               const pipelineJobData: ExecutePipelineJobData = {
@@ -175,9 +182,13 @@ const processSourceQueryJob = (job: Job<SourceQueryJobData>) =>
                 `process-item`,
                 pipelineJobData
               );
+
+              return sourceItem.id;
             }),
-          { concurrency: 10, discard: true }
+          { concurrency: 10 }
         );
+
+        yield* Effect.log(`Enqueued ${processedItems.length} items for pipeline processing`);
       }
     });
 
