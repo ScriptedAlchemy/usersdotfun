@@ -5,6 +5,8 @@ import { z } from "zod";
 import { MasaSourceConfigSchema, MasaSourceInputSchema, MasaSourceOutputSchema } from "../../plugins/masa-source/src/schemas/index.js";
 import { ObjectTransformerConfigSchema, ObjectTransformerInputSchema, ObjectTransformerOutputSchema } from "../../plugins/object-transform/src/schemas/index.js";
 import { SimpleTransformerConfigSchema, SimpleTransformerInputSchema, SimpleTransformerOutputSchema } from "../../plugins/simple-transform/src/schemas/index.js";
+import { AITransformerConfigSchema, AITransformerInputSchema, AITransformerOutputSchema } from './../../plugins/ai-transform/src/schemas/index';
+import { NotionDistributorConfigSchema, NotionDistributorInputSchema, NotionDistributorOutputSchema } from './../../plugins/notion/src/schemas/index.js';
 import { TelegramSourceConfigSchema, TelegramSourceInputSchema, TelegramSourceOutputSchema } from './../../plugins/telegram-source/src/schemas/index.js';
 
 // Plugin schema definitions
@@ -19,6 +21,11 @@ const pluginSchemas = {
     inputSchema: ObjectTransformerInputSchema,
     outputSchema: ObjectTransformerOutputSchema
   },
+  'ai-transform': {
+    configSchema: AITransformerConfigSchema,
+    inputSchema: AITransformerInputSchema,
+    outputSchema: AITransformerOutputSchema
+  },
   'masa-source': {
     configSchema: MasaSourceConfigSchema,
     inputSchema: MasaSourceInputSchema,
@@ -28,6 +35,11 @@ const pluginSchemas = {
     configSchema: TelegramSourceConfigSchema,
     inputSchema: TelegramSourceInputSchema,
     outputSchema: TelegramSourceOutputSchema
+  },
+  'notion-distributor': {
+    configSchema: NotionDistributorConfigSchema,
+    inputSchema: NotionDistributorInputSchema,
+    outputSchema: NotionDistributorOutputSchema
   }
 } as const;
 
@@ -35,8 +47,10 @@ const pluginSchemas = {
 const pluginsToRegister = {
   'simple-transform': "SimpleTransformer",
   'object-transform': "ObjectTransformer",
+  'ai-transform': "AITransformer",
   'masa-source': "MasaSource",
-  'telegram-source': "TelegramSource"
+  'telegram-source': "TelegramSource",
+  'notion-distributor': "NotionDistributor"
 } as const;
 
 const registry: Record<string, any> = {};

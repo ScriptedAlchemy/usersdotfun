@@ -1,0 +1,54 @@
+{
+  "name": "@curatedotfun/ai-transform",
+  "version": "0.0.8",
+  "description": "AI transform plugin for curatedotfun",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "package.json"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/potlock/curatedotfun-plugins.git",
+    "directory": "packages/ai-transform"
+  },
+  "keywords": [
+    "curatedotfun",
+    "ai",
+    "transformer",
+    "plugin"
+  ],
+  "scripts": {
+    "build": "rspack build && tsc -p tsconfig.build.json",
+    "dev": "rspack serve",
+    "lint": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@curatedotfun/utils": "^0.0.2",
+    "@module-federation/node": "^2.7.10",
+    "@rspack/cli": "latest",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0",
+    "effect": "^3.17.6",
+    "zod": "^4.0.8"
+  },
+  "dependencies": {
+    "@usersdotfun/core-sdk": "workspace:*"
+  }
+}
