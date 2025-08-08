@@ -27,6 +27,7 @@ export const pluginRunSchema = z.object({
   sourceItemId: z.string().nullable(),
   stepId: z.string(),
   pluginId: z.string(),
+  type: z.enum(['SOURCE', 'PIPELINE']).default('PIPELINE'),
   config: z.any().nullable(),
   status: pluginRunStatusEnum,
   input: z.any().nullable(),
@@ -34,6 +35,7 @@ export const pluginRunSchema = z.object({
   error: z.any().nullable(),
   startedAt: z.coerce.date().nullable(),
   completedAt: z.coerce.date().nullable(),
+  retryCount: z.string().default('0'),
 });
 
 // A canonical record of a unique piece of data from a source.
@@ -61,6 +63,11 @@ export const richWorkflowRunSummarySchema = workflowRunSchema.extend({
     name: true,
     image: true,
   }).nullable(),
+});
+
+export const richPluginRunSchema = pluginRunSchema.extend({
+  sourceItem: sourceItemSchema.nullable(),
+  workflowRun: richWorkflowRunSummarySchema.nullable(),
 });
 
 

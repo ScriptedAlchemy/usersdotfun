@@ -34,28 +34,7 @@ import {
   workflowRunStatusColors,
 } from "~/lib/status-colors";
 import { toast } from "sonner";
-
-// Type definitions
-type PluginRunStatus = "PENDING" | "RUNNING" | "COMPLETED" | "FAILED" | "SKIPPED" | "RETRYING";
-
-interface PluginRun {
-  id: string;
-  stepId: string;
-  pluginId: string;
-  status: PluginRunStatus;
-  input?: any;
-  output?: any;
-  config?: any;
-  error?: any;
-  sourceItemId?: string;
-  retryCount?: string;
-}
-
-interface SourceItem {
-  id: string;
-  externalId: string;
-  processedAt?: string;
-}
+import { PluginRun, SourceItem } from "@usersdotfun/shared-types/types";
 
 export const Route = createFileRoute(
   "/_layout/workflows/$workflowId/runs/$runId"
@@ -260,9 +239,9 @@ function RunDetailsPage() {
               <h4 className="font-medium">Source Plugin Runs</h4>
               {sourceLoading ? (
                 <div className="text-center py-4">Loading source plugin runs...</div>
-              ) : sourcePluginRuns?.length ? (
+              ) : sourcePluginRuns?.pluginRuns?.length ? (
                 <div className="space-y-3">
-                  {sourcePluginRuns.map((pluginRun: PluginRun) => (
+                  {sourcePluginRuns?.pluginRuns?.map((pluginRun: PluginRun) => (
                     <div key={pluginRun.id} className="border p-3 rounded-md">
                       <div className="flex justify-between items-center mb-2">
                         <p className="font-semibold text-sm">{pluginRun.stepId}</p>
@@ -352,9 +331,9 @@ function RunDetailsPage() {
               <h4 className="font-medium">Pipeline Plugin Runs</h4>
               {pipelineLoading ? (
                 <div className="text-center py-4">Loading pipeline plugin runs...</div>
-              ) : pipelinePluginRuns?.length ? (
+              ) : pipelinePluginRuns?.pluginRuns?.length ? (
                 <div className="space-y-3">
-                  {pipelinePluginRuns.map((pluginRun: PluginRun) => (
+                  {pipelinePluginRuns.pluginRuns?.map((pluginRun: PluginRun) => (
                     <div key={pluginRun.id} className="border p-3 rounded-md">
                       <div className="flex justify-between items-center mb-2">
                         <div>

@@ -1,5 +1,6 @@
 import {
   pluginRunSchema,
+  richPluginRunSchema,
   richWorkflowRunSchema,
   richWorkflowRunSummarySchema,
   richWorkflowSchema,
@@ -10,6 +11,7 @@ import {
 } from "@usersdotfun/shared-types/schemas";
 import type {
   PluginRun,
+  RichPluginRun,
   RichWorkflow,
   RichWorkflowRun,
   RichWorkflowRunSummary,
@@ -156,7 +158,7 @@ export interface WorkflowService {
   readonly getPluginRunsForItem: (
     itemId: string,
     workflowId?: string
-  ) => Effect.Effect<Array<PluginRun>, DbError>;
+  ) => Effect.Effect<Array<RichPluginRun>, DbError>;
   
   readonly getWorkflowRunsForItem: (
     itemId: string
@@ -165,7 +167,7 @@ export interface WorkflowService {
   readonly getPluginRunsForWorkflowRun: (
     workflowRunId: string,
     type?: 'SOURCE' | 'PIPELINE'
-  ) => Effect.Effect<Array<PluginRun>, DbError>;
+  ) => Effect.Effect<Array<RichPluginRun>, DbError>;
   
   // Item processing tracking
   readonly addItemToWorkflowRun: (
@@ -679,15 +681,16 @@ export const WorkflowServiceLive = Layer.effect(
     const getPluginRunsForItem = (
       itemId: string,
       workflowId?: string
-    ): Effect.Effect<Array<PluginRun>, DbError> =>
+    ): Effect.Effect<Array<RichPluginRun>, DbError> =>
       Effect.tryPromise({
         try: () => {
           return db.query.pluginRun.findMany({
             where: eq(schema.pluginRun.sourceItemId, itemId),
             with: {
+              sourceItem: true,
               workflowRun: {
                 with: {
-                  workflow: true,
+                  user: true,
                 },
               },
             },
@@ -706,7 +709,7 @@ export const WorkflowServiceLive = Layer.effect(
             : runs;
           
           return Effect.forEach(filteredRuns, run =>
-            parseEntity<PluginRun>(run, pluginRunSchema, 'plugin run')
+            parseEntity<RichPluginRun>(run, richPluginRunSchema, 'rich plugin run')
           );
         })
       );
@@ -746,7 +749,7 @@ export const WorkflowServiceLive = Layer.effect(
     const getPluginRunsForWorkflowRun = (
       workflowRunId: string,
       type?: 'SOURCE' | 'PIPELINE'
-    ): Effect.Effect<Array<PluginRun>, DbError> =>
+    ): Effect.Effect<Array<RichPluginRun>, DbError> =>
       Effect.tryPromise({
         try: () => {
           const whereConditions = [eq(schema.pluginRun.workflowRunId, workflowRunId)];
@@ -758,6 +761,11 @@ export const WorkflowServiceLive = Layer.effect(
             where: and(...whereConditions),
             with: {
               sourceItem: true,
+              workflowRun: {
+                with: {
+                  user: true,
+                },
+              },
             },
             orderBy: (runs, { asc }) => asc(runs.startedAt),
           });
@@ -770,7 +778,7 @@ export const WorkflowServiceLive = Layer.effect(
       }).pipe(
         Effect.flatMap(runs =>
           Effect.forEach(runs, run =>
-            parseEntity<PluginRun>(run, pluginRunSchema, 'plugin run')
+            parseEntity<RichPluginRun>(run, richPluginRunSchema, 'rich plugin run')
           )
         )
       );

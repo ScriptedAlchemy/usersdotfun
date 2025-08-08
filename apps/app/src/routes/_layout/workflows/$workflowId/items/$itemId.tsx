@@ -28,49 +28,7 @@ import {
   workflowRunStatusColors 
 } from "~/lib/status-colors";
 import { toast } from "sonner";
-
-// Type definitions
-type PluginRunStatus = "PENDING" | "RUNNING" | "COMPLETED" | "FAILED" | "SKIPPED" | "RETRYING";
-type WorkflowRunStatus = "PENDING" | "RUNNING" | "COMPLETED" | "FAILED" | "PARTIAL_SUCCESS" | "CANCELLED";
-
-interface PluginRun {
-  id: string;
-  stepId: string;
-  pluginId: string;
-  status: PluginRunStatus;
-  input?: any;
-  output?: any;
-  config?: any;
-  error?: any;
-  sourceItemId?: string;
-  retryCount?: string;
-  workflowRunId: string;
-  type?: 'SOURCE' | 'PIPELINE';
-  workflowRun?: {
-    id: string;
-    workflowId: string;
-    status: string;
-    startedAt: string;
-    workflow?: {
-      id: string;
-      name: string;
-    };
-  };
-}
-
-interface WorkflowRun {
-  id: string;
-  workflowId: string;
-  status: WorkflowRunStatus;
-  startedAt: string;
-  user?: {
-    name: string;
-  };
-  workflow?: {
-    id: string;
-    name: string;
-  };
-}
+import { RichPluginRun, RichWorkflowRun } from "@usersdotfun/shared-types/types";
 
 export const Route = createFileRoute(
   "/_layout/workflows/$workflowId/items/$itemId"
@@ -211,7 +169,7 @@ function ItemDetailsPage() {
                 <div className="text-center py-4">Loading plugin runs...</div>
               ) : pluginRuns?.length ? (
                 <div className="space-y-3">
-                  {pluginRuns.map((pluginRun: PluginRun) => (
+                  {pluginRuns.map((pluginRun: RichPluginRun) => (
                     <div key={pluginRun.id} className="border p-3 rounded-md">
                       <div className="flex justify-between items-center mb-2">
                         <div>
@@ -255,12 +213,6 @@ function ItemDetailsPage() {
                         </div>
                       </div>
                       
-                      {pluginRun.retryCount && pluginRun.retryCount !== '0' && (
-                        <div className="text-xs text-amber-600 mb-2">
-                          Retry attempt #{pluginRun.retryCount}
-                        </div>
-                      )}
-                      
                       <Tabs defaultValue="input">
                         <TabsList>
                           <TabsTrigger value="input">Input</TabsTrigger>
@@ -301,7 +253,7 @@ function ItemDetailsPage() {
                 <div className="text-center py-4">Loading workflow runs...</div>
               ) : workflowRuns?.length ? (
                 <div className="space-y-3">
-                  {workflowRuns.map((workflowRun: WorkflowRun) => (
+                  {workflowRuns.map((workflowRun: RichWorkflowRun) => (
                     <div key={workflowRun.id} className="border p-3 rounded-md">
                       <div className="flex justify-between items-center mb-2">
                         <div>
@@ -328,11 +280,6 @@ function ItemDetailsPage() {
                           </div>
                         </div>
                       </div>
-                      {workflowRun.workflow && (
-                        <div className="text-xs text-muted-foreground">
-                          Workflow: {workflowRun.workflow.name}
-                        </div>
-                      )}
                     </div>
                   ))}
                 </div>
