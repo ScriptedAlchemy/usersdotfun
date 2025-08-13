@@ -1,15 +1,18 @@
 {
-  "name": "@curatedotfun/template-plugin",
+  "name": "@curatedotfun/rss-source",
   "version": "0.0.1",
-  "description": "Template plugin for curate.fun - change name and port",
+  "description": "RSS source plugin for curate.fun",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "type": "module",
   "dependencies": {
-    "@usersdotfun/core-sdk": "workspace:*"
+    "@effect/platform": "^0.90.2",
+    "@effect/platform-node": "^0.95.0",
+    "@usersdotfun/core-sdk": "workspace:*",
+    "rss-parser": "^3.13.0"
   },
   "peerDependencies": {
-    "effect": "^3.17.6",
+    "effect": "^3.17.7",
     "zod": "^4.0.8",
     "typescript": "^5.0.0"
   },

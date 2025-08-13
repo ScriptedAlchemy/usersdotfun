@@ -1,41 +1,63 @@
-import { createConfigSchema, createInputSchema, createOutputSchema } from '@usersdotfun/core-sdk';
+import { createConfigSchema, createSourceInputSchema, createSourceOutputSchema, PlatformStateSchema } from '@usersdotfun/core-sdk';
 import { z } from 'zod';
 
+// State schema for resumable operations (extends PlatformState)
+export const RssSourceStateSchema = PlatformStateSchema.extend({
+  lastProcessedItemGuid: z.string().optional(),
+  lastProcessedItemTimestamp: z.string().datetime().optional(),
+});
+
 // Config schema with variables and secrets
-export const TemplateConfigSchema = createConfigSchema(
+export const RssSourceConfigSchema = createConfigSchema(
   // Variables (non-sensitive config)
   z.object({
-    baseUrl: z.string().url().optional(),
-    timeout: z.number().optional(),
+    feedUrl: z.string().url(),
+    maxItems: z.number().min(1).max(100).default(50).optional(),
+    timeout: z.number().min(1000).max(30000).default(10000).optional(), // timeout in ms
   }),
   // Secrets (sensitive config, hydrated at runtime)
   z.object({
-    apiKey: z.string().min(1, "API key is required"),
+    // No secrets needed for basic RSS fetching, but could add API keys for protected feeds
   })
 );
 
-// Input schema
-export const TemplateInputSchema = createInputSchema(
-  z.object({
-    query: z.string(),
-    options: z.object({
-      limit: z.number().optional(),
-    }).optional(),
-  })
+// Search options schema (empty for now as we're just fetching a single feed)
+export const RssSourceSearchOptionsSchema = z.object({});
+
+// Input schema for source plugin
+export const RssSourceInputSchema = createSourceInputSchema(
+  RssSourceSearchOptionsSchema,
+  RssSourceStateSchema
 );
 
-// Output schema
-export const TemplateOutputSchema = createOutputSchema(
-  z.object({
-    results: z.array(z.object({
-      id: z.string(),
-      content: z.string(),
-    })),
-    count: z.number(),
-  })
+// Individual RSS item schema for raw data
+export const RssSourceItemSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  content: z.string(),
+  description: z.string().optional(),
+  link: z.string().url(),
+  author: z.string().optional(),
+  publishedAt: z.string().datetime(),
+  guid: z.string(),
+  categories: z.array(z.string()).optional(),
+  image: z.string().url().optional(),
+  source: z.object({
+    url: z.string().url(),
+    title: z.string(),
+  }),
+});
+
+// Output schema for source plugin
+export const RssSourceOutputSchema = createSourceOutputSchema(
+  RssSourceItemSchema,
+  RssSourceStateSchema
 );
 
 // Derived types
-export type TemplateConfig = z.infer<typeof TemplateConfigSchema>;
-export type TemplateInput = z.infer<typeof TemplateInputSchema>;
-export type TemplateOutput = z.infer<typeof TemplateOutputSchema>;
+export type RssSourceState = z.infer<typeof RssSourceStateSchema>;
+export type RssSourceConfig = z.infer<typeof RssSourceConfigSchema>;
+export type RssSourceSearchOptions = z.infer<typeof RssSourceSearchOptionsSchema>;
+export type RssSourceInput = z.infer<typeof RssSourceInputSchema>;
+export type RssSourceItem = z.infer<typeof RssSourceItemSchema>;
+export type RssSourceOutput = z.infer<typeof RssSourceOutputSchema>;

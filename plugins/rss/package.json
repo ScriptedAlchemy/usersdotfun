@@ -1,12 +1,16 @@
 {
-  "name": "@curatedotfun/template-plugin",
+  "name": "@curatedotfun/rss",
   "version": "0.0.1",
-  "description": "Template plugin for curate.fun - change name and port",
+  "description": "RSS distributor plugin for curate.fun",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "type": "module",
   "dependencies": {
-    "@usersdotfun/core-sdk": "workspace:*"
+    "@usersdotfun/core-sdk": "workspace:*",
+    "uuid": "^10.0.0"
+  },
+  "devDependencies": {
+    "@types/uuid": "^10.0.0"
   },
   "peerDependencies": {
     "effect": "^3.17.6",
