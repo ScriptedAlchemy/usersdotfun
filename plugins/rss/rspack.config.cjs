@@ -4,7 +4,8 @@ const pkg = require("./package.json");
 const { getNormalizedRemoteName } = require("@curatedotfun/utils");
 
 module.exports = {
-  entry: "./src/index",
+  // No single entry needed, as we are exposing modules directly.
+  // Rspack will build the exposed files as entries.
   mode: process.env.NODE_ENV === "development" ? "development" : "production",
   target: "async-node",
   devtool: "source-map",
@@ -18,7 +19,8 @@ module.exports = {
   devServer: {
     static: path.join(__dirname, "dist"),
     hot: true,
-    port: 3005, // RSS distributor plugin port
+    // A single port for both plugins
+    port: 3005,
     devMiddleware: {
       writeToDisk: true,
     },
@@ -26,14 +28,14 @@ module.exports = {
   module: {
     rules: [
       {
-        test: /\.tsx?$/,
+        test: /\.ts$/,
         use: "builtin:swc-loader",
         exclude: /node_modules/,
       },
     ],
   },
   resolve: {
-    extensions: [".tsx", ".ts", ".js"],
+    extensions: [".ts", ".js"],
   },
   plugins: [
     new rspack.container.ModuleFederationPlugin({
@@ -44,18 +46,22 @@ module.exports = {
       ],
       library: { type: "commonjs-module" },
       exposes: {
-        "./plugin": "./src/index.ts",
+        "./source": "./src/plugins/source.ts",
+        "./plugin": "./src/plugins/distributor.ts", // TODO:
       },
       shared: {
         effect: {
           singleton: true,
           requiredVersion: "^3.17.6",
-          eager: false,
         },
         zod: {
           singleton: true,
           requiredVersion: "^4.0.8",
-          eager: false,
+        },
+        // Share the core SDK to ensure single instance
+        "@usersdotfun/core-sdk": {
+          singleton: true,
+          requiredVersion: "workspace:*",
         },
       },
     }),

@@ -56,7 +56,6 @@ export class MasaSourcePlugin
       });
 
       self.serviceManager = new ServiceManager(self.masaClient);
-      yield* logger.logInfo('Masa source plugin initialized successfully', { pluginId: self.id });
     });
   }
 

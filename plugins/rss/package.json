@@ -1,16 +1,23 @@
 {
   "name": "@curatedotfun/rss",
   "version": "0.0.1",
-  "description": "RSS distributor plugin for curate.fun",
+  "description": "RSS source and distributor plugins for curate.fun",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "type": "module",
   "dependencies": {
+    "@curatedotfun/rss-service": "workspace:*",
+    "@hono/zod-validator": "^0.7.2",
     "@usersdotfun/core-sdk": "workspace:*",
+    "fast-xml-parser": "^5.2.5",
+    "feed": "^5.1.0",
+    "hono": "^4.8.8",
+    "ioredis": "^5.7.0",
     "uuid": "^10.0.0"
   },
   "devDependencies": {
-    "@types/uuid": "^10.0.0"
+    "@types/uuid": "^10.0.0",
+    "@upstash/redis": "^1.35.3"
   },
   "peerDependencies": {
     "effect": "^3.17.6",

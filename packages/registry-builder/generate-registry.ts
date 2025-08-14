@@ -1,3 +1,4 @@
+import { RssDistributorConfigSchema, RssDistributorInputSchema, RssDistributorOutputSchema } from './../../plugins/rss/src/plugins/distributor';
 import fs from 'fs/promises';
 import path from 'path';
 import { z } from "zod";
@@ -42,10 +43,15 @@ const pluginSchemas = {
     inputSchema: X23SourceInputSchema,
     outputSchema: X23SourceOutputSchema
   },
-  'notion-distributor': {
+  'notion': {
     configSchema: NotionDistributorConfigSchema,
     inputSchema: NotionDistributorInputSchema,
     outputSchema: NotionDistributorOutputSchema
+  },
+  'rss': {
+    configSchema: RssDistributorConfigSchema,
+    inputSchema: RssDistributorInputSchema,
+    outputSchema: RssDistributorOutputSchema
   }
 } as const;
 
@@ -57,7 +63,8 @@ const pluginsToRegister = {
   'masa-source': "MasaSource",
   'telegram-source': "TelegramSource",
   'x23-source': "X23Source",
-  'notion-distributor': "NotionDistributor"
+  'notion': "NotionDistributor",
+  'rss': "RssDistributor"
 } as const;
 
 const registry: Record<string, any> = {};
