@@ -86,4 +86,16 @@ export const jwks = pgTable("jwks", {
   createdAt: timestamp("created_at").notNull(),
 });
 
+export const nearAccount = pgTable("near_account", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  accountId: text("account_id").notNull(),
+  network: text("network").notNull(),
+  publicKey: text("public_key").notNull(),
+  isPrimary: boolean("is_primary"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export type UserEntity = typeof user.$inferSelect;

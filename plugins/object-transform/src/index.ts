@@ -43,7 +43,7 @@ const defaultTemplates: Record<string, TemplateGenerator> = {
 };
 
 // Schema for the configuration
-export default class ObjectTransformer
+export class ObjectTransformerPlugin
   implements
     Plugin<
       typeof ObjectTransformerInputSchema,

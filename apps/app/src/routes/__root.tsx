@@ -4,7 +4,7 @@ import {
   HeadContent,
   Outlet,
   Scripts,
-  createRootRouteWithContext
+  createRootRouteWithContext,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { createServerFn } from "@tanstack/react-start";
@@ -98,10 +98,23 @@ export const Route = createRootRouteWithContext<{
       { rel: "icon", href: "/favicon.ico" },
     ],
     scripts: [
-      // {
-      //   src: "/customScript.js",
-      //   type: "text/javascript",
-      // },
+      {
+        src: "https://unpkg.com/fastintear@latest/dist/umd/browser.global.js",
+        type: "text/javascript",
+      },
+      {
+        // TODO: move to a near lib file
+        children: `
+      window.near && window.near.config({ networkId: "mainnet" });
+      
+      if (typeof window.near !== "undefined") {
+        console.log("NEAR (via global object 'near') is ready!");
+      } else {
+        console.error("NEAR global object 'near' not found!");
+      }
+    `,
+        type: "text/javascript",
+      },
     ],
   }),
   errorComponent: DefaultCatchBoundary,

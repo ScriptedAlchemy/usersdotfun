@@ -1,10 +1,13 @@
-import { betterAuth, BetterAuthPlugin } from "better-auth";
-import { jwt, anonymous, admin } from "better-auth/plugins";
-import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { db } from "~/db";
 import { schema } from "@usersdotfun/shared-db";
+import { betterAuth, BetterAuthPlugin } from "better-auth";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { admin, anonymous, jwt } from "better-auth/plugins";
 import { reactStartCookies } from "better-auth/react-start";
+import { siwn } from "better-near-auth";
+import { generateNonce } from "near-sign-verify";
+import { db } from "~/db";
 
+// TODO: better type safety
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg",
@@ -13,6 +16,13 @@ export const auth = betterAuth({
   plugins: [
     anonymous({
       generateName: () => `User_${Math.random().toString(36).substring(7)}`
+    }),
+    siwn({
+      // TODO: recipient, can be near account or url
+      domain: process.env.DOMAIN || "http://localhost:3000",
+      getNonce: async () => {
+        return generateNonce();
+      },
     }),
     admin({
       defaultRole: "user",

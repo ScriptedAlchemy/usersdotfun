@@ -9,7 +9,7 @@
     "@usersdotfun/core-sdk": "workspace:*"
   },
   "peerDependencies": {
-    "effect": "^3.17.6",
+    "effect": "^3.17.7",
     "zod": "^4.0.8",
     "typescript": "^5.0.0"
   },

@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "@hono/zod-validator": "^0.7.2",
-    "effect": "^3.17.6",
+    "effect": "^3.17.7",
     "feed": "^5.1.0",
     "hono": "^4.8.8",
     "ioredis": "^5.7.0",
