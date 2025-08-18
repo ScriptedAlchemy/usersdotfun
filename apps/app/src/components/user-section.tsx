@@ -33,7 +33,6 @@ export function UserSection() {
       <Button
         onClick={async () => {
           const profile = await authClient.near.getProfile();
-          console.log("me", profile);
         }}
       >
         test

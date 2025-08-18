@@ -18,8 +18,7 @@ export const auth = betterAuth({
       generateName: () => `User_${Math.random().toString(36).substring(7)}`
     }),
     siwn({
-      // TODO: recipient, can be near account or url
-      domain: process.env.DOMAIN || "http://localhost:3000",
+      recipient: "http://localhost:3000",
       getNonce: async () => {
         return generateNonce();
       },
