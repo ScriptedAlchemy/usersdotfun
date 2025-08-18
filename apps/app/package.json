@@ -36,7 +36,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cron-parser": "^5.3.0",
-    "fastintear": "^0.2.1",
+    "fastintear": "link:fastintear",
     "json5": "^2.2.3",
     "lucide-react": "^0.537.0",
     "near-sign-verify": "^0.4.3",

@@ -3,6 +3,7 @@ import {
   ErrorComponent,
   Link,
   rootRouteId,
+  useCanGoBack,
   useMatch,
   useRouter,
 } from "@tanstack/react-router";
@@ -14,6 +15,7 @@ export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
     strict: false,
     select: (state) => state.id === rootRouteId,
   });
+  const canGoBack = useCanGoBack();
 
   console.error("DefaultCatchBoundary Error:", error);
 
@@ -28,21 +30,21 @@ export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
         >
           Try Again
         </Button>
-        {isRoot ? (
-          <Button asChild>
-            <Link to="/">Home</Link>
-          </Button>
-        ) : (
+        {canGoBack ? (
           <Link
             to="/"
             className={`px-2 py-1 bg-gray-600 dark:bg-gray-700 rounded text-white uppercase font-extrabold`}
             onClick={(e) => {
               e.preventDefault();
-              window.history.back();
+              router.history.back();
             }}
           >
             Go Back
           </Link>
+        ) : (
+          <Button asChild>
+            <Link to="/">Home</Link>
+          </Button>
         )}
       </div>
     </div>

@@ -1,11 +1,15 @@
-import { createFileRoute, useNavigate, useLoaderData } from "@tanstack/react-router";
-import { CommonSheet } from "~/components/common/common-sheet";
+import {
+  createFileRoute,
+  useLoaderData,
+  useNavigate,
+} from "@tanstack/react-router";
 import type { JobStatus } from "@usersdotfun/shared-types/types";
-import { allQueueJobsQueryOptions } from "~/lib/queries";
-import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { AlertCircle, Loader2 } from "lucide-react";
-import { Button } from "~/components/ui/button";
 import { CodePreview } from "~/components/common/code-preview";
+import { CommonSheet } from "~/components/common/common-sheet";
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import { Button } from "~/components/ui/button";
+import { allQueueJobsQueryOptions } from "~/lib/queries";
 
 export const Route = createFileRoute("/_layout/queues/$jobId")({
   component: JobDetailsPage,

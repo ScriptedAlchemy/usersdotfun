@@ -47,14 +47,14 @@ export const Route = createRootRouteWithContext<{
     // });
     return (
       <>
-        <ThemeProvider
+        {/* <ThemeProvider
           attribute="class"
           defaultTheme="light"
           enableSystem
           disableTransitionOnChange
-        >
-          <Outlet />
-        </ThemeProvider>
+        > */}
+        <Outlet />
+        {/* </ThemeProvider> */}
         <Toaster />
         <TanStackRouterDevtools />
       </>
@@ -100,6 +100,7 @@ export const Route = createRootRouteWithContext<{
     scripts: [
       {
         src: "https://unpkg.com/fastintear@latest/dist/umd/browser.global.js",
+        // src: "../../../../node_modules/fastintear/dist/umd/browser.global.js",
         type: "text/javascript",
       },
       {

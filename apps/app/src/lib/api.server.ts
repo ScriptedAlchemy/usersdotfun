@@ -11,23 +11,13 @@ const ApiCallOptionsSchema = z.object({
 // Infer the TypeScript type from the Zod schema
 type ApiCallOptions = z.infer<typeof ApiCallOptionsSchema>;
 
-/**
- * A single, generic server function to communicate with the Hono API.
- * This is defined using the correct, chainable syntax from the docs.
- */
 export const callApi = createServerFn({
-  // We use POST for the RPC call itself, as it's best for sending a JSON body.
-  // The actual method for the Hono API is inside the `options` payload.
   method: "POST",
 })
-  // Use the .validator() method to parse and validate the input.
-  // The return type of this function becomes the input type for the handler.
   .validator((options: unknown) => {
     return ApiCallOptionsSchema.parse(options);
   })
-  // The handler receives the validated data in its context object.
   .handler(async (ctx) => {
-    // Access the validated options from the context
     const options = ctx.data;
     console.log(`[Server] Calling API: ${options.method} ${options.path}`);
 

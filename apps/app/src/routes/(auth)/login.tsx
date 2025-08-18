@@ -1,9 +1,11 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import * as near from "fastintear"; // just need to import types for window.near
 import { useState } from "react";
 import { toast } from "sonner";
 import z from "zod";
 import { Button } from "~/components/ui/button";
+import { auth } from "~/lib/auth";
 import { authClient } from "~/lib/auth-client";
 
 const searchSchema = z.object({
@@ -11,6 +13,7 @@ const searchSchema = z.object({
 });
 
 export const Route = createFileRoute("/(auth)/login")({
+  ssr: false,
   component: LoginForm,
   validateSearch: searchSchema,
 });
@@ -23,7 +26,9 @@ function LoginForm() {
   const { redirect } = Route.useSearch();
 
   // Check wallet connection status
-  const accountId = typeof window !== "undefined" && (window as any).near?.accountId() || null;
+  const accountId =
+    (typeof window !== "undefined" && (window as any).near?.accountId()) ||
+    null;
 
   const handleAnonymousSignIn = async () => {
     setIsLoading(true);
@@ -43,37 +48,40 @@ function LoginForm() {
     setNearLoading(true);
 
     try {
-      await (window as any).near.requestSignIn({ 
-        contractId: "social.near" 
-      }, {
-        onPending: (context: any) => {
-          switch (context.step) {
-            case 'popup_opening':
-              toast.info("Opening wallet popup...");
-              break;
-            case 'waiting_for_user':
-              toast.info("Please complete authentication in the popup");
-              break;
-            case 'processing_result':
-              toast.info("Processing authentication result...");
-              break;
-          }
+      await window.near.requestSignIn(
+        {
+          contractId: "social.near",
         },
-        onSuccess: (result: any) => {
-          toast.success(`Wallet connected: ${result.accountId}`);
-          setNearLoading(false);
-          // UI will re-render and show "Sign in with NEAR" button
-        },
-        onError: (error: any) => {
-          console.error("Wallet connection failed:", error);
-          toast.error(
-            error.type === "popup_blocked" 
-              ? "Please allow popups and try again"
-              : "Failed to connect wallet"
-          );
-          setNearLoading(false);
+        {
+          onPending: (context: any) => {
+            switch (context.step) {
+              case "popup_opening":
+                toast.info("Opening wallet popup...");
+                break;
+              case "waiting_for_user":
+                toast.info("Please complete authentication in the popup");
+                break;
+              case "processing_result":
+                toast.info("Processing authentication result...");
+                break;
+            }
+          },
+          onSuccess: (result: any) => {
+            toast.success(`Wallet connected: ${result.accountId}`);
+            setNearLoading(false);
+            // UI will re-render and show "Sign in with NEAR" button
+          },
+          onError: (error: any) => {
+            console.error("Wallet connection failed:", error);
+            toast.error(
+              error.type === "popup_blocked"
+                ? "Please allow popups and try again"
+                : "Failed to connect wallet"
+            );
+            setNearLoading(false);
+          },
         }
-      });
+      );
     } catch (error) {
       console.error("Wallet connection error:", error);
       toast.error("Failed to connect to NEAR wallet");
@@ -84,22 +92,26 @@ function LoginForm() {
   const handleNearSignIn = async () => {
     setNearLoading(true);
 
-    authClient.signIn.near({
-      recipient: typeof window !== "undefined" ? window.location.origin : "localhost:3000"
-    }, {
-      onError: (ctx) => {
-        console.error("NEAR sign in failed:", ctx);
-        toast.error(
-          ctx instanceof Error ? ctx.message : "Authentication failed"
-        );
-        setNearLoading(false);
+    const response = await authClient.signIn.near(
+      {
+        recipient: window.location.origin,
+        signer: window.near,
       },
-      onSuccess: async () => {
-        toast.success(`Signed in as: ${accountId}`);
-        await queryClient.invalidateQueries({ queryKey: ["user"] });
-        navigate({ to: redirect || "/" });
-      },
-    });
+      {
+        onError: (ctx) => {
+          console.error("NEAR sign in failed:", ctx);
+          toast.error(
+            ctx instanceof Error ? ctx.message : "Authentication failed"
+          );
+          setNearLoading(false);
+        },
+        onSuccess: async () => {
+          toast.success(`Signed in as: ${accountId}`);
+          await queryClient.invalidateQueries({ queryKey: ["user"] });
+          navigate({ to: redirect || "/" });
+        },
+      }
+    );
   };
 
   return (
